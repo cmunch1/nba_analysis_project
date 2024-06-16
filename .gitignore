@@ -1,0 +1,9 @@
+.conda
+/.ipynb_checkpoints
+.ipynb_checkpoints
+__pycache__
+ca_chain
+certfile
+keyfile
+geckodriver.log
+.env
