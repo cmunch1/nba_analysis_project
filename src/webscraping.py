@@ -20,6 +20,10 @@ Because of the way the data is structured on nba.com, the data is scraped in chu
 
 (the search function on nba.com requires each of these be specified, and the data is served on different pages for each of these)
 
+The data from different seasons and sub-seasons, while retrieved in chunks, are combined into a single DataFrame for each type of stats.
+
+The data for each type of stats is saved to a separate csv file since each has different columns, and the merging of the data will be done later.
+
 The data is saved to multiple csv files (depending on type of stats) that will be joined later.
     games_traditional.csv, 
     games_advanced.csv
@@ -50,12 +54,18 @@ import time
 from datetime import datetime, timedelta
 from pytz import timezone
 
-from pathlib import Path  #for Windows/Linux compatibility
 
-DATAPATH = Path(r'data')
-NEWLY_SCRAPED_PATH = DATAPATH / 'newly_scraped'
-CUMULATIVE_SCRAPED_PATH = DATAPATH / 'cumulative_scraped'
-SCRAPED_FILES = ["games_traditional.csv", "games_advanced.csv", "games_four-factors.csv", "games_misc.csv", "games_scoring.csv"]
+from src.constants import (
+    OFF_SEASON_START, 
+    REGULAR_SEASON_START, 
+    PLAYOFFS_START,
+)   
+
+from src.data_access import (
+    load_scraped_data, 
+    save_scraped_data,
+)
+
 
 NBA_SCHEDULE = "https://www.nba.com/schedule"
 NBA_BOXSCORES = "https://www.nba.com/stats/teams/boxscores"
@@ -63,10 +73,6 @@ SUB_SEASON_TYPES = ["Regular+Season", "PlayIn", "Playoffs"] #nba.com has differe
 STAT_TYPES = ['traditional', 'advanced', 'four-factors', 'misc', 'scoring'] #nba.com has different boxscore pages for each of these stat types
 
 GAME_DATE_VARIATIONS = ["Game Date", "Game_Date", "GAME DATE", "Game\xa0Date"] #nba.com uses different column names for the date in different tables
-
-OFF_SEASON_START = 8 #month that the off-season starts, typically July, but may be August 
-REGULAR_SEASON_START = 10 #month that the regular season starts, typically October
-PLAYOFFS_START = 4 #month that the playoffs start, typically April
 
 START_SEASON = 2006  # the first season to start scraping if full_scrape is TRUE (some seasons prior to 2006 may be missing some of the additional stats)
 
@@ -123,9 +129,8 @@ def main(full_scrape: bool = False):
             start_date = str(REGULAR_SEASON_START) + "/01/" + str(season_year+1)  #if more than 1 season, reset start date to beginning of next season
 
         file_name = "games_" + stat_type + ".csv"
-        print(f"Saving {file_name}")
-        print()
-        new_games.to_csv(NEWLY_SCRAPED_PATH / file_name, index=False)
+        save_scraped_data(new_games, file_name)
+        
 
     # scrape the matchups (team ids) and games (game ids) for games scheduled today and save to csv
     scrape_and_save_todays_matchups(driver)
@@ -134,7 +139,7 @@ def main(full_scrape: bool = False):
     driver.close() 
 
     # reload the csv files and check that the data is consistent - same games in each dataframe, same number of rows, no nulls
-    scraped_data = load_scraped_data(new=True)
+    scraped_data = load_scraped_data(cumulative=False)
 
     response = validate_scraped_dataframes(scraped_data)
 
@@ -144,39 +149,6 @@ def main(full_scrape: bool = False):
         print("Error - scraped dataframes are inconsistent")
         print(response)
 
-
-
-def load_scraped_data(new:bool = True) -> list:
-    """
-    Get the scraped data from the csv files, either the newly scraped data or the cumulative scraped data
-
-    Args:
-        new (bool): whether to load the newly scraped data or the cumulative scraped data
-
-    Returns:
-        list: list of DataFrames
-    """ 
-
-    if new:
-        scraped_path = NEWLY_SCRAPED_PATH
-    else:
-        scraped_path = CUMULATIVE_SCRAPED_PATH
-
-    all_dfs = []
-
-    if not scraped_path.exists():
-        raise FileNotFoundError(f"Directory {scraped_path} not found")
-   
-    for file in SCRAPED_FILES:
-        if not (scraped_path / file).exists():
-            raise FileNotFoundError(f"File {file} not found in {scraped_path}")
-        
-        df = pd.read_csv(scraped_path / file)
-        
-        all_dfs = all_dfs + [df]
-
-    return all_dfs
-        
 
 
 def activate_web_driver(browser: str) -> webdriver:
@@ -595,9 +567,11 @@ def scrape_and_save_todays_matchups(driver: webdriver) -> None:
 
     # save the data to a csv file - will be empty if no games are scheduled for today
     matchups = pd.DataFrame(matchups)
+    file_name = "matchups"
+    save_scraped_data(matchups, file_name)
     games = pd.DataFrame(games)
-    matchups.to_csv(NEWLY_SCRAPED_PATH / 'todays_matchups.csv', index=False)
-    games.to_csv(NEWLY_SCRAPED_PATH / 'todays_games.csv', index=False)
+    file_name = "games_ids"
+    save_scraped_data(games, file_name)
 
 
 
