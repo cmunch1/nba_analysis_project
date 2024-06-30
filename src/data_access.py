@@ -1,7 +1,10 @@
 """
 data_access.py
 
-Wrapper functions for saving and loading data
+Wrapper functions for saving and loading data. 
+
+Isolates the data access layer from the rest of the application so that the data can be saved and loaded from 
+different sources (e.g. csv files, databases, APIs) without changing the rest of the application.
 
 """
 
@@ -26,7 +29,7 @@ def save_data(df: pd.DataFrame, file_name: str, cumulative:bool = False) -> None
     Args:
         df (pd.DataFrame): the scraped data to save
         file_name (str): the name of the file to save the data to
-        cumulative (bool): whether to save the newly scraped data or the cumulative scraped data
+        cumulative (bool): whether to save to newly scraped data directory or the cumulative scraped data directory
     """ 
 
     if cumulative:

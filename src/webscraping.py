@@ -8,34 +8,48 @@ Selenium and BeautifulSoup do all the heavy lifting in this module. Selenium is 
 
 (If running from GitHub Actions or other public servers, a proxy service may be required to avoid being blocked by nba.com.)
 
-It saves this freshly scraped data to csv files in a specific data directory for later processing. The main
+This module saves this freshly scraped data to csv files in a specific data directory for later processing. The main
 purpose is to simply get the data from the website and save the fairly raw data to a convenient location for later processing.
 Data manipulation and cleaning is minimal in this module, but after the csv files are saved, it does check for nulls and
-that the data is consistent across the different csv files (e.g. same games in each file, same number of rows).
+that the data is consistent across the different csv files (e.g. same games in each file, same number of rows) to make sure the scraping went well.
 
 Because of the way the data is structured on nba.com, the data is scraped in chunks based on:
+    type of stats ('traditional', 'advanced', 'four-factors', 'misc', 'scoring,)
     season, 
     sub-season (regular season, play-in, playoffs), 
-    and the type of stats ('traditional', 'advanced', 'four-factors', 'misc', 'scoring')
+    and date range.
 
-(the search function on nba.com requires each of these be specified, and the data is served on different pages for each of these)
+The search function on nba.com requires each of these be specified, and the data is served on different pages for each of these.
 
-The data from different seasons and sub-seasons, while retrieved in chunks, are combined into a single DataFrame for each type of stats.
+(For example, the traditional stats for the 2021 regular season are on a different page than the traditional stats for the 2021 playoffs when
+using the search function on nba.com.)
 
-The data for each type of stats is saved to a separate csv file since each has different columns, and the merging of the data will be done later.
+The data from different seasons, sub-seasons, and date ranges, while retrieved in chunks, all have the same columns for each stat type and 
+are combined (concatenated) into a single DataFrame for each type of stats.
 
-The data is saved to multiple csv files (depending on type of stats) that will be joined later.
+The different stat pages (traditional, advanced, etc..) all have different columns, so the data is saved to separate csv files for each type of stats,
+and the merging of the data into one single big table will be done later.
+
+The data is saved to multiple csv files (depending on the of type stat page it came from) that will be joined later.
     games_traditional.csv, 
     games_advanced.csv
     games_four-factors.csv, 
     games_misc.csv, 
     games_scoring.csv
 
-This module also retrieves the matchups (pair of team ids) and the game ids for games scheduled today and saves them to csv files:
+We also need to scrape the matchups for games scheduled today, so we can predict the winner before the game is played.
+The boxscores pages are not available until after the game is played, so we have to create our own records of the games scheduled for today:
+    go to the schedule page, 
+    retrieve the team ids for each matchup, 
+    retrieve the game ids for each game,
+    and save these to csv files.
+    
+This will enable us to later construct records of the games that are scheduled for today, and then even later classify the games as wins or losses.
     todays_matchups.csv
-    todays_games.csv
+    todays_game_ids.csv
 
-These are all basically temporary raw data files that will be processed further in other modules.
+    
+** These are all basically temporary raw data files that will be processed further in other modules. **
 
 """
 
@@ -99,7 +113,7 @@ def main(full_scrape: bool = False):
         # determine start date by looking at the cumulative scraped data
         
         scraped_data = [] #list of dataframes
-        scraped_data = load_scraped_data(new=False) # we want the cumulative scraped data
+        scraped_data = load_scraped_data(cumulative=True) # we want the cumulative scraped data
         
         # check the latest game in the dataset to see when to start scraping
         first_start_date, seasons = determine_scrape_start(scraped_data)
