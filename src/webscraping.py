@@ -42,11 +42,13 @@ The boxscores pages are not available until after the game is played, so we have
     go to the schedule page, 
     retrieve the team ids for each matchup, 
     retrieve the game ids for each game,
-    and save these to csv files.
-    
-This will enable us to later construct records of the games that are scheduled for today, and then even later classify the games as wins or losses.
+    and save these to csv files:
+
     todays_matchups.csv
     todays_game_ids.csv
+    
+This will enable us to later construct records of the games that are scheduled for today into our feature store/database, and then 
+classify these games as wins or losses.
 
     
 ** These are all basically temporary raw data files that will be processed further in other modules. **
@@ -201,11 +203,11 @@ def activate_web_driver(browser: str) -> webdriver:
 
     return driver
 
-def determine_scrape_start(scraped_data: list) -> tuple:
+def determine_scrape_start(scraped_data: list) -> tuple[datetime, list]:
     """
     Determine where to begin scraping for more games based on the latest game in the dataset
 
-    Args:
+    Args:       
         scraped_data (list): list of DataFrames that have been scraped
 
     Returns:

@@ -40,8 +40,8 @@ def save_data(df: pd.DataFrame, file_name: str, cumulative:bool = False) -> None
     else:
         if not NEWLY_SCRAPED_PATH.exists():
             print("Could not find directory for newly scraped data")
-            print("Creating directory for newly scraped data")
-            NEWLY_SCRAPED_PATH.mkdir(parents=True, exist_ok=True)
+            print("Creating directory for newly scraped data")       # this directory is only for temporary storage anyway, so go ahead and create it
+            NEWLY_SCRAPED_PATH.mkdir(parents=True, exist_ok=True)    # so that data can be saved there and figure out any issues later
         file_path = NEWLY_SCRAPED_PATH
 
     if file_name == "matchups":
