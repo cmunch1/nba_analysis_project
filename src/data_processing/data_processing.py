@@ -3,7 +3,6 @@ import pandas as pd
 
 
 
-
 def merge_scraped_dataframes(scraped_dataframes: list) -> pd.DataFrame:
     """
     Merges the scraped dataframes into a single dataframe by first standardizing the column names and then merging on GAME_ID and TEAM_ID.

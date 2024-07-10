@@ -22,7 +22,7 @@ SCRAPED_BOXSCORE_FILES = ["games_traditional.csv", "games_advanced.csv", "games_
 TODAYS_MATCHUPS_FILE = "todays_matchups.csv"
 TODAYS_GAMES_IDS_FILE = "todays_games_ids.csv"
 
-def save_data(df: pd.DataFrame, file_name: str, cumulative:bool = False) -> None:
+def save_scraped_data(df: pd.DataFrame, file_name: str, cumulative:bool = False) -> None:
     """
     Saves the dataframe to a csv file in the appropriate directory
 

@@ -4,7 +4,7 @@ webscraping.py
 This module scrapes the NBA.com website for data/statistics from previous games, and it 
 finds the team ids and game ids for games scheduled today.
 
-Selenium and BeautifulSoup do all the heavy lifting in this module. Selenium is required because the data is dynamic and requires javascript to load.
+Selenium does all the heavy lifting in this module. Selenium is required because the data is dynamic and requires javascript to load.
 
 (If running from GitHub Actions or other public servers, a proxy service may be required to avoid being blocked by nba.com.)
 
@@ -63,21 +63,23 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-from bs4 import BeautifulSoup as soup
 
 import time
 from datetime import datetime, timedelta
 from pytz import timezone
 
 
-from src.constants import (
+from configs import (
     OFF_SEASON_START, 
     REGULAR_SEASON_START, 
     PLAYOFFS_START,
 )   
 
-from src.data_access import (
+from data_access import (
     load_scraped_data, 
     save_scraped_data,
 )
@@ -358,7 +360,7 @@ def validate_scraped_dataframes(scraped_dataframes: list) -> str:
     return response
 
 
-def parse_ids(data_table: soup) -> tuple[pd.Series, pd.Series]:
+def parse_ids(data_table) -> tuple[pd.Series, pd.Series]:
     """
     Parse the html table to extract the team and game ids
 
@@ -377,13 +379,13 @@ def parse_ids(data_table: soup) -> tuple[pd.Series, pd.Series]:
     CLASS_ID = 'Anchor_anchor__cSc3P' 
 
     # get all the links
-    links = data_table.find_all('a', {'class':CLASS_ID})
+    links = data_table.find_elements(By.CLASS_NAME, CLASS_ID)
     
     # get the href part (web addresses)
     # href="/stats/team/1610612740" for teams
-    # href="/game/0022200191" for games
-    links_list = [i.get("href") for i in links]
-
+    # href="/game/0022200191" for games   
+    links_list = [i.get_attribute("href") for i in links]
+    
     # create a series using last 10 digits of the appropriate links
     team_id = pd.Series([i[-10:] for i in links_list if ('stats' in i)])
     game_id = pd.Series([i[-10:] for i in links_list if ('/game/' in i)])
@@ -445,46 +447,37 @@ def scrape_to_dataframe(driver: webdriver, Season: str, DateFrom: str ="NONE", D
 
         
     driver.get(nba_url)
-    time.sleep(10)
-    source = soup(driver.page_source, 'html.parser')
+    wait = WebDriverWait(driver, 10)
 
-    #check for more than one page
-    pagination = source.find('div', {'class':CLASS_ID_PAGINATION})
-    #pagination = driver.find_elements(By.XPATH, "//*[@class='" + CLASS_ID_PAGINATION + "']")
-
-    if pagination is None:
-        
-        # if only one page, then just extract the data table
-        
-        data_table = source.find('table', {'class':CLASS_ID_TABLE})
-        if data_table is None:
+    try:
+        data_table = wait.until(EC.presence_of_element_located((By.CLASS_NAME, CLASS_ID_TABLE)))
+    except TimeoutException:
+        print("No data found")
+        return pd.DataFrame()
+    
+    # check for more than one page of data
+    try:
+        pagination = driver.find_element(By.CLASS_NAME, CLASS_ID_PAGINATION) # if there is a pagination dropdown, then there is more than one page of data
+        try:
+            page_dropdown = pagination.find_element(By.CLASS_NAME, CLASS_ID_DROPDOWN) # click the dropdown to show all data on one page
+            page_dropdown.send_keys("ALL")
+            time.sleep(3)
+            driver.execute_script('arguments[0].click()', page_dropdown)
+            time.sleep(3)
+            data_table = driver.find_element(By.CLASS_NAME, CLASS_ID_TABLE)
+        except NoSuchElementException:
+            print("No dropdown found")
+            return pd.DataFrame()
+    except NoSuchElementException:
+        try:
+            data_table = driver.find_element(By.CLASS_NAME, CLASS_ID_TABLE) # if no pagination dropdown, then there is only one page of data
+        except NoSuchElementException:
             print("No data found")
             return pd.DataFrame()
-        
-    else:
-        
-        # if multiple pages, first activate pulldown option for All pages to show all rows on one page
-        
-        page_dropdown = driver.find_element(By.XPATH, "//*[@class='" + CLASS_ID_PAGINATION + "']//*[@class='" + CLASS_ID_DROPDOWN + "']")
-    
-        page_dropdown.send_keys("ALL") # show all pages
-        #page_dropdown.click() doesn't work in headless mode
-        time.sleep(3)
-        driver.execute_script('arguments[0].click()', page_dropdown) #click() didn't work in headless mode, used this workaround (https://stackoverflow.com/questions/57741875)
-        
-        #refresh page data now that it contains all rows of the table
-        time.sleep(3)
-        source = soup(driver.page_source, 'html.parser')
-        data_table = source.find('table', {'class':CLASS_ID_TABLE})
-                
-        if data_table is None:
-            print("Error finding data table")
-            return pd.DataFrame()
-
 
     # convert the html table to a dataframe   
-
-    dfs = pd.read_html(str(data_table), header=0) 
+    table_html = data_table.get_attribute('outerHTML')
+    dfs = pd.read_html(table_html, header=0)
     df = pd.concat(dfs)
 
     # pull out teams ids and game ids from hrefs and add these to the dataframe
@@ -515,41 +508,42 @@ def scrape_and_save_todays_matchups(driver: webdriver) -> None:
     
     # go to nba.com schedule page
     driver.get(NBA_SCHEDULE)
-    time.sleep(10)
-    source = soup(driver.page_source, 'html.parser')
+    wait = WebDriverWait(driver, 10)
+
+    try:
+        games_container = wait.until(EC.presence_of_element_located((By.CLASS_NAME, CLASS_GAMES_PER_DAY)))
+    except TimeoutException:
+        print("No games found for today")
+        return [], []
 
     # Get the block of all of todays games
     # Sometimes, the results of yesterday's games are listed first, then todays games are listed
     # Other times, yesterday's games are not listed, or when the playoffs approach, future games are listed
-    # We will check the date for the first div, if it is not todays date, then we will look for the next div
-
-    div_games = source.find('div', {'class':CLASS_GAMES_PER_DAY}) # first div may or may not be yesterday's games or even future games when playoffs approach
-    div_game_day = source.find('h4', {'class':CLASS_DAY})
-    today = datetime.today().strftime('%A, %B %d')[:3] # e.g. "Wednesday, February 1" -> "Wed" for convenience with dealing with leading zeros
-    todays_games = None
     
-    while div_games:
-        print('Found games for: ' + div_game_day.text[:3]) 
-        if today == div_game_day.text[:3]:  
-            todays_games = div_games
+    today = datetime.today().strftime('%A, %B %d')[:3]
+    
+    game_days = driver.find_elements(By.CLASS_NAME, CLASS_DAY)
+    games_containers = driver.find_elements(By.CLASS_NAME, CLASS_GAMES_PER_DAY)
+    
+    todays_games = None
+    for day, games in zip(game_days, games_containers):
+        if today == day.text[:3]:
+            todays_games = games
             break
-        else:
-            # move to next div
-            div_games = div_games.find_next('div', {'class':CLASS_GAMES_PER_DAY}) 
-            div_game_day = div_game_day.find_next('h4', {'class':CLASS_DAY})
-
+    
     if todays_games is None:
         print("No games found for today")
-        return [], []   
+        return [], []
 
     # Get the teams playing
     # Each team listed in todays block will have a href with the specified anchor class
     # e.g. <a href="/team/1610612743/nuggets/" class="Anchor_anchor__cSc3P Link_styled__okbXW" ...
     # href includes team ID (1610612743 in example)
     # first team is visitor, second team is home
+
     CLASS_ID = "Anchor_anchor__cSc3P Link_styled__okbXW"
-    links = todays_games.find_all('a', {'class':CLASS_ID})
-    teams_list = [i.get("href") for i in links]
+    links = todays_games.find_elements(By.CLASS_NAME, CLASS_ID)
+    teams_list = [i.get_attribute("href") for i in links]
 
     # example output:
     # ['/team/1610612759/spurs/', '/team/1610612748/heat/',...
@@ -562,7 +556,7 @@ def scrape_and_save_todays_matchups(driver: webdriver) -> None:
         visitor_id = teams_list[i].partition("team/")[2].partition("/")[0] #extract team id from text
         home_id = teams_list[i+1].partition("team/")[2].partition("/")[0]
         matchups.append([visitor_id, home_id])
-
+    
 
     # Get Game IDs
     # Each game listed in todays block will have a link with the specified anchor class
@@ -570,11 +564,10 @@ def scrape_and_save_todays_matchups(driver: webdriver) -> None:
     # Each game will have two links with the specified anchor class, one for the preview and one to buy tickets
     # all using the same anchor class, so we will filter out those just for PREVIEW
     CLASS_ID = "Anchor_anchor__cSc3P TabLink_link__f_15h"
-    links = todays_games.find_all('a', {'class':CLASS_ID})
-    links = [i for i in links if "PREVIEW" in i]
-    game_id_list = [i.get("href") for i in links]
+    links = todays_games.find_elements(By.CLASS_NAME, CLASS_ID)
+    links = [i for i in links if "PREVIEW" in i.text]
+    game_id_list = [i.get_attribute("href") for i in links]
     
-
     games = []
     for game in game_id_list:
         game_id = game.partition("-00")[2].partition("?")[0] # extract team id from text for link
