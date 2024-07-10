@@ -1,7 +1,7 @@
 '''
-constants.py
+configs.py
 
-This file contains constants that are used in more than one module.
+
 '''
 
 
