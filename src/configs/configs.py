@@ -4,7 +4,7 @@ configs.py
 
 '''
 
-
+START_SEASON = 2006
 
 # season information
 OFF_SEASON_START = 8 #month that the off-season starts, typically July, but may be August 
