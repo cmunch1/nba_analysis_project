@@ -1,6 +1,6 @@
 from .nba_scraper import NbaScraper
 from .utils import activate_web_driver, determine_scrape_start
-from ..data_processing.data_processing import validate_scraped_dataframes
+from .validate import validate_scraped_dataframes
 from ..data_access.data_access import load_scraped_data, save_scraped_data
 from ..configs.configs import START_SEASON, REGULAR_SEASON_START
 

@@ -31,15 +31,27 @@ class ScrapedPage:
             print("No pagination found")
 
     def get_table(self, table_class: str) -> pd.DataFrame:
-        """Retrieve the table indicated by the given class and return it as a DataFrame."""
+        """Retrieve the table indicated by the given class."""
+        CLASS_ID = 'Anchor_anchor__cSc3P'
         try:
             table = self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, table_class)))
             table_html = table.get_attribute('outerHTML')
-            dfs = pd.read_html(table_html, header=0)
-            return pd.concat(dfs)
+            return table_html
         except TimeoutException:
             print("Table not found")
-            return pd.DataFrame()
+            return ""
+        
+    def convert_table(self, table_html: str) -> pd.DataFrame:
+        df = pd.read_html(table_html, header=0)
+        return pd.concat(df)
+        
+    def get_table_links(self, data_table) -> list[str]:
+        """Parse the html table to get any links"""
+        links = data_table.find_elements(By.CLASS_NAME, CLASS_ID)
+        return links
+    # maybe use the get_elements_by_class method instead and this parse
+    def get_
+
 
     def get_elements_by_class(self, class_name: str):
         """Retrieve all elements with the given class name."""
@@ -56,6 +68,12 @@ class ScrapedPage:
         
         return team_id, game_id
 
+    def get_table_links(self, table_class: str, link_class: str) -> pd.DataFrame:
+        dfs = pd.read_html(table_html, header=0)
+        return pd.concat(dfs)
+
+
+
     def scrape_page(self, url: str, table_class: str, pagination_class: str, dropdown_class: str) -> pd.DataFrame:
         """
         Scrape a page, handling pagination and returning the table as a DataFrame.
@@ -63,7 +81,7 @@ class ScrapedPage:
         """
         self.go_to_url(url)
         self.handle_pagination(pagination_class, dropdown_class)
-        df = self.get_table(table_class)
+        data_table = self.get_table(table_class)
         
         if not df.empty:
             data_table = self.driver.find_element(By.CLASS_NAME, table_class)
