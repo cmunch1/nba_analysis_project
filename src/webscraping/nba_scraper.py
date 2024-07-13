@@ -2,14 +2,14 @@ import pandas as pd
 from datetime import datetime
 
 
-from .scraped_page import ScrapedPage
+from .page_scraper import PageScraper
 from ..data_access.data_access import save_scraped_data
 from ..configs.configs import OFF_SEASON_START, REGULAR_SEASON_START
 
 class NbaScraper:
     def __init__(self, driver):
         self.driver = driver
-        self.scraped_page = ScrapedPage(driver)
+        self.page_scraper = PageScraper(driver)
         self.NBA_BOXSCORES = "https://www.nba.com/stats/teams/boxscores"
         self.NBA_SCHEDULE = "https://www.nba.com/schedule"
         self.SUB_SEASON_TYPES = ["Regular+Season", "PlayIn", "Playoffs"]
@@ -35,7 +35,7 @@ class NbaScraper:
         nba_url = self.construct_nba_url(stat_type, season_type, Season, DateFrom, DateTo)
         print(f"Scraping {nba_url}")
 
-        df = self.scraped_page.scrape_page(nba_url, CLASS_ID_TABLE, CLASS_ID_PAGINATION, CLASS_ID_DROPDOWN)
+        df = self.page_scraper.scrape_page(nba_url, CLASS_ID_TABLE, CLASS_ID_PAGINATION, CLASS_ID_DROPDOWN)
         
         return df
 
@@ -58,10 +58,10 @@ class NbaScraper:
         CLASS_GAMES_PER_DAY = "ScheduleDay_sdGames__NGdO5"
         CLASS_DAY = "ScheduleDay_sdDay__3s2Xt"
         
-        self.scraped_page.go_to_url(self.NBA_SCHEDULE)
+        self.page_scraper.go_to_url(self.NBA_SCHEDULE)
 
         try:
-            self.scraped_page.wait.until(EC.presence_of_element_located((By.CLASS_NAME, CLASS_GAMES_PER_DAY)))
+            self.page_scraper.wait.until(EC.presence_of_element_located((By.CLASS_NAME, CLASS_GAMES_PER_DAY)))
         except TimeoutException:
             print("No games found for today")
             return
@@ -79,8 +79,8 @@ class NbaScraper:
 
     def find_todays_games(self, CLASS_DAY, CLASS_GAMES_PER_DAY):
         today = datetime.today().strftime('%A, %B %d')[:3]
-        game_days = self.scraped_page.get_elements_by_class(CLASS_DAY)
-        games_containers = self.scraped_page.get_elements_by_class(CLASS_GAMES_PER_DAY)
+        game_days = self.page_scraper.get_elements_by_class(CLASS_DAY)
+        games_containers = self.page_scraper.get_elements_by_class(CLASS_GAMES_PER_DAY)
         
         for day, games in zip(game_days, games_containers):
             if today == day.text[:3]:
