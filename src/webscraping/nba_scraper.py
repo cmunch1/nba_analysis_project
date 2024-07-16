@@ -1,26 +1,40 @@
 import pandas as pd
 from datetime import datetime
+import json
 
 
 from .page_scraper import PageScraper
 from ..data_access.data_access import save_scraped_data
 from ..configs.configs import OFF_SEASON_START, REGULAR_SEASON_START
 
+
 class NbaScraper:
     def __init__(self, driver):
         self.driver = driver
         self.page_scraper = PageScraper(driver)
-        self.NBA_BOXSCORES = "https://www.nba.com/stats/teams/boxscores"
-        self.NBA_SCHEDULE = "https://www.nba.com/schedule"
-        self.SUB_SEASON_TYPES = ["Regular+Season", "PlayIn", "Playoffs"]
-        self.STAT_TYPES = ['traditional', 'advanced', 'four-factors', 'misc', 'scoring']
+
+         # Load configurations
+        with open('config.json') as config_file:
+            config = json.load(config_file)
+        
+        self.nba_boxscores_url = config["nba_boxscores_url"]
+        self.nba_schedule_url = config["nba_schedule_url"]
+        self.sub_season_types = config["sub_season_types"]
+        self.stat_types = config["stat_types"]
+        self.table_class_name = config["table_class_name"]  
+        self.pagination_class_name = config["pagination_class_name"]  
+        self.dropdown_class_name = config["dropdown_class_name"]
+        self.games_per_day_class_name = config["games_per_day_class_name"]
+        self.day_class_name = config["day_class_name"]
+        self.teams_class_name = config["teams_class_name"]
+        self.game_links_class_name = config["game_links_class_name"] 
 
     def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
         print(f"Scraping {season} from {start_date} to {end_date} for {stat_type} stats")
         
         all_sub_seasons = pd.DataFrame()
 
-        for sub_season_type in self.SUB_SEASON_TYPES:
+        for sub_season_type in self.sub_season_types:
             df = self.scrape_to_dataframe(Season=season, DateFrom=start_date, DateTo=end_date, stat_type=stat_type, season_type=sub_season_type)
             if not df.empty:
                 all_sub_seasons = pd.concat([all_sub_seasons, df], axis=0)
@@ -28,14 +42,11 @@ class NbaScraper:
         return all_sub_seasons
 
     def scrape_to_dataframe(self, Season: str, DateFrom: str ="NONE", DateTo: str ="NONE", stat_type: str ='traditional', season_type: str = "Regular+Season") -> pd.DataFrame:
-        CLASS_ID_TABLE = 'Crom_table__p1iZz' 
-        CLASS_ID_PAGINATION = "Pagination_pageDropdown__KgjBU" 
-        CLASS_ID_DROPDOWN = "DropDown_select__4pIg9" 
 
         nba_url = self.construct_nba_url(stat_type, season_type, Season, DateFrom, DateTo)
         print(f"Scraping {nba_url}")
 
-        df = self.page_scraper.scrape_page(nba_url, CLASS_ID_TABLE, CLASS_ID_PAGINATION, CLASS_ID_DROPDOWN)
+        df = self.page_scraper.scrape_page_table(nba_url, self.table_class_name, self.pagination_class_name, self.dropdown_class_name)
         
         return df
 
@@ -55,18 +66,11 @@ class NbaScraper:
         return nba_url
 
     def scrape_and_save_todays_matchups(self) -> None:
-        CLASS_GAMES_PER_DAY = "ScheduleDay_sdGames__NGdO5"
-        CLASS_DAY = "ScheduleDay_sdDay__3s2Xt"
+
         
         self.page_scraper.go_to_url(self.NBA_SCHEDULE)
 
-        try:
-            self.page_scraper.wait.until(EC.presence_of_element_located((By.CLASS_NAME, CLASS_GAMES_PER_DAY)))
-        except TimeoutException:
-            print("No games found for today")
-            return
-
-        todays_games = self.find_todays_games(CLASS_DAY, CLASS_GAMES_PER_DAY)
+        todays_games = self.find_todays_games(CLASS_DAY, self.games_per_day_class_name)
         
         if todays_games is None:
             print("No games found for today")
@@ -77,10 +81,10 @@ class NbaScraper:
 
         self.save_matchups_and_games(matchups, games)
 
-    def find_todays_games(self, CLASS_DAY, CLASS_GAMES_PER_DAY):
+    def find_todays_games(self, day_class_name, self.games_per_day_class_name):
         today = datetime.today().strftime('%A, %B %d')[:3]
-        game_days = self.page_scraper.get_elements_by_class(CLASS_DAY)
-        games_containers = self.page_scraper.get_elements_by_class(CLASS_GAMES_PER_DAY)
+        game_days = self.page_scraper.get_elements_by_class(self.day_class_name)
+        games_containers = self.page_scraper.get_elements_by_class(self.games_per_day_class_name)
         
         for day, games in zip(game_days, games_containers):
             if today == day.text[:3]:
@@ -88,8 +92,7 @@ class NbaScraper:
         return None
 
     def extract_team_ids(self, todays_games):
-        CLASS_ID = "Anchor_anchor__cSc3P Link_styled__okbXW"
-        links = todays_games.find_elements(By.CLASS_NAME, CLASS_ID)
+        links = todays_games.find_elements(By.CLASS_NAME, self.teams_class_name)
         teams_list = [i.get_attribute("href") for i in links]
 
         matchups = []
@@ -100,8 +103,7 @@ class NbaScraper:
         return matchups
 
     def extract_game_ids(self, todays_games):
-        CLASS_ID = "Anchor_anchor__cSc3P TabLink_link__f_15h"
-        links = todays_games.find_elements(By.CLASS_NAME, CLASS_ID)
+        links = todays_games.find_elements(By.CLASS_NAME, self.game_links_class_name)
         links = [i for i in links if "PREVIEW" in i.text]
         game_id_list = [i.get_attribute("href") for i in links]
         

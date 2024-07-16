@@ -1,3 +1,5 @@
+# Claude AI Sonnet 3.5 wrote most of this, I just fixed a few issues.
+
 import pandas as pd
 from unittest.mock import Mock, patch
 import logging

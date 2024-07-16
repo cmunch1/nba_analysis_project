@@ -5,6 +5,8 @@ from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.remote.webdriver import WebDriver
+
 import pandas as pd
 from typing import Optional, List, Tuple
 import time
@@ -42,16 +44,32 @@ class PageScraper:
             self.logger.addHandler(handler)
         self.logger.info("PageScraper initialized")
 
-    def go_to_url(self, url: str) -> None:
+
+
+    def go_to_url(self, url: str) -> bool:
         """
-        Navigate to the given URL.
+        Navigate to the given URL and check if the page loaded correctly.
 
         Args:
             url (str): The URL to navigate to.
+
+        Returns:
+            bool: True if navigation was successful and page loaded, False otherwise.
         """
         self.logger.info(f"Navigating to URL: {url}")
-        self.driver.get(url)
-        self.logger.debug(f"Navigation to {url} completed")
+        try:
+            self.driver.get(url)
+            # Check if the page has finished loading
+            self.wait.until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
+            self.logger.debug(f"Navigation to {url} completed successfully")
+            return True
+        except TimeoutException:
+            self.logger.warning(f"Timeout occurred while loading {url}")
+            return False
+        except Exception as e:
+            self.logger.error(f"Error navigating to {url}: {e}")
+            return False
+            
 
     def handle_pagination(self, pagination_class: str, dropdown_class: str) -> None:
         """
@@ -151,22 +169,46 @@ class PageScraper:
         self.logger.debug(f"Extracted {len(hrefs)} href attributes")
         return hrefs
 
-    def get_elements_by_class(self, class_name: str) -> List[WebElement]:
+    def get_elements_by_class(self, class_name: str, max_retries: int = 3, retry_delay: int = 2) -> Optional[List[WebElement]]:
         """
-        Retrieve all elements with the given class name.
+        Retrieve all elements with the given class name, with error trapping and retries.
 
         Args:
             class_name (str): The class name to search for.
+            max_retries (int): Maximum number of retry attempts.
+            retry_delay (int): Delay in seconds between retries.
 
         Returns:
-            List[WebElement]: A list of WebElements with the specified class name.
+            Optional[List[WebElement]]: A list of WebElements with the specified class name, or None if not found.
         """
         self.logger.info(f"Retrieving elements with class: {class_name}")
-        elements = self.wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, class_name)))
-        self.logger.debug(f"Found {len(elements)} elements with class {class_name}")
-        return elements
 
-    def scrape_page_table(self, url: str, table_class: str, pagination_class: str, dropdown_class: str, link_class: str) -> Tuple[Optional[pd.DataFrame], Optional[List[WebElement]], Optional[List[str]]]:
+        for attempt in range(max_retries):
+            try:
+                elements = self.wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, class_name)))
+                
+                if not elements:
+                    self.logger.warning(f"No elements found with class {class_name}")
+                    return None
+                
+                self.logger.debug(f"Found {len(elements)} elements with class {class_name}")
+                return elements
+            
+            except TimeoutException:
+                self.logger.warning(f"Timeout while waiting for elements with class {class_name}. Attempt {attempt + 1} of {max_retries}")
+            except NoSuchElementException:
+                self.logger.warning(f"No elements found with class {class_name}. Attempt {attempt + 1} of {max_retries}")
+            except Exception as e:
+                self.logger.error(f"Unexpected error occurred: {str(e)}. Attempt {attempt + 1} of {max_retries}")
+            
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+
+        self.logger.error(f"Failed to retrieve elements with class {class_name} after {max_retries} attempts")
+
+        return None
+
+    def scrape_page_table(self, url: str, table_class: str, pagination_class: str, dropdown_class: str, link_class: str) -> pd.DataFrame:
         """
         Scrape a page, handling pagination and returning the table as a DataFrame.
 
@@ -187,19 +229,23 @@ class PageScraper:
                 - A list of href attributes extracted from the links (or None if not found)
         """
         self.logger.info(f"Starting page scrape for URL: {url}")
-        self.go_to_url(url)
+        success = self.go_to_url(url)
+        if not success:
+            self.logger.warning(f"Page scrape failed: Could not navigate to URL: {url}")
+            return None
+        self.logger.info("Url found and scraped successfully")
         self.handle_pagination(pagination_class, dropdown_class)
         data_table = self.get_table(table_class)
         
         if data_table is not None:
             df = self.convert_table_df(data_table)
-            links = self.get_table_links(data_table, link_class)
-            hrefs = self.extract_hrefs(links)
+            #links = self.get_table_links(data_table, link_class)
+            #hrefs = self.extract_hrefs(links)
             self.logger.info("Page scrape completed successfully")
-            return df, links, hrefs
+            return df
         else:
             self.logger.warning("Page scrape failed: Table not found")
-            return None, None, None
+            return None
 
     def safe_wait_and_click(self, locator: Tuple[str, str], max_attempts: int = 3) -> None:
         """
