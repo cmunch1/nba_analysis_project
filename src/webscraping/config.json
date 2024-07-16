@@ -1,0 +1,13 @@
+{
+    "nba_boxscores_url": "https://www.nba.com/stats/teams/boxscores",
+    "nba_schedule_url": "https://www.nba.com/schedule",
+    "sub_season_types": ["Regular+Season", "PlayIn", "Playoffs"],
+    "stat_types": ["traditional", "advanced", "four-factors", "misc", "scoring"],
+    "table_class_name": "Crom_table__p1iZz",
+    "pagination_class_name": "Pagination_pageDropdown__KgjBU",
+    "dropdown_class_name": "DropDown_select__4pIg9",
+    "games_per_day_class_name": "ScheduleDay_sdGames__NGdO5",
+    "day_class_name": "ScheduleDay_sdDay__3s2Xt",
+    "teams_class_name": "Anchor_anchor__cSc3P Link_styled__okbXW",
+    "game_links_class_name": "Anchor_anchor__cSc3P TabLink_link__f_15h"
+  }
