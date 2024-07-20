@@ -25,7 +25,8 @@ def main(full_scrape: bool = False):
         file_name = f"games_{stat_type}.csv"
         save_scraped_data(new_games, file_name)
 
-    scraper.scrape_and_save_todays_matchups()
+    search_day = datetime.today().strftime('%A, %B %d')[:3]
+    scraper.scrape_and_save_matchups_for_day(search_day)
 
     driver.close() 
 
