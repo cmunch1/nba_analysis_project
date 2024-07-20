@@ -1,11 +1,12 @@
 import pandas as pd
 from datetime import datetime
 import json
+from selenium.webdriver.remote.webelement import WebElement
 
 
-from .page_scraper import PageScraper
-from ..data_access.data_access import save_scraped_data
-from ..configs.configs import OFF_SEASON_START, REGULAR_SEASON_START
+from page_scraper import PageScraper
+#from src.data_access.import save_scraped_data
+
 
 
 class NbaScraper:
@@ -17,16 +18,24 @@ class NbaScraper:
         with open('config.json') as config_file:
             config = json.load(config_file)
         
+        # season info
+        self.start_season = config["start_season"]   #season to start scraping if choosing a full scrape, more advanced stats don't go back beyond 2006
+        self.regular_season_start_month = config["regular_season_start_month"]
+        self.off_season_start_month = config["off_season_start_month"]
+        # boxscores sub-pages - url construction requires that these be specified
+        self.sub_season_types = config["sub_season_types"] #["Regular+Season", "PlayIn", "Playoffs"],
+        self.stat_types = config["stat_types"] #["traditional", "advanced", "four-factors", "misc", "scoring"],
+        # boxscores
         self.nba_boxscores_url = config["nba_boxscores_url"]
-        self.nba_schedule_url = config["nba_schedule_url"]
-        self.sub_season_types = config["sub_season_types"]
-        self.stat_types = config["stat_types"]
         self.table_class_name = config["table_class_name"]  
         self.pagination_class_name = config["pagination_class_name"]  
         self.dropdown_class_name = config["dropdown_class_name"]
+        self.teams_and_games_class_name = config["teams_and_games_class_name"]
+        # schedule
+        self.nba_schedule_url = config["nba_schedule_url"]
         self.games_per_day_class_name = config["games_per_day_class_name"]
         self.day_class_name = config["day_class_name"]
-        self.teams_class_name = config["teams_class_name"]
+        self.teams_links_class_name = config["teams_links_class_name"]
         self.game_links_class_name = config["game_links_class_name"] 
 
     def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
@@ -41,20 +50,31 @@ class NbaScraper:
 
         return all_sub_seasons
 
-    def scrape_to_dataframe(self, Season: str, DateFrom: str ="NONE", DateTo: str ="NONE", stat_type: str ='traditional', season_type: str = "Regular+Season") -> pd.DataFrame:
+    def scrape_boxscores_table(self, Season: str, DateFrom: str ="NONE", DateTo: str ="NONE", stat_type: str ='traditional', season_type: str = "Regular+Season") -> WebElement:
 
         nba_url = self.construct_nba_url(stat_type, season_type, Season, DateFrom, DateTo)
         print(f"Scraping {nba_url}")
 
-        df = self.page_scraper.scrape_page_table(nba_url, self.table_class_name, self.pagination_class_name, self.dropdown_class_name)
+        data_table = self.page_scraper.scrape_page_table(nba_url, self.table_class_name, self.pagination_class_name, self.dropdown_class_name)
         
+        return data_table
+    
+    def convert_table_to_df(self, data_table):
+        table_html = data_table.get_attribute('outerHTML')
+        dfs = pd.read_html(table_html, header=0)
+        df = pd.concat(dfs)
+
+        team_id, game_id = self.extract_team_and_game_ids_boxscores(data_table)
+        df['TEAM_ID'] = team_id
+        df['GAME_ID'] = game_id
+
         return df
 
     def construct_nba_url(self, stat_type, season_type, Season, DateFrom, DateTo):
         if stat_type == 'traditional':
-            nba_url = f"{self.NBA_BOXSCORES}?SeasonType={season_type}"
+            nba_url = f"{self.nba_boxscores_url}?SeasonType={season_type}"
         else:
-            nba_url = f"{self.NBA_BOXSCORES}-{stat_type}?SeasonType={season_type}"
+            nba_url = f"{self.nba_boxscores_url}-{stat_type}?SeasonType={season_type}"
             
         if not Season:
             nba_url = f"{nba_url}&DateFrom={DateFrom}&DateTo={DateTo}"
@@ -65,34 +85,33 @@ class NbaScraper:
                 nba_url = f"{nba_url}&Season={Season}&DateFrom={DateFrom}&DateTo={DateTo}"
         return nba_url
 
-    def scrape_and_save_todays_matchups(self) -> None:
+    def scrape_and_save_matchups_for_day(self, search_day) -> None:
+  
+        self.page_scraper.go_to_url(self.nba_schedule_url)
 
+        days_games = self.find_games_for_day(search_day)
         
-        self.page_scraper.go_to_url(self.NBA_SCHEDULE)
-
-        todays_games = self.find_todays_games(CLASS_DAY, self.games_per_day_class_name)
-        
-        if todays_games is None:
-            print("No games found for today")
+        if days_games is None:
+            print("No games found for this day")
             return
 
-        matchups = self.extract_team_ids(todays_games)
-        games = self.extract_game_ids(todays_games)
+        matchups = self.extract_team_ids(days_games)
+        games = self.extract_game_ids(days_games)
 
         self.save_matchups_and_games(matchups, games)
 
-    def find_todays_games(self, day_class_name, self.games_per_day_class_name):
-        today = datetime.today().strftime('%A, %B %d')[:3]
+    def find_games_for_day(self, search_day):
+        
         game_days = self.page_scraper.get_elements_by_class(self.day_class_name)
         games_containers = self.page_scraper.get_elements_by_class(self.games_per_day_class_name)
         
-        for day, games in zip(game_days, games_containers):
-            if today == day.text[:3]:
-                return games
+        for day, days_games in zip(game_days, games_containers):
+            if search_day == day.text[:3]:
+                return days_games
         return None
 
-    def extract_team_ids(self, todays_games):
-        links = todays_games.find_elements(By.CLASS_NAME, self.teams_class_name)
+    def extract_team_ids_schedule(self, todays_games):
+        links = self.page_scraper.get_elements_by_class(self.teams_links_class_name, todays_games)
         teams_list = [i.get_attribute("href") for i in links]
 
         matchups = []
@@ -102,8 +121,8 @@ class NbaScraper:
             matchups.append([visitor_id, home_id])
         return matchups
 
-    def extract_game_ids(self, todays_games):
-        links = todays_games.find_elements(By.CLASS_NAME, self.game_links_class_name)
+    def extract_game_ids_schedule(self, todays_games):
+        links = self.page_scraper.get_elements_by_class(self.game_links_class_name, todays_games)
         links = [i for i in links if "PREVIEW" in i.text]
         game_id_list = [i.get_attribute("href") for i in links]
         
@@ -113,6 +132,19 @@ class NbaScraper:
             if len(game_id) > 0:               
                 games.append(game_id)
         return games
+    
+    def extract_team_and_game_ids_boxscores(self, data_table):
+        links = self.page_scraper.get_elements_by_class(self.teams_and_games_class_name, data_table)       
+        links_list = [i.get_attribute("href") for i in links]
+    
+        # href="/stats/team/1610612740" for teams
+        # href="/game/0022200191" for games 
+
+        # create a series using last 10 digits of the appropriate links
+        team_id = pd.Series([i[-10:] for i in links_list if ('stats' in i)])
+        game_id = pd.Series([i[-10:] for i in links_list if ('/game/' in i)])
+    
+        return team_id, game_id
 
     def save_matchups_and_games(self, matchups, games):
         matchups_df = pd.DataFrame(matchups)
@@ -126,11 +158,12 @@ class NbaScraper:
 
         for season in seasons:
             season_year = int(season[:4])    
-            end_date = f"{OFF_SEASON_START}/01/{season_year+1}"
+            end_date = f"{self.off_season_start_month}/01/{season_year+1}"
             df_season = self.scrape_sub_seasons(str(season), str(start_date), str(end_date), stat_type)
             new_games = pd.concat([new_games, df_season], axis=0)
-            start_date = f"{REGULAR_SEASON_START}/01/{season_year+1}"
+            start_date = f"{self.regular_season_start_month}/01/{season_year+1}"
 
         return new_games
+
     
     
