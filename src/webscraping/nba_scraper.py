@@ -1,12 +1,11 @@
 import pandas as pd
-from datetime import datetime
-import json
 from selenium.webdriver.remote.webelement import WebElement
 
+from .config import config
+from .page_scraper import PageScraper
 
-from page_scraper import PageScraper
-#from src.data_access.import save_scraped_data
 
+from ..data_access.data_access import save_scraped_data
 
 
 class NbaScraper:
@@ -14,10 +13,8 @@ class NbaScraper:
         self.driver = driver
         self.page_scraper = PageScraper(driver)
 
-         # Load configurations
-        with open('config.json') as config_file:
-            config = json.load(config_file)
-        
+        # Load configurations
+                
         # season info
         self.start_season = config["start_season"]   #season to start scraping if choosing a full scrape, more advanced stats don't go back beyond 2006
         self.regular_season_start_month = config["regular_season_start_month"]
@@ -37,6 +34,7 @@ class NbaScraper:
         self.day_class_name = config["day_class_name"]
         self.teams_links_class_name = config["teams_links_class_name"]
         self.game_links_class_name = config["game_links_class_name"] 
+
 
     def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
         print(f"Scraping {season} from {start_date} to {end_date} for {stat_type} stats")
@@ -164,6 +162,15 @@ class NbaScraper:
             start_date = f"{self.regular_season_start_month}/01/{season_year+1}"
 
         return new_games
+
+    def scrape_and_save_all_boxscores(self, seasons, first_start_date):
+
+        for stat_type in self.stat_types:
+            new_games = self.scrape_stat_type(seasons, first_start_date, stat_type)
+            file_name = f"games_{stat_type}.csv"
+            save_scraped_data(new_games, file_name)
+    
+    
 
     
     
