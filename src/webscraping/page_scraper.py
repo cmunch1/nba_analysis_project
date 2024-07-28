@@ -202,3 +202,5 @@ class PageScraper:
                     raise TimeoutException(f"Element {locator} was not clickable after {max_attempts} attempts")
                 self.logger.debug(f"Retrying click attempt in 1 second")
                 time.sleep(1)
+
+

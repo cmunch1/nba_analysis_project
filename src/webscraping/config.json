@@ -15,5 +15,9 @@
     "games_per_day_class_name": "ScheduleDay_sdGames__NGdO5",
     "day_class_name": "ScheduleDay_sdDay__3s2Xt",
     "teams_links_class_name": "Anchor_anchor__cSc3P Link_styled__okbXW",
-    "game_links_class_name": "Anchor_anchor__cSc3P TabLink_link__f_15h"
+    "game_links_class_name": "Anchor_anchor__cSc3P TabLink_link__f_15h",
+    "max_retries": 3,
+    "retry_delay": 2,
+    "wait_time": 10,
+    "log_level": "INFO"
   }
