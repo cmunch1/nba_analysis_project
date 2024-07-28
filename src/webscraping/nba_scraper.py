@@ -36,6 +36,26 @@ class NbaScraper:
         self.game_links_class_name = config["game_links_class_name"] 
 
 
+    def scrape_and_save_all_boxscores(self, seasons, first_start_date):
+
+        for stat_type in self.stat_types:
+            new_games = self.scrape_stat_type(seasons, first_start_date, stat_type)
+            file_name = f"games_{stat_type}.csv"
+            save_scraped_data(new_games, file_name)
+
+    def scrape_stat_type(self, seasons, first_start_date, stat_type):
+        new_games = pd.DataFrame()
+        start_date = first_start_date
+
+        for season in seasons:
+            season_year = int(season[:4])    
+            end_date = f"{self.off_season_start_month}/01/{season_year+1}"
+            df_season = self.scrape_sub_seasons(str(season), str(start_date), str(end_date), stat_type)
+            new_games = pd.concat([new_games, df_season], axis=0)
+            start_date = f"{self.regular_season_start_month}/01/{season_year+1}"
+
+        return new_games
+
     def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
         print(f"Scraping {season} from {start_date} to {end_date} for {stat_type} stats")
         
@@ -47,6 +67,17 @@ class NbaScraper:
                 all_sub_seasons = pd.concat([all_sub_seasons, df], axis=0)
 
         return all_sub_seasons
+    
+    def scrape_to_dataframe(self, Season: str, DateFrom: str ="NONE", DateTo: str ="NONE", stat_type: str ='traditional', season_type: str = "Regular+Season") -> pd.DataFrame:
+        
+        data_table = self.scrape_boxscores_table(Season, DateFrom, DateTo, stat_type, season_type)
+        
+        if data_table is None:
+            return pd.DataFrame()
+        
+        df = self.convert_table_to_df(data_table)
+        
+        return df
 
     def scrape_boxscores_table(self, Season: str, DateFrom: str ="NONE", DateTo: str ="NONE", stat_type: str ='traditional', season_type: str = "Regular+Season") -> WebElement:
 
@@ -83,6 +114,19 @@ class NbaScraper:
                 nba_url = f"{nba_url}&Season={Season}&DateFrom={DateFrom}&DateTo={DateTo}"
         return nba_url
 
+    def extract_team_and_game_ids_boxscores(self, data_table):
+        links = self.page_scraper.get_elements_by_class(self.teams_and_games_class_name, data_table)       
+        links_list = [i.get_attribute("href") for i in links]
+    
+        # href="/stats/team/1610612740" for teams
+        # href="/game/0022200191" for games 
+
+        # create a series using last 10 digits of the appropriate links
+        team_id = pd.Series([i[-10:] for i in links_list if ('stats' in i)])
+        game_id = pd.Series([i[-10:] for i in links_list if ('/game/' in i)])
+    
+        return team_id, game_id
+    
     def scrape_and_save_matchups_for_day(self, search_day) -> None:
   
         self.page_scraper.go_to_url(self.nba_schedule_url)
@@ -130,19 +174,6 @@ class NbaScraper:
             if len(game_id) > 0:               
                 games.append(game_id)
         return games
-    
-    def extract_team_and_game_ids_boxscores(self, data_table):
-        links = self.page_scraper.get_elements_by_class(self.teams_and_games_class_name, data_table)       
-        links_list = [i.get_attribute("href") for i in links]
-    
-        # href="/stats/team/1610612740" for teams
-        # href="/game/0022200191" for games 
-
-        # create a series using last 10 digits of the appropriate links
-        team_id = pd.Series([i[-10:] for i in links_list if ('stats' in i)])
-        game_id = pd.Series([i[-10:] for i in links_list if ('/game/' in i)])
-    
-        return team_id, game_id
 
     def save_matchups_and_games(self, matchups, games):
         matchups_df = pd.DataFrame(matchups)
@@ -150,25 +181,7 @@ class NbaScraper:
         games_df = pd.DataFrame(games)
         save_scraped_data(games_df, "games_ids")
 
-    def scrape_stat_type(self, seasons, first_start_date, stat_type):
-        new_games = pd.DataFrame()
-        start_date = first_start_date
 
-        for season in seasons:
-            season_year = int(season[:4])    
-            end_date = f"{self.off_season_start_month}/01/{season_year+1}"
-            df_season = self.scrape_sub_seasons(str(season), str(start_date), str(end_date), stat_type)
-            new_games = pd.concat([new_games, df_season], axis=0)
-            start_date = f"{self.regular_season_start_month}/01/{season_year+1}"
-
-        return new_games
-
-    def scrape_and_save_all_boxscores(self, seasons, first_start_date):
-
-        for stat_type in self.stat_types:
-            new_games = self.scrape_stat_type(seasons, first_start_date, stat_type)
-            file_name = f"games_{stat_type}.csv"
-            save_scraped_data(new_games, file_name)
     
     
 
