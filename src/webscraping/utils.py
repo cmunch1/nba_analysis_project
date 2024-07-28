@@ -5,7 +5,10 @@ import pandas as pd
 from datetime import datetime, timedelta
 from pytz import timezone
 
-GAME_DATE_VARIATIONS = ["Game Date", "Game_Date", "GAME DATE", "Game\xa0Date"]
+from .config import config
+from ..data_access.data_access import load_scraped_data
+
+
 
 def activate_web_driver(browser: str) -> webdriver:
     """
@@ -33,6 +36,27 @@ def activate_web_driver(browser: str) -> webdriver:
 
     return driver
 
+def get_start_date_and_seasons() -> tuple[datetime, list]:
+
+  
+    full_scrape = config["full_scrape"]
+    start_season = config["start_season"]
+    regular_season_start_month = config["regular_season_start_month"]
+
+    if full_scrape:
+        seasons = list(range(start_season, datetime.now().year))
+        seasons = [str(season) + "-" + (str(season + 1))[-2:] for season in seasons]
+        first_start_date = f"{regular_season_start_month}/1/{start_season}"
+    else:
+        scraped_data = load_scraped_data(cumulative=True)
+        first_start_date, seasons = determine_scrape_start(scraped_data)
+
+        if first_start_date is None:
+            print("Error - previous scraped data has inconsistent dates")
+            exit()
+
+    return first_start_date, seasons
+
 def determine_scrape_start(scraped_data: list) -> tuple[datetime, list]:
     """
     Determine where to begin scraping for more games based on the latest game in the dataset
@@ -44,9 +68,11 @@ def determine_scrape_start(scraped_data: list) -> tuple[datetime, list]:
         tuple: start_date (datetime), seasons (list of ints)
     """ 
 
+    game_date_header_variations = config["game_date_header_variations"] # each column header is spelled differently in different datasets
+
     # find the last date in the dataset and make sure all the datasets have the same last date
     for i, df in enumerate(scraped_data):
-        for date_col in GAME_DATE_VARIATIONS:
+        for date_col in game_date_header_variations:
             if date_col in df.columns:
                 df[date_col] = pd.to_datetime(df[date_col])
                 game_date = date_col
@@ -90,3 +116,44 @@ def determine_scrape_start(scraped_data: list) -> tuple[datetime, list]:
     print("Start date: ", start_date)
 
     return start_date, seasons
+
+def validate_data() -> str:
+    """
+    Validate the boxscores dataframe
+    """
+    scraped_data = load_scraped_data(cumulative=False)
+    response = validate_scraped_dataframes(scraped_data)
+
+    if response == "Pass":
+        print("All scraped dataframes are consistent")
+    else:
+        print("Error - scraped dataframes are inconsistent")
+        print(response)
+
+def validate_scraped_dataframes(scraped_dataframes: list) -> str:
+    response = "Pass"
+    num_rows = 0
+    game_ids = None
+    
+    for i, df in enumerate(scraped_dataframes):
+        if df.duplicated().any():
+            return f"Dataframe {i} has duplicate records"
+        
+        if df.isnull().values.any():
+            return f"Dataframe {i} has null values"
+
+        df = df.sort_values(by='GAME_ID')
+
+        if i == 0:
+            num_rows = df.shape[0]
+            game_ids = df['GAME_ID']
+        else:
+            if num_rows != df.shape[0]:
+                return f"Dataframe {i} does not match the number of rows of the first dataframe"
+            
+            if not np.array_equal(game_ids.values, df['GAME_ID'].values):
+                return f"Dataframe {i} does not match the game ids of the first dataframe"
+        
+    return response
+
+

@@ -1,4 +1,6 @@
 {
+    "game_date_header_variations": ["Game Date", "Game_Date", "GAME DATE", "Game\\xa0Date"],
+    "full_scrape": false,
     "start_season": 2006,
     "off_season_start_month": 8,
     "regular_season_start_month": 10,
