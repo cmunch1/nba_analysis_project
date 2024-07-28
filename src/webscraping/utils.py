@@ -1,26 +1,31 @@
+import logging
+from datetime import datetime, timedelta
+from typing import List, Tuple, Optional
+
+import numpy as np
+import pandas as pd
+from pytz import timezone
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-import pandas as pd
-from datetime import datetime, timedelta
-from pytz import timezone
 
 from .config import config
 from ..data_access.data_access import load_scraped_data
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-
-def activate_web_driver(browser: str) -> webdriver:
+def activate_web_driver(browser: str) -> webdriver.Chrome:
     """
-    Activate selenium web driver for use in scraping
+    Activate selenium web driver for use in scraping.
 
     Args:
-        browser (str): the name of the browser to use though currently only Chrome is supported
+        browser (str): The name of the browser to use (currently only Chrome is supported).
 
     Returns:
-        the selected webdriver
+        webdriver.Chrome: The selected webdriver.
     """
-    
     options = [
         "--headless=new",
         "--remote-debugging-port=9222",
@@ -33,105 +38,104 @@ def activate_web_driver(browser: str) -> webdriver:
         chrome_options.add_argument(option)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)    
-
+    logger.info("Web driver activated successfully")
     return driver
 
-def get_start_date_and_seasons() -> tuple[datetime, list]:
+def get_start_date_and_seasons() -> Tuple[str, List[str]]:
+    """
+    Determine the start date and seasons for scraping.
 
-  
+    Returns:
+        Tuple[str, List[str]]: A tuple containing the start date (str) and a list of seasons (List[str]).
+    """
     full_scrape = config["full_scrape"]
     start_season = config["start_season"]
     regular_season_start_month = config["regular_season_start_month"]
 
     if full_scrape:
-        seasons = list(range(start_season, datetime.now().year))
-        seasons = [str(season) + "-" + (str(season + 1))[-2:] for season in seasons]
+        seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(start_season, datetime.now().year)]
         first_start_date = f"{regular_season_start_month}/1/{start_season}"
     else:
         scraped_data = load_scraped_data(cumulative=True)
         first_start_date, seasons = determine_scrape_start(scraped_data)
 
         if first_start_date is None:
-            print("Error - previous scraped data has inconsistent dates")
-            exit()
+            logger.error("Previous scraped data has inconsistent dates")
+            raise ValueError("Inconsistent dates in scraped data")
 
+    logger.info(f"Start date: {first_start_date}, Seasons: {seasons}")
     return first_start_date, seasons
 
-def determine_scrape_start(scraped_data: list) -> tuple[datetime, list]:
+def determine_scrape_start(scraped_data: List[pd.DataFrame]) -> Tuple[Optional[str], Optional[List[str]]]:
     """
-    Determine where to begin scraping for more games based on the latest game in the dataset
+    Determine where to begin scraping for more games based on the latest game in the dataset.
 
-    Args:       
-        scraped_data (list): list of DataFrames that have been scraped
+    Args:
+        scraped_data (List[pd.DataFrame]): List of DataFrames that have been scraped.
 
     Returns:
-        tuple: start_date (datetime), seasons (list of ints)
-    """ 
+        Tuple[Optional[str], Optional[List[str]]]: A tuple containing the start date (str) and a list of seasons (List[str]).
+        Returns (None, None) if there's an error.
+    """
+    game_date_header_variations = config["game_date_header_variations"]
 
-    game_date_header_variations = config["game_date_header_variations"] # each column header is spelled differently in different datasets
-
-    # find the last date in the dataset and make sure all the datasets have the same last date
+    last_date = None
     for i, df in enumerate(scraped_data):
-        for date_col in game_date_header_variations:
-            if date_col in df.columns:
-                df[date_col] = pd.to_datetime(df[date_col])
-                game_date = date_col
-                break
-        else:
-            print(f"Dataframe {i} does not have a recognized game date column")
+        if df.empty:
+            logger.error(f"Dataframe {i} is empty")
             return None, None
-       
-        if i == 0:
-            last_date = df[game_date].max()
-        else:
-            if df[game_date].max() != last_date:
-                print(f"Dataframe {i} has a different last date than the first dataframe")
-                return None, None
+        date_col = next((col for col in game_date_header_variations if col in df.columns), None)
+        if date_col is None:
+            logger.error(f"Dataframe {i} does not have a recognized game date column")
+            return None, None
+        
+        df[date_col] = pd.to_datetime(df[date_col])
+        current_last_date = df[date_col].max()
+        
+        if last_date is None:
+            last_date = current_last_date
+        elif current_last_date != last_date:
+            logger.error(f"Dataframe {i} has a different last date than the first dataframe")
+            return None, None
 
-    # determine the season for that date
-    if last_date.month >= 10:
-        last_season = last_date.year
-    else:
-        last_season = last_date.year - 1
+    last_season = last_date.year if last_date.month >= 10 else last_date.year - 1
+    start_date = (last_date + timedelta(days=1)).strftime("%m/%d/%Y")
 
-    # Determine the date of the next day to begin scraping from
-    start_date = last_date + timedelta(days=1)
-    start_date = start_date.strftime("%m/%d/%Y")
-
-    # determine what season we are in currently
     today = datetime.now(timezone('EST'))
-    if today.month >= 10:
-        current_season = today.year
-    else:
-        current_season = today.year - 1
+    current_season = today.year if today.month >= 10 else today.year - 1
 
-    # determine which seasons we need to scrape to catch up the data
-    seasons = list(range(last_season, current_season+1))
-    seasons = [str(season) + "-" + (str(season + 1))[-2:] for season in seasons]
+    seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(last_season, current_season + 1)]
 
-    print("Last date in dataset: ", last_date)
-    print("Last season in dataset: ", last_season)
-    print("Current season: ", current_season)
-    print("Seasons to scrape: ", seasons)
-    print("Start date: ", start_date)
+    logger.info(f"Last date in dataset: {last_date}")
+    logger.info(f"Last season in dataset: {last_season}")
+    logger.info(f"Current season: {current_season}")
+    logger.info(f"Seasons to scrape: {seasons}")
+    logger.info(f"Start date: {start_date}")
 
     return start_date, seasons
 
-def validate_data() -> str:
+def validate_data() -> None:
     """
-    Validate the boxscores dataframe
+    Validate the boxscores dataframe.
     """
     scraped_data = load_scraped_data(cumulative=False)
     response = validate_scraped_dataframes(scraped_data)
 
     if response == "Pass":
-        print("All scraped dataframes are consistent")
+        logger.info("All scraped dataframes are consistent")
     else:
-        print("Error - scraped dataframes are inconsistent")
-        print(response)
+        logger.error(f"Scraped dataframes are inconsistent: {response}")
 
-def validate_scraped_dataframes(scraped_dataframes: list) -> str:
-    response = "Pass"
+def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
+    """
+    Validate the consistency of scraped dataframes.
+
+    Args:
+        scraped_dataframes (List[pd.DataFrame]): List of scraped dataframes to validate.
+
+    Returns:
+        str: "Pass" if all dataframes are consistent, otherwise an error message.
+    """
     num_rows = 0
     game_ids = None
     
@@ -153,7 +157,5 @@ def validate_scraped_dataframes(scraped_dataframes: list) -> str:
             
             if not np.array_equal(game_ids.values, df['GAME_ID'].values):
                 return f"Dataframe {i} does not match the game ids of the first dataframe"
-        
-    return response
-
-
+    
+    return "Pass"
