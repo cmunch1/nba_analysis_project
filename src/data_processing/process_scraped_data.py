@@ -1,4 +1,6 @@
 
+
+
 import pandas as pd
 
 
@@ -169,42 +171,7 @@ def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-def add_TARGET(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Adds a TARGET column to the dataframe by copying HOME_TEAM_WINS.
-
-    Args:
-        df (pd.DataFrame): the dataframe to add the TARGET column to
-
-    Returns:
-        the games dataframe with a TARGET column
-
-    """
-
-    df['TARGET'] = df['HOME_TEAM_WINS']
-    
-    return df
 
 
-def split_train_test(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Splits the dataframe into train and test sets.
 
-    Splits the latest season as the test set and the rest as the train set.
-    The second latest season included with the test set to allow for feature engineering.
-
-    Args:
-        df (pd.DataFrame): the dataframe to split
-
-    Returns:
-        the train and test dataframes
-
-    """
-
-    latest_season = df['SEASON'].unique().max()
-
-    train = df[df['SEASON'] < (latest_season)]
-    test = df[df['SEASON'] >= (latest_season - 1)]
-    
-    return train, test
 
