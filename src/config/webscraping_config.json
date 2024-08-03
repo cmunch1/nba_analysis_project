@@ -19,5 +19,10 @@
     "max_retries": 3,
     "retry_delay": 2,
     "wait_time": 10,
-    "log_level": "INFO"
+    "log_level": "INFO",
+    "webdriver_options": [
+      "--headless=new", 
+      "--remote-debugging-port=9222", 
+      "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"
+    ]
   }

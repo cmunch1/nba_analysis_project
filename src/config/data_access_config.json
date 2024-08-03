@@ -1,0 +1,13 @@
+{
+    "newly_scraped_path": "datapath/newly_scraped",
+    "cumulative_scraped_path": "datapath/cumulative_scraped",
+    "scraped_boxscore_files": [
+      "games_traditional.csv",
+      "games_advanced.csv",
+      "games_four-factors.csv",
+      "games_misc.csv",
+      "games_scoring.csv"
+    ],
+    "todays_matchups_file": "todays_matchups.csv",
+    "todays_games_ids_file": "todays_games_ids.csv"
+  }
