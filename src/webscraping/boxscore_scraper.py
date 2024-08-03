@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Tuple
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
-
+from datetime import datetime
 
 from .page_scraper import PageScraper
 from ..config.config import config
@@ -76,7 +76,8 @@ class BoxscoreScraper:
 
     def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
         """
-        Scrape data for all sub-seasons within a given season.
+        Scrape data for all sub-seasons within a given season. 
+        The NBA.com search functionality requires that sub_season_types be specified (regular season, playoffs, play-in).
 
         Args:
             season: The season to scrape.
@@ -91,12 +92,36 @@ class BoxscoreScraper:
         
         all_sub_seasons = pd.DataFrame()
 
-        for sub_season_type in config.sub_season_types:
+        sub_season_types = self.determine_sub_season_types(start_date, end_date)
+
+        for sub_season_type in sub_season_types:
             df = self.scrape_to_dataframe(Season=season, DateFrom=start_date, DateTo=end_date, stat_type=stat_type, season_type=sub_season_type)
             if not df.empty:
                 all_sub_seasons = pd.concat([all_sub_seasons, df], axis=0)
 
         return all_sub_seasons
+    
+    def determine_sub_season_types(self, start_date, end_date):
+        
+        # Determine sub-season types based on start and end dates
+
+        sub_season_types = []
+
+        start_date = datetime.strptime(start_date, "%m/%d/%Y")
+        end_date = datetime.strptime(end_date, "%m/%d/%Y")
+        play_in_date = datetime(start_date.year, config.play_in_month, 1)
+
+        if start_date < play_in_date and end_date < play_in_date:
+            sub_season_types.append(config.regular_season_text)
+        elif start_date > play_in_date and end_date > play_in_date:
+            sub_season_types.append(config.playoffs_season_text)
+        else:
+            sub_season_types.append(config.regular_season_text)
+            sub_season_types.append(config.playoffs_season_text)
+            sub_season_types.append(config.play_in_season_text)
+
+        return sub_season_types
+
     
     def scrape_to_dataframe(self, Season: str, DateFrom: str = "NONE", DateTo: str = "NONE", stat_type: str = 'traditional', season_type: str = "Regular+Season") -> pd.DataFrame:
         """
