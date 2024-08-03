@@ -9,9 +9,10 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from .config import config
-from ..data_access.data_access import load_scraped_data
+from ..config.config import config
+from ..data_access.data_access import DataAccess
 
+data_access = DataAccess()
 
 logging.basicConfig(level=getattr(logging, config.log_level),
             format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,7 +50,7 @@ def get_start_date_and_seasons() -> Tuple[str, List[str]]:
         seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(config.start_season, datetime.now().year)]
         first_start_date = f"{config.regular_season_start_month}/1/{config.start_season}"
     else:
-        scraped_data = load_scraped_data(cumulative=True)
+        scraped_data = data_access.load_scraped_data(cumulative=True)
         first_start_date, seasons = determine_scrape_start(scraped_data)
 
         if first_start_date is None:
@@ -111,7 +112,7 @@ def validate_data() -> None:
     """
     Validate the boxscores dataframe.
     """
-    scraped_data = load_scraped_data(cumulative=False)
+    scraped_data = DataAccess.load_scraped_data(cumulative=False)
     response = validate_scraped_dataframes(scraped_data)
 
     if response == "Pass":

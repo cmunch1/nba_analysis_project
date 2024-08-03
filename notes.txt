@@ -1,1 +1,3 @@
+python -m src.webscraping.main_webscraper
+
 C:\Users\CPM\miniconda3\_conda.exe activate nba_analysis
