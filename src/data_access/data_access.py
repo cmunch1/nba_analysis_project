@@ -1,87 +1,80 @@
 """
 data_access.py
 
-Wrapper functions for saving and loading data. 
+Wrapper class for saving and loading data. 
 
 Isolates the data access layer from the rest of the application so that the data can be saved and loaded from 
 different sources (e.g. csv files, databases, APIs) without changing the rest of the application.
-
 """
 
 import pandas as pd
-
 from pathlib import Path
+import logging
+from typing import List
 
+from config import config
 
-DATAPATH = Path(r'data')
+class DataAccess:
+    def __init__(self):
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger(__name__)
 
-# scraped data
-NEWLY_SCRAPED_PATH = DATAPATH / 'newly_scraped'
-CUMULATIVE_SCRAPED_PATH = DATAPATH / 'cumulative_scraped'
-SCRAPED_BOXSCORE_FILES = ["games_traditional.csv", "games_advanced.csv", "games_four-factors.csv", "games_misc.csv", "games_scoring.csv"]
-TODAYS_MATCHUPS_FILE = "todays_matchups.csv"
-TODAYS_GAMES_IDS_FILE = "todays_games_ids.csv"
+    def save_scraped_data(self, df: pd.DataFrame, file_name: str, cumulative: bool = False) -> None:
+        """
+        Saves the dataframe to a csv file in the appropriate directory
 
-def save_scraped_data(df: pd.DataFrame, file_name: str, cumulative:bool = False) -> None:
-    """
-    Saves the dataframe to a csv file in the appropriate directory
+        Args:
+            df (pd.DataFrame): the scraped data to save
+            file_name (str): the name of the file to save the data to
+            cumulative (bool): whether to save to newly scraped data directory or the cumulative scraped data directory
+        """ 
+        if cumulative:
+            if not config.cumulative_scraped_path.exists():
+                self.logger.error("Could not find directory for cumulative scraped data")
+                raise FileNotFoundError("Cumulative scraped data directory not found")
+            file_path = config.cumulative_scraped_path 
+        else:
+            if not config.newly_scraped_path.exists():
+                self.logger.warning("Could not find directory for newly scraped data")
+                self.logger.info("Creating directory for newly scraped data")
+                config.newly_scraped_path.mkdir(parents=True, exist_ok=True)
+            file_path = config.newly_scraped_path
 
-    Args:
-        df (pd.DataFrame): the scraped data to save
-        file_name (str): the name of the file to save the data to
-        cumulative (bool): whether to save to newly scraped data directory or the cumulative scraped data directory
-    """ 
+        if file_name == "matchups":
+            file_name = config.todays_matchups_file
 
-    if cumulative:
-        if not CUMULATIVE_SCRAPED_PATH.exists():
-            print("Could not find directory for cumulative scraped data")
-            exit(1)
-        file_path = CUMULATIVE_SCRAPED_PATH 
-    else:
-        if not NEWLY_SCRAPED_PATH.exists():
-            print("Could not find directory for newly scraped data")
-            print("Creating directory for newly scraped data")       # this directory is only for temporary storage anyway, so go ahead and create it
-            NEWLY_SCRAPED_PATH.mkdir(parents=True, exist_ok=True)    # so that data can be saved there and figure out any issues later
-        file_path = NEWLY_SCRAPED_PATH
+        if file_name == "games_ids":
+            file_name = config.todays_games_ids_file
+            
+        df.to_csv(file_path / file_name, index=False)
+        self.logger.info(f"Data saved to {file_path / file_name}")
 
-    if file_name == "matchups":
-        file_name = TODAYS_MATCHUPS_FILE
+    def load_scraped_data(self, cumulative: bool = False) -> List[pd.DataFrame]:
+        """
+        Get the scraped data from the csv files, either the newly scraped data or the cumulative scraped data
+        Retrieves all the scraped data from the csv files and returns them as a list of DataFrames
 
-    if file_name == "games_ids":
-        file_name = TODAYS_GAMES_IDS_FILE
-        
-    df.to_csv(file_path / file_name, index=False)
-    print(f"Data saved to {file_path / file_name}")
+        Args:
+            cumulative (bool): whether to load the newly scraped data or the cumulative scraped data
 
+        Returns:
+            List[pd.DataFrame]: list of DataFrames
+        """ 
+        scraped_path = config.cumulative_scraped_path if cumulative else config.newly_scraped_path
 
-def load_scraped_data(cumulative:bool = False) -> list:
-    """
-    Get the scraped data from the csv files, either the newly scraped data or the cumulative scraped data
-    Retrieves all the scraped data from the csv files and returns them as a list of DataFrames
+        all_dfs: List[pd.DataFrame] = []
 
-    Args:
-        cumulative (bool): whether to load the newly scraped data or the cumulative scraped data
+        if not scraped_path.exists():
+            self.logger.error(f"Directory {scraped_path} not found")
+            raise FileNotFoundError(f"Directory {scraped_path} not found")
+    
+        for file in config.scraped_boxscore_files:
+            if not (scraped_path / file).exists():
+                self.logger.error(f"File {file} not found in {scraped_path}")
+                raise FileNotFoundError(f"File {file} not found in {scraped_path}")
+            
+            df = pd.read_csv(scraped_path / file)
+            all_dfs.append(df)
 
-    Returns:
-        list: list of DataFrames
-    """ 
-
-    if cumulative:
-        scraped_path = CUMULATIVE_SCRAPED_PATH
-    else:
-        scraped_path = NEWLY_SCRAPED_PATH
-
-    all_dfs = []
-
-    if not scraped_path.exists():
-        raise FileNotFoundError(f"Directory {scraped_path} not found")
-   
-    for file in SCRAPED_BOXSCORE_FILES:
-        if not (scraped_path / file).exists():
-            raise FileNotFoundError(f"File {file} not found in {scraped_path}")
-        
-        df = pd.read_csv(scraped_path / file)
-        
-        all_dfs = all_dfs + [df]
-
-    return all_dfs
+        self.logger.info(f"Loaded {len(all_dfs)} dataframes from {scraped_path}")
+        return all_dfs

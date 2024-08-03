@@ -12,8 +12,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 from .config import config
 from ..data_access.data_access import load_scraped_data
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logging.basicConfig(level=getattr(logging, config.log_level),
+            format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def activate_web_driver(browser: str) -> webdriver.Chrome:
@@ -26,15 +27,10 @@ def activate_web_driver(browser: str) -> webdriver.Chrome:
     Returns:
         webdriver.Chrome: The selected webdriver.
     """
-    options = [
-        "--headless=new",
-        "--remote-debugging-port=9222",
-        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"
-    ]
     
     chrome_options = webdriver.ChromeOptions() 
     
-    for option in options:
+    for option in config.webdriver_options:
         chrome_options.add_argument(option)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)    
@@ -48,13 +44,10 @@ def get_start_date_and_seasons() -> Tuple[str, List[str]]:
     Returns:
         Tuple[str, List[str]]: A tuple containing the start date (str) and a list of seasons (List[str]).
     """
-    full_scrape = config["full_scrape"]
-    start_season = config["start_season"]
-    regular_season_start_month = config["regular_season_start_month"]
-
-    if full_scrape:
-        seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(start_season, datetime.now().year)]
-        first_start_date = f"{regular_season_start_month}/1/{start_season}"
+    
+    if config.full_scrape:
+        seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(config.start_season, datetime.now().year)]
+        first_start_date = f"{config.regular_season_start_month}/1/{config.start_season}"
     else:
         scraped_data = load_scraped_data(cumulative=True)
         first_start_date, seasons = determine_scrape_start(scraped_data)
@@ -77,14 +70,14 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame]) -> Tuple[Optional[s
         Tuple[Optional[str], Optional[List[str]]]: A tuple containing the start date (str) and a list of seasons (List[str]).
         Returns (None, None) if there's an error.
     """
-    game_date_header_variations = config["game_date_header_variations"]
+    
 
     last_date = None
     for i, df in enumerate(scraped_data):
         if df.empty:
             logger.error(f"Dataframe {i} is empty")
             return None, None
-        date_col = next((col for col in game_date_header_variations if col in df.columns), None)
+        date_col = next((col for col in config.game_date_header_variations if col in df.columns), None)
         if date_col is None:
             logger.error(f"Dataframe {i} does not have a recognized game date column")
             return None, None
