@@ -1,6 +1,6 @@
 {
-    "newly_scraped_path": "datapath/newly_scraped",
-    "cumulative_scraped_path": "datapath/cumulative_scraped",
+    "newly_scraped_directory": "/data/newly_scraped",
+    "cumulative_scraped_directory": "/data/cumulative_scraped",
     "scraped_boxscore_files": [
       "games_traditional.csv",
       "games_advanced.csv",

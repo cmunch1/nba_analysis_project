@@ -3,9 +3,12 @@ from typing import List, Optional, Tuple
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
 
-from .config import config
+
 from .page_scraper import PageScraper
-from ..data_access.data_access import save_scraped_data
+from ..config.config import config
+from ..data_access.data_access import DataAccess
+
+data_access = DataAccess()
 
 
 class BoxscoreScraper:
@@ -45,7 +48,7 @@ class BoxscoreScraper:
         for stat_type in config.stat_types:
             new_games = self.scrape_stat_type(seasons, first_start_date, stat_type)
             file_name = f"games_{stat_type}.csv"
-            save_scraped_data(new_games, file_name)
+            data_access.save_scraped_data(new_games, file_name)
 
     def scrape_stat_type(self, seasons: List[str], first_start_date: str, stat_type: str) -> pd.DataFrame:
         """

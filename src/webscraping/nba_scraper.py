@@ -1,6 +1,6 @@
 from .boxscore_scraper import BoxscoreScraper
 from .schedule_scraper import ScheduleScraper
-from selenium import webdriver
+
 
 class NbaScraper:
     """

@@ -3,9 +3,12 @@ from typing import List, Optional
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
 
-from .config import config
+
 from .page_scraper import PageScraper
-from ..data_access.data_access import save_scraped_data
+from ..config.config import Config
+from ..data_access.data_access import DataAccess
+
+data_access = DataAccess()
 
 class ScheduleScraper:
     """
@@ -29,7 +32,7 @@ class ScheduleScraper:
         self.driver = driver
         self.page_scraper = PageScraper(driver)
         
-        logging.basicConfig(level=getattr(logging, config.log_level),
+        logging.basicConfig(level=getattr(logging, Config.log_level),
             format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -41,7 +44,7 @@ class ScheduleScraper:
         Args:
             search_day: The day to search for matchups.
         """
-        self.page_scraper.go_to_url(config.nba_schedule_url)
+        self.page_scraper.go_to_url(Config.nba_schedule_url)
 
         days_games = self._find_games_for_day(search_day)
         
@@ -64,8 +67,8 @@ class ScheduleScraper:
         Returns:
             A WebElement containing the games for the day, or None if not found.
         """
-        game_days = self.page_scraper.get_elements_by_class(config.day_class_name)
-        games_containers = self.page_scraper.get_elements_by_class(config.games_per_day_class_name)
+        game_days = self.page_scraper.get_elements_by_class(Config.day_class_name)
+        games_containers = self.page_scraper.get_elements_by_class(Config.games_per_day_class_name)
         
         for day, days_games in zip(game_days, games_containers):
             if search_day == day.text[:3]:
@@ -82,7 +85,7 @@ class ScheduleScraper:
         Returns:
             A list of lists containing visitor and home team IDs.
         """
-        links = self.page_scraper.get_elements_by_class(config.teams_links_class_name, todays_games)
+        links = self.page_scraper.get_elements_by_class(Config.teams_links_class_name, todays_games)
         teams_list = [i.get_attribute("href") for i in links]
 
         matchups = []
@@ -102,7 +105,7 @@ class ScheduleScraper:
         Returns:
             A list of game IDs.
         """
-        links = self.page_scraper.get_elements_by_class(config.game_links_class_name, todays_games)
+        links = self.page_scraper.get_elements_by_class(Config.game_links_class_name, todays_games)
         links = [i for i in links if "PREVIEW" in i.text]
         game_id_list = [i.get_attribute("href") for i in links]
         
@@ -123,11 +126,11 @@ class ScheduleScraper:
         """
         try:
             matchups_df = pd.DataFrame(matchups)
-            save_scraped_data(matchups_df, "matchups")
+            data_access.save_scraped_data(matchups_df, "matchups")
             self.logger.info("Successfully saved matchups data")
 
             games_df = pd.DataFrame(games)
-            save_scraped_data(games_df, "games_ids")
+            data_access.save_scraped_data(games_df, "games_ids")
             self.logger.info("Successfully saved game IDs data")
         except Exception as e:
             self.logger.error(f"Error saving matchups and games data: {str(e)}")
