@@ -112,7 +112,7 @@ def validate_data() -> None:
     """
     Validate the boxscores dataframe.
     """
-    scraped_data = DataAccess.load_scraped_data(cumulative=False)
+    scraped_data = data_access.load_scraped_data(cumulative=False)
     response = validate_scraped_dataframes(scraped_data)
 
     if response == "Pass":

@@ -5,7 +5,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 
 from .page_scraper import PageScraper
-from ..config.config import Config
+from ..config.config import config
 from ..data_access.data_access import DataAccess
 
 data_access = DataAccess()
@@ -32,7 +32,7 @@ class ScheduleScraper:
         self.driver = driver
         self.page_scraper = PageScraper(driver)
         
-        logging.basicConfig(level=getattr(logging, Config.log_level),
+        logging.basicConfig(level=getattr(logging, config.log_level),
             format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -44,7 +44,7 @@ class ScheduleScraper:
         Args:
             search_day: The day to search for matchups.
         """
-        self.page_scraper.go_to_url(Config.nba_schedule_url)
+        self.page_scraper.go_to_url(config.nba_schedule_url)
 
         days_games = self._find_games_for_day(search_day)
         
@@ -67,8 +67,11 @@ class ScheduleScraper:
         Returns:
             A WebElement containing the games for the day, or None if not found.
         """
-        game_days = self.page_scraper.get_elements_by_class(Config.day_class_name)
-        games_containers = self.page_scraper.get_elements_by_class(Config.games_per_day_class_name)
+        game_days = self.page_scraper.get_elements_by_class(config.day_class_name)
+        games_containers = self.page_scraper.get_elements_by_class(config.games_per_day_class_name)
+
+        if not game_days or not games_containers:
+            return None
         
         for day, days_games in zip(game_days, games_containers):
             if search_day == day.text[:3]:

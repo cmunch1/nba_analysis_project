@@ -1,6 +1,8 @@
 from .boxscore_scraper import BoxscoreScraper
 from .schedule_scraper import ScheduleScraper
 
+from .utils import activate_web_driver
+
 
 class NbaScraper:
     """
@@ -9,21 +11,17 @@ class NbaScraper:
     This class acts as a facade, delegating scraping tasks to specialized scraper classes.
 
     Attributes:
-        driver: A Selenium WebDriver instance.
         boxscore_scraper: An instance of BoxscoreScraper.
         schedule_scraper: An instance of ScheduleScraper.
     """
 
-    def __init__(self, driver):
+    def __init__(self):
         """
-        Initialize the NbaScraper with a WebDriver and create instances of specialized scrapers.
+        Initialize the NbaScraper with WebDriver instances for boxscore and schedule scraping.
+        """
+        self.boxscore_scraper = None
+        self.schedule_scraper = None
 
-        Args:
-            driver: A Selenium WebDriver instance.
-        """
-        self.driver = driver
-        self.boxscore_scraper = BoxscoreScraper(driver)
-        self.schedule_scraper = ScheduleScraper(driver)
 
     def __enter__(self):
         """
@@ -32,6 +30,9 @@ class NbaScraper:
         Returns:
             The NbaScraper instance.
         """
+        self.driver = activate_web_driver("Chrome")
+        self.boxscore_scraper = BoxscoreScraper(self.driver)
+        self.schedule_scraper = ScheduleScraper(self.driver)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
