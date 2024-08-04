@@ -4,6 +4,7 @@ from .schedule_scraper import ScheduleScraper
 from .utils import activate_web_driver
 
 
+
 class NbaScraper:
     """
     A class that combines boxscore and schedule scraping functionality for NBA data.

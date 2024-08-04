@@ -31,10 +31,7 @@ class ScheduleScraper:
         """
         self.driver = driver
         self.page_scraper = PageScraper(driver)
-        
-        logging.basicConfig(level=getattr(logging, config.log_level),
-            format='%(asctime)s - %(levelname)s - %(message)s')
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(__name__)
 
 
     def scrape_and_save_matchups_for_day(self, search_day: str) -> None:

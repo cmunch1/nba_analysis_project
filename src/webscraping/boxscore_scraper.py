@@ -20,7 +20,6 @@ class BoxscoreScraper:
     Attributes:
         driver: A Selenium WebDriver instance.
         page_scraper: An instance of PageScraper.
-        logger: A logging instance for this class.
     """
 
     def __init__(self, driver):
@@ -32,10 +31,7 @@ class BoxscoreScraper:
         """
         self.driver = driver
         self.page_scraper = PageScraper(driver)
-
-        logging.basicConfig(level=getattr(logging, config.log_level),
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(__name__)
 
     def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
         """

@@ -13,17 +13,13 @@ import time
 
 from ..config.config import config
 
+
+
 class PageScraper:
     def __init__(self, driver: webdriver.Chrome):
         self.driver = driver
         self.wait = WebDriverWait(self.driver, config.wait_time)
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(getattr(logging, config.log_level))
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
+        self.logger = logging.getLogger(__name__)
         self.logger.info("PageScraper initialized")
 
     def go_to_url(self, url: str) -> bool:

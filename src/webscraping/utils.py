@@ -14,8 +14,6 @@ from ..data_access.data_access import DataAccess
 
 data_access = DataAccess()
 
-logging.basicConfig(level=getattr(logging, config.log_level),
-            format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def activate_web_driver(browser: str) -> webdriver.Chrome:
@@ -108,11 +106,11 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame]) -> Tuple[Optional[s
 
     return start_date, seasons
 
-def validate_data() -> None:
+def validate_data(cumulative: bool = False) -> None:
     """
     Validate the boxscores dataframe.
     """
-    scraped_data = data_access.load_scraped_data(cumulative=False)
+    scraped_data = data_access.load_scraped_data(cumulative)
     response = validate_scraped_dataframes(scraped_data)
 
     if response == "Pass":
@@ -153,3 +151,33 @@ def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
                 return f"Dataframe {i} does not match the game ids of the first dataframe"
     
     return "Pass"
+
+def concatenate_scraped_data():
+    newly_scraped = data_access.load_scraped_data(cumulative=False)
+    cumulative_scraped = data_access.load_scraped_data(cumulative=True)
+
+    if not newly_scraped or not cumulative_scraped:
+        logger.error("Either newly scraped or cumulative data is missing")
+        return
+
+    # Check for empty dataframes in newly_scraped
+    empty_dfs = [i for i, df in enumerate(newly_scraped) if df.empty]
+    if empty_dfs:
+        logger.warning(f"Empty dataframes found in newly scraped data at indices: {empty_dfs}")
+
+    for i, (new_df, cum_df, file_name) in enumerate(zip(newly_scraped, cumulative_scraped, config.scraped_boxscore_files)):
+        if new_df.empty:
+            logger.warning(f"Skipping empty dataframe for {file_name}")
+            continue
+
+        combined_df = pd.concat([cum_df, new_df], ignore_index=True)
+        combined_df = combined_df.sort_values(by=['GAME_ID', 'TEAM_ID'])
+        combined_df = combined_df.drop_duplicates(subset=['GAME_ID', 'TEAM_ID'], keep='last')
+        
+        data_access.save_scraped_data(combined_df, file_name, cumulative=True)
+        logger.info(f"Successfully concatenated and saved {file_name}")
+
+    logger.info("Completed concatenation of all scraped data files")
+
+
+
