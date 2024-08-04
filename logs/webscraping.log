@@ -1,0 +1,82 @@
+2024-08-04 11:45:23,911 - DataAccess - INFO - Loaded 5 dataframes from data\cumulative_scraped
+2024-08-04 11:45:24,013 - src.webscraping.utils - INFO - Last date in dataset: 2024-06-17 00:00:00
+2024-08-04 11:45:24,013 - src.webscraping.utils - INFO - Last season in dataset: 2023
+2024-08-04 11:45:24,013 - src.webscraping.utils - INFO - Current season: 2023
+2024-08-04 11:45:24,014 - src.webscraping.utils - INFO - Seasons to scrape: ['2023-24']
+2024-08-04 11:45:24,014 - src.webscraping.utils - INFO - Start date: 06/18/2024
+2024-08-04 11:45:24,014 - src.webscraping.utils - INFO - Start date: 06/18/2024, Seasons: ['2023-24']
+2024-08-04 11:45:24,017 - WDM - INFO - ====== WebDriver manager ======
+2024-08-04 11:45:24,462 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-04 11:45:24,588 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-04 11:45:24,665 - WDM - INFO - Driver [C:\Users\Chris\.wdm\drivers\chromedriver\win64\127.0.6533.88\chromedriver-win32/chromedriver.exe] found in cache
+2024-08-04 11:45:25,515 - src.webscraping.utils - INFO - Web driver activated successfully
+2024-08-04 11:45:25,515 - src.webscraping.page_scraper - INFO - PageScraper initialized
+2024-08-04 11:45:25,516 - src.webscraping.page_scraper - INFO - PageScraper initialized
+2024-08-04 11:45:25,516 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for traditional stats
+2024-08-04 11:45:25,517 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:25,517 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:25,517 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:29,032 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-04 11:45:29,032 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-04 11:45:32,074 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-04 11:45:32,074 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-04 11:45:35,115 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-04 11:45:35,115 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 1 attempts
+2024-08-04 11:45:35,115 - src.webscraping.page_scraper - WARNING - Page scrape failed: Table not found
+2024-08-04 11:45:35,118 - DataAccess - INFO - Data saved to data\newly_scraped\games_traditional.csv
+2024-08-04 11:45:35,119 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for advanced stats
+2024-08-04 11:45:35,119 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:35,119 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:35,120 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:35,802 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-04 11:45:35,803 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-04 11:45:38,985 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-04 11:45:38,985 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-04 11:45:42,030 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-04 11:45:42,030 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 1 attempts
+2024-08-04 11:45:42,031 - src.webscraping.page_scraper - WARNING - Page scrape failed: Table not found
+2024-08-04 11:45:42,032 - DataAccess - INFO - Data saved to data\newly_scraped\games_advanced.csv
+2024-08-04 11:45:42,033 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for four-factors stats
+2024-08-04 11:45:42,034 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:42,034 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:42,035 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:42,571 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-04 11:45:42,572 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-04 11:45:45,824 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-04 11:45:45,826 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-04 11:45:48,922 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-04 11:45:48,925 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 1 attempts
+2024-08-04 11:45:48,927 - src.webscraping.page_scraper - WARNING - Page scrape failed: Table not found
+2024-08-04 11:45:48,932 - DataAccess - INFO - Data saved to data\newly_scraped\games_four-factors.csv
+2024-08-04 11:45:48,933 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for misc stats
+2024-08-04 11:45:48,934 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:48,935 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:48,935 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:49,581 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-04 11:45:49,581 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-04 11:45:52,724 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-04 11:45:52,724 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-04 11:45:55,803 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-04 11:45:55,805 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 1 attempts
+2024-08-04 11:45:55,807 - src.webscraping.page_scraper - WARNING - Page scrape failed: Table not found
+2024-08-04 11:45:55,813 - DataAccess - INFO - Data saved to data\newly_scraped\games_misc.csv
+2024-08-04 11:45:55,814 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for scoring stats
+2024-08-04 11:45:55,815 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:55,815 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:55,816 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-04 11:45:56,428 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-04 11:45:56,429 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-04 11:45:59,678 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-04 11:45:59,680 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-04 11:46:02,758 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-04 11:46:02,760 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 1 attempts
+2024-08-04 11:46:02,762 - src.webscraping.page_scraper - WARNING - Page scrape failed: Table not found
+2024-08-04 11:46:02,765 - DataAccess - INFO - Data saved to data\newly_scraped\games_scoring.csv
+2024-08-04 11:46:02,767 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/schedule
+2024-08-04 11:46:03,095 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdDay__3s2Xt
+2024-08-04 11:46:06,205 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-04 11:46:06,208 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdDay__3s2Xt after 1 attempts
+2024-08-04 11:46:06,210 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdGames__NGdO5
+2024-08-04 11:46:09,314 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-04 11:46:09,318 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdGames__NGdO5 after 1 attempts
+2024-08-04 11:46:09,321 - src.webscraping.schedule_scraper - WARNING - No games found for this day

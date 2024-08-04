@@ -5,8 +5,11 @@ from .nba_scraper import NbaScraper
 from .utils import (
     get_start_date_and_seasons, 
     validate_data,
+    concatenate_scraped_data,
 )
 
+from ..logging.logging_setup import setup_logging
+setup_logging("webscraping.log")
 
 def main():
     """
@@ -34,7 +37,14 @@ def main():
         scraper.scrape_and_save_matchups_for_day(search_day)
 
     
-    validate_data()
+    validate_data(cumulative=False)
+
+    # combine newly scraped data with cumulative scraped data
+    concatenate_scraped_data()
+
+    validate_data(cumulative=True)
+
+
 
 if __name__ == "__main__":
     main()
