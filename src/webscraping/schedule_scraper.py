@@ -1,8 +1,26 @@
+"""
+schedule_scraper.py
+
+This module contains the ScheduleScraper class, which is responsible for scraping NBA schedule data.
+It provides functionality to extract matchups and game IDs for specific days from the NBA website.
+
+Key features:
+- Scrapes matchups and game IDs for a given day
+- Saves scraped data to CSV files
+- Implements error handling and logging
+- Uses Selenium WebDriver for web scraping
+
+Dependencies:
+- selenium
+- pandas
+- logging
+"""
+
 import logging
 from typing import List, Optional
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
-
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 from .page_scraper import PageScraper
 from ..config.config import config
@@ -33,42 +51,56 @@ class ScheduleScraper:
         self.page_scraper = PageScraper(driver)
         self.logger = logging.getLogger(__name__)
 
-
     def scrape_and_save_matchups_for_day(self, search_day: str) -> None:
         """
         Scrape and save matchups for a specific day.
 
         Args:
-            search_day: The day to search for matchups.
+            search_day (str): The day to search for matchups (e.g., 'MON', 'TUE').
+
+        Raises:
+            TimeoutException: If the page load times out.
+            NoSuchElementException: If required elements are not found on the page.
         """
-        self.page_scraper.go_to_url(config.nba_schedule_url)
+        try:
+            self.page_scraper.go_to_url(config.nba_schedule_url)
 
-        days_games = self._find_games_for_day(search_day)
-        
-        if days_games is None:
-            self.logger.warning("No games found for this day")
-            return
+            days_games = self._find_games_for_day(search_day)
+            
+            if days_games is None:
+                self.logger.warning(f"No games found for {search_day}")
+                return
 
-        matchups = self._extract_team_ids_schedule(days_games)
-        games = self._extract_game_ids_schedule(days_games)
+            matchups = self._extract_team_ids_schedule(days_games)
+            games = self._extract_game_ids_schedule(days_games)
 
-        self._save_matchups_and_games(matchups, games)
+            self._save_matchups_and_games(matchups, games)
+
+        except TimeoutException:
+            self.logger.error(f"Timeout while loading the NBA schedule page for {search_day}")
+        except NoSuchElementException as e:
+            self.logger.error(f"Required element not found on the page: {str(e)}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error occurred: {str(e)}")
 
     def _find_games_for_day(self, search_day: str) -> Optional[WebElement]:
         """
         Find games for a specific day on the schedule page.
 
         Args:
-            search_day: The day to search for games.
+            search_day (str): The day to search for games.
 
         Returns:
-            A WebElement containing the games for the day, or None if not found.
+            Optional[WebElement]: A WebElement containing the games for the day, or None if not found.
+
+        Raises:
+            NoSuchElementException: If the required elements are not found on the page.
         """
         game_days = self.page_scraper.get_elements_by_class(config.day_class_name)
         games_containers = self.page_scraper.get_elements_by_class(config.games_per_day_class_name)
 
         if not game_days or not games_containers:
-            return None
+            raise NoSuchElementException("Game days or games containers not found on the page")
         
         for day, days_games in zip(game_days, games_containers):
             if search_day == day.text[:3]:
@@ -80,12 +112,19 @@ class ScheduleScraper:
         Extract team IDs from the schedule page.
 
         Args:
-            todays_games: A WebElement containing the games for the day.
+            todays_games (WebElement): A WebElement containing the games for the day.
 
         Returns:
-            A list of lists containing visitor and home team IDs.
+            List[List[str]]: A list of lists containing visitor and home team IDs.
+
+        Raises:
+            NoSuchElementException: If the team links are not found on the page.
         """
-        links = self.page_scraper.get_elements_by_class(Config.teams_links_class_name, todays_games)
+        links = self.page_scraper.get_elements_by_class(config.teams_links_class_name, todays_games)
+        
+        if not links:
+            raise NoSuchElementException("Team links not found on the page")
+
         teams_list = [i.get_attribute("href") for i in links]
 
         matchups = []
@@ -100,12 +139,19 @@ class ScheduleScraper:
         Extract game IDs from the schedule page.
 
         Args:
-            todays_games: A WebElement containing the games for the day.
+            todays_games (WebElement): A WebElement containing the games for the day.
 
         Returns:
-            A list of game IDs.
+            List[str]: A list of game IDs.
+
+        Raises:
+            NoSuchElementException: If the game links are not found on the page.
         """
-        links = self.page_scraper.get_elements_by_class(Config.game_links_class_name, todays_games)
+        links = self.page_scraper.get_elements_by_class(config.game_links_class_name, todays_games)
+        
+        if not links:
+            raise NoSuchElementException("Game links not found on the page")
+
         links = [i for i in links if "PREVIEW" in i.text]
         game_id_list = [i.get_attribute("href") for i in links]
         
@@ -121,16 +167,20 @@ class ScheduleScraper:
         Save matchups and game IDs to CSV files.
 
         Args:
-            matchups: A list of lists containing visitor and home team IDs.
-            games: A list of game IDs.
+            matchups (List[List[str]]): A list of lists containing visitor and home team IDs.
+            games (List[str]): A list of game IDs.
+
+        Raises:
+            Exception: If there's an error while saving the data.
         """
         try:
-            matchups_df = pd.DataFrame(matchups)
+            matchups_df = pd.DataFrame(matchups, columns=['visitor_id', 'home_id'])
             data_access.save_scraped_data(matchups_df, "matchups")
             self.logger.info("Successfully saved matchups data")
 
-            games_df = pd.DataFrame(games)
+            games_df = pd.DataFrame(games, columns=['game_id'])
             data_access.save_scraped_data(games_df, "games_ids")
             self.logger.info("Successfully saved game IDs data")
         except Exception as e:
             self.logger.error(f"Error saving matchups and games data: {str(e)}")
+            raise
