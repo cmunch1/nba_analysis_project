@@ -80,3 +80,124 @@
 2024-08-04 11:46:09,314 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
 2024-08-04 11:46:09,318 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdGames__NGdO5 after 1 attempts
 2024-08-04 11:46:09,321 - src.webscraping.schedule_scraper - WARNING - No games found for this day
+2024-08-09 08:14:27,649 - __main__ - INFO - Starting web scraping process
+2024-08-09 08:14:27,938 - DataAccess - INFO - Loaded 5 dataframes from data\cumulative_scraped
+2024-08-09 08:14:28,140 - src.webscraping.utils - INFO - Last date in dataset: 2024-06-17 00:00:00
+2024-08-09 08:14:28,140 - src.webscraping.utils - INFO - Last season in dataset: 2023
+2024-08-09 08:14:28,141 - src.webscraping.utils - INFO - Current season: 2023
+2024-08-09 08:14:28,141 - src.webscraping.utils - INFO - Seasons to scrape: ['2023-24']
+2024-08-09 08:14:28,142 - src.webscraping.utils - INFO - Start date: 06/18/2024
+2024-08-09 08:14:28,142 - src.webscraping.utils - INFO - Start date: 06/18/2024, Seasons: ['2023-24']
+2024-08-09 08:14:28,145 - __main__ - INFO - Scraping data from 06/18/2024 for seasons: ['2023-24']
+2024-08-09 08:14:28,145 - src.webscraping.web_driver_factory - ERROR - Failed to activate Chrome WebDriver: 'list' object has no attribute 'items'
+2024-08-09 08:14:28,146 - __main__ - ERROR - An error occurred during the web scraping process: Failed to initialize NbaScraper: 'list' object has no attribute 'items'
+Traceback (most recent call last):
+  File "E:\OneDrive\nba_analysis_project\src\webscraping\nba_scraper.py", line 64, in __enter__
+    self.driver = self.driver_factory.create_driver("chrome", options=config.webdriver_options)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\OneDrive\nba_analysis_project\src\webscraping\web_driver_factory.py", line 41, in create_driver
+    return self._create_chrome_driver(options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\OneDrive\nba_analysis_project\src\webscraping\web_driver_factory.py", line 48, in _create_chrome_driver
+    driver = ChromeWebDriver(options)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\OneDrive\nba_analysis_project\src\webscraping\web_driver_factory.py", line 21, in __init__
+    for option, value in options.items():
+                         ^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'items'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\OneDrive\nba_analysis_project\src\webscraping\main_webscraper.py", line 53, in main
+    with NbaScraper() as scraper:
+  File "E:\OneDrive\nba_analysis_project\src\webscraping\nba_scraper.py", line 69, in __enter__
+    raise RuntimeError(f"Failed to initialize NbaScraper: {str(e)}")
+RuntimeError: Failed to initialize NbaScraper: 'list' object has no attribute 'items'
+2024-08-09 08:18:25,308 - __main__ - INFO - Starting web scraping process
+2024-08-09 08:18:25,527 - DataAccess - INFO - Loaded 5 dataframes from data\cumulative_scraped
+2024-08-09 08:18:25,675 - src.webscraping.utils - INFO - Last date in dataset: 2024-06-17 00:00:00
+2024-08-09 08:18:25,675 - src.webscraping.utils - INFO - Last season in dataset: 2023
+2024-08-09 08:18:25,676 - src.webscraping.utils - INFO - Current season: 2023
+2024-08-09 08:18:25,676 - src.webscraping.utils - INFO - Seasons to scrape: ['2023-24']
+2024-08-09 08:18:25,677 - src.webscraping.utils - INFO - Start date: 06/18/2024
+2024-08-09 08:18:25,677 - src.webscraping.utils - INFO - Start date: 06/18/2024, Seasons: ['2023-24']
+2024-08-09 08:18:25,680 - __main__ - INFO - Scraping data from 06/18/2024 for seasons: ['2023-24']
+2024-08-09 08:18:25,684 - WDM - INFO - ====== WebDriver manager ======
+2024-08-09 08:18:26,209 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-09 08:18:26,327 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-09 08:18:26,391 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-09 08:18:26,526 - WDM - INFO - WebDriver version 127.0.6533.99 selected
+2024-08-09 08:18:26,528 - WDM - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/127.0.6533.99/win32/chromedriver-win32.zip
+2024-08-09 08:18:26,528 - WDM - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/127.0.6533.99/win32/chromedriver-win32.zip
+2024-08-09 08:18:26,623 - WDM - INFO - Driver downloading response is 200
+2024-08-09 08:18:27,026 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-09 08:18:27,143 - WDM - INFO - Driver has been saved in cache [C:\Users\Chris\.wdm\drivers\chromedriver\win64\127.0.6533.99]
+2024-08-09 08:18:28,116 - src.webscraping.web_driver_factory - INFO - Chrome WebDriver activated successfully
+2024-08-09 08:18:28,117 - src.webscraping.page_scraper - INFO - PageScraper initialized
+2024-08-09 08:18:28,118 - src.webscraping.page_scraper - INFO - PageScraper initialized
+2024-08-09 08:18:28,118 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for traditional stats
+2024-08-09 08:18:28,119 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:28,120 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:28,121 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:32,317 - src.webscraping.page_scraper - ERROR - Error navigating to https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024: 'ChromeWebDriver' object has no attribute 'execute_script'
+2024-08-09 08:18:32,318 - src.webscraping.page_scraper - WARNING - Page scrape failed: Could not navigate to URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:32,319 - src.webscraping.boxscore_scraper - WARNING - No data found for 2023-24 Playoffs traditional
+2024-08-09 08:18:32,326 - DataAccess - INFO - Data saved to data\newly_scraped\games_traditional.csv
+2024-08-09 08:18:32,326 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved traditional stats for 1 seasons
+2024-08-09 08:18:32,326 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for advanced stats
+2024-08-09 08:18:32,327 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:32,328 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:32,328 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,304 - src.webscraping.page_scraper - ERROR - Error navigating to https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024: 'ChromeWebDriver' object has no attribute 'execute_script'
+2024-08-09 08:18:36,305 - src.webscraping.page_scraper - WARNING - Page scrape failed: Could not navigate to URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,305 - src.webscraping.boxscore_scraper - WARNING - No data found for 2023-24 Playoffs advanced
+2024-08-09 08:18:36,311 - DataAccess - INFO - Data saved to data\newly_scraped\games_advanced.csv
+2024-08-09 08:18:36,312 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved advanced stats for 1 seasons
+2024-08-09 08:18:36,312 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for four-factors stats
+2024-08-09 08:18:36,313 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,314 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,314 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,725 - src.webscraping.page_scraper - ERROR - Error navigating to https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024: 'ChromeWebDriver' object has no attribute 'execute_script'
+2024-08-09 08:18:36,726 - src.webscraping.page_scraper - WARNING - Page scrape failed: Could not navigate to URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,726 - src.webscraping.boxscore_scraper - WARNING - No data found for 2023-24 Playoffs four-factors
+2024-08-09 08:18:36,728 - DataAccess - INFO - Data saved to data\newly_scraped\games_four-factors.csv
+2024-08-09 08:18:36,728 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved four-factors stats for 1 seasons
+2024-08-09 08:18:36,729 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for misc stats
+2024-08-09 08:18:36,729 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,730 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:36,730 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:37,104 - src.webscraping.page_scraper - ERROR - Error navigating to https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024: 'ChromeWebDriver' object has no attribute 'execute_script'
+2024-08-09 08:18:37,105 - src.webscraping.page_scraper - WARNING - Page scrape failed: Could not navigate to URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:37,105 - src.webscraping.boxscore_scraper - WARNING - No data found for 2023-24 Playoffs misc
+2024-08-09 08:18:37,107 - DataAccess - INFO - Data saved to data\newly_scraped\games_misc.csv
+2024-08-09 08:18:37,107 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved misc stats for 1 seasons
+2024-08-09 08:18:37,108 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 06/18/2024 to 8/01/2024 for scoring stats
+2024-08-09 08:18:37,108 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:37,109 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:37,109 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:37,576 - src.webscraping.page_scraper - ERROR - Error navigating to https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024: 'ChromeWebDriver' object has no attribute 'execute_script'
+2024-08-09 08:18:37,577 - src.webscraping.page_scraper - WARNING - Page scrape failed: Could not navigate to URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=06/18/2024&DateTo=8/01/2024
+2024-08-09 08:18:37,577 - src.webscraping.boxscore_scraper - WARNING - No data found for 2023-24 Playoffs scoring
+2024-08-09 08:18:37,578 - DataAccess - INFO - Data saved to data\newly_scraped\games_scoring.csv
+2024-08-09 08:18:37,579 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved scoring stats for 1 seasons
+2024-08-09 08:18:37,579 - __main__ - INFO - Finished scraping box scores
+2024-08-09 08:18:37,579 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/schedule
+2024-08-09 08:18:37,931 - src.webscraping.page_scraper - ERROR - Error navigating to https://www.nba.com/schedule: 'ChromeWebDriver' object has no attribute 'execute_script'
+2024-08-09 08:18:37,932 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdDay__3s2Xt
+2024-08-09 08:18:37,932 - src.webscraping.page_scraper - ERROR - Unexpected error occurred: 'ChromeWebDriver' object has no attribute 'find_elements'. Attempt 1 of 1
+2024-08-09 08:18:37,932 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdDay__3s2Xt after 1 attempts
+2024-08-09 08:18:37,932 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdGames__NGdO5
+2024-08-09 08:18:37,932 - src.webscraping.page_scraper - ERROR - Unexpected error occurred: 'ChromeWebDriver' object has no attribute 'find_elements'. Attempt 1 of 1
+2024-08-09 08:18:37,933 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdGames__NGdO5 after 1 attempts
+2024-08-09 08:18:37,933 - src.webscraping.schedule_scraper - ERROR - Required element not found on the page: Message: Game days or games containers not found on the page; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+
+2024-08-09 08:18:37,934 - __main__ - INFO - Finished scraping matchups for Fri
+2024-08-09 08:18:40,051 - src.webscraping.utils - ERROR - Error in validate_data: No columns to parse from file
+2024-08-09 08:18:40,052 - __main__ - INFO - Validated newly scraped data
+2024-08-09 08:18:40,052 - src.webscraping.utils - ERROR - Error in concatenate_scraped_data: No columns to parse from file
+2024-08-09 08:18:40,053 - __main__ - INFO - Concatenated new data with existing data
+2024-08-09 08:18:40,280 - DataAccess - INFO - Loaded 5 dataframes from data\cumulative_scraped
+2024-08-09 08:18:40,380 - src.webscraping.utils - INFO - All scraped dataframes are consistent
+2024-08-09 08:18:40,383 - __main__ - INFO - Validated cumulative data
+2024-08-09 08:18:40,383 - __main__ - INFO - Web scraping process completed successfully

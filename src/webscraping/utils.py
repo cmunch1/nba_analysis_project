@@ -30,35 +30,7 @@ data_access = DataAccess()
 
 logger = logging.getLogger(__name__)
 
-def activate_web_driver(browser: str) -> Union[webdriver.Chrome, None]:
-    """
-    Activate selenium web driver for use in scraping.
 
-    Args:
-        browser (str): The name of the browser to use (currently only Chrome is supported).
-
-    Returns:
-        Union[webdriver.Chrome, None]: The selected webdriver, or None if activation fails.
-
-    Raises:
-        ValueError: If an unsupported browser is specified.
-    """
-    if browser.lower() != "chrome":
-        logger.error(f"Unsupported browser: {browser}")
-        raise ValueError(f"Unsupported browser: {browser}")
-
-    try:
-        chrome_options = webdriver.ChromeOptions() 
-        
-        for option in config.webdriver_options:
-            chrome_options.add_argument(option)
-
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)    
-        logger.info("Web driver activated successfully")
-        return driver
-    except Exception as e:
-        logger.error(f"Failed to activate web driver: {str(e)}")
-        return None
 
 def get_start_date_and_seasons() -> Tuple[str, List[str]]:
     """
