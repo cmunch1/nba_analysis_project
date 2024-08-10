@@ -35,10 +35,11 @@ logger = logging.getLogger(__name__)
 def get_start_date_and_seasons() -> Tuple[str, List[str]]:
     """
     Determine the start date and seasons for scraping.
+    Example format: "10/1/2021", ["2023-24", "2022-23", "2021-22"]
 
     Returns:
         Tuple[str, List[str]]: A tuple containing the start date (str) and a list of seasons (List[str]).
-
+    
     Raises:
         ValueError: If there are inconsistent dates in scraped data.
     """

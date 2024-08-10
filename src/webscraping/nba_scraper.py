@@ -15,13 +15,12 @@ Dependencies:
     - BoxscoreScraper and ScheduleScraper from local modules
 """
 
-
 from typing import List, Optional
-from datetime import date
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from .boxscore_scraper import BoxscoreScraper
 from .schedule_scraper import ScheduleScraper
+from .abstract_scraper_classes import AbstractBoxscoreScraper, AbstractScheduleScraper
 from .web_driver_factory import WebDriverFactory
 from ..config.config import config
 
@@ -33,8 +32,8 @@ class NbaScraper:
     the WebDriver lifecycle using WebDriverFactory.
 
     Attributes:
-        boxscore_scraper (Optional[BoxscoreScraper]): An instance of BoxscoreScraper.
-        schedule_scraper (Optional[ScheduleScraper]): An instance of ScheduleScraper.
+        boxscore_scraper (Optional[AbstractBoxscoreScraper]): An instance of BoxscoreScraper.
+        schedule_scraper (Optional[AbstractScheduleScraper]): An instance of ScheduleScraper.
         driver (Optional[WebDriver]): The Selenium WebDriver instance.
         driver_factory (WebDriverFactory): An instance of WebDriverFactory.
     """
@@ -43,8 +42,8 @@ class NbaScraper:
         """
         Initialize the NbaScraper with a WebDriverFactory instance.
         """
-        self.boxscore_scraper: Optional[BoxscoreScraper] = None
-        self.schedule_scraper: Optional[ScheduleScraper] = None
+        self.boxscore_scraper: Optional[AbstractBoxscoreScraper] = None
+        self.schedule_scraper: Optional[AbstractScheduleScraper] = None
         self.driver: Optional[WebDriver] = None
         self.driver_factory: WebDriverFactory = WebDriverFactory()
 
@@ -91,13 +90,13 @@ class NbaScraper:
             return False  # Propagate the exception
         return True
 
-    def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: date) -> None:
+    def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
         """
         Scrape and save all boxscores for the given seasons.
 
         Args:
             seasons (List[str]): A list of seasons to scrape (e.g., ["2021-22", "2022-23"]).
-            first_start_date (date): The start date for the first season.
+            first_start_date (str): The start date for the first season.
 
         Raises:
             ValueError: If the boxscore_scraper is not initialized.
@@ -111,12 +110,12 @@ class NbaScraper:
         except Exception as e:
             raise RuntimeError(f"Failed to scrape and save boxscores: {str(e)}")
 
-    def scrape_and_save_matchups_for_day(self, search_day: date) -> None:
+    def scrape_and_save_matchups_for_day(self, search_day: str) -> None:
         """
         Scrape and save matchups for a specific day.
 
         Args:
-            search_day (date): The day to search for matchups.
+            search_day (str): The day to search for matchups.
 
         Raises:
             ValueError: If the schedule_scraper is not initialized.

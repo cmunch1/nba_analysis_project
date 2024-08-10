@@ -1,10 +1,8 @@
-"""page_scraper.py
+"""
+page_scraper.py
 
 This module provides a PageScraper class for web scraping operations using Selenium.
-
-The PageScraper class offers methods to navigate web pages, handle pagination,
-retrieve elements, and scrape table data. It includes robust error handling,
-logging, and retry mechanisms to ensure reliable scraping operations.
+It implements the AbstractPageScraper interface.
 """
 
 import logging
@@ -13,33 +11,28 @@ from typing import Optional, List, Tuple
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait, Select
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from .abstract_scraper_classes import AbstractPageScraper
 from ..config.config import config
 
-class PageScraper:
+class PageScraper(AbstractPageScraper):
     """
     A class for scraping web pages using Selenium.
-
     This class provides methods for navigating to URLs, handling pagination,
     retrieving elements by class name, and scraping table data from web pages.
-
-    Attributes:
-        driver (webdriver.Chrome): The Selenium WebDriver instance.
-        wait (WebDriverWait): A WebDriverWait instance for waiting for elements.
-        logger (logging.Logger): A logger for recording operations and errors.
     """
 
-    def __init__(self, driver: webdriver.Chrome) -> None:
+    def __init__(self, driver: WebDriver) -> None:
         """
         Initialize the PageScraper with a WebDriver instance.
 
         Args:
-            driver (webdriver.Chrome): The Selenium WebDriver instance to use for scraping.
+            driver (WebDriver): The Selenium WebDriver instance to use for scraping.
         """
         self.driver: WebDriver = driver
         self.wait: WebDriverWait = WebDriverWait(self.driver, config.wait_time)
@@ -185,5 +178,3 @@ class PageScraper:
                     raise TimeoutException(f"Element {locator} was not clickable after {config.max_retries} attempts")
                 self.logger.debug(f"Retrying click attempt in {config.retry_delay} seconds")
                 time.sleep(config.retry_delay)
-
-

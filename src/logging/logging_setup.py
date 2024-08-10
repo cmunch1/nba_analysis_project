@@ -15,7 +15,10 @@ def setup_logging(filename=None):
         # Create the directory if it doesn't exist
         os.makedirs(os.path.dirname(full_log_path), exist_ok=True)
         
-        file_handler = logging.FileHandler(full_log_path)
+        # Check if we should only log the current run
+        file_mode = 'w' if config.log_current_run_only else 'a'
+        
+        file_handler = logging.FileHandler(full_log_path, mode=file_mode)
         file_handler.setLevel(getattr(logging, config.log_level))
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         logging.getLogger('').addHandler(file_handler)

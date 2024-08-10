@@ -2,14 +2,7 @@
 boxscore_scraper.py
 
 This module contains the BoxscoreScraper class, which is responsible for scraping NBA boxscore data
-from the official NBA stats website. It provides functionality to scrape data for multiple seasons,
-different stat types, and various sub-season types (regular season, playoffs, play-in).
-
-Key features:
-- Scrapes boxscore data for specified seasons and stat types
-- Handles different sub-season types automatically
-- Converts scraped data to pandas DataFrames for easy manipulation and analysis
-- Uses centralized configuration management and logging
+from the official NBA stats website. It implements the AbstractBoxscoreScraper interface.
 """
 
 import logging
@@ -17,35 +10,36 @@ from typing import List, Optional, Tuple
 from datetime import datetime
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.remote.webdriver import WebDriver
 
+from .abstract_scraper_classes import AbstractBoxscoreScraper, AbstractPageScraper
 from .page_scraper import PageScraper
 from ..config.config import config
 from ..data_access.data_access import DataAccess
 
-# Initialize configuration and data access
 data_access = DataAccess()
 
-class BoxscoreScraper:
+class BoxscoreScraper(AbstractBoxscoreScraper):
     """
     A class for scraping NBA boxscore data.
 
     This class provides methods to scrape boxscores for multiple seasons and stat types.
 
     Attributes:
-        driver: A Selenium WebDriver instance.
-        page_scraper (PageScraper): An instance of PageScraper.
+        driver (WebDriver): A Selenium WebDriver instance.
+        page_scraper (AbstractPageScraper): An instance of PageScraper.
         logger (logging.Logger): Logger for this class.
     """
 
-    def __init__(self, driver):
+    def __init__(self, driver: WebDriver):
         """
         Initialize the BoxscoreScraper with a WebDriver and load configuration.
 
         Args:
-            driver: A Selenium WebDriver instance.
+            driver (WebDriver): A Selenium WebDriver instance.
         """
         self.driver = driver
-        self.page_scraper = PageScraper(driver)
+        self.page_scraper: AbstractPageScraper = PageScraper(driver)
         self.logger = logging.getLogger(__name__)
 
     def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:

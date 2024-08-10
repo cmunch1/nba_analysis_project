@@ -28,6 +28,9 @@ class ChromeWebDriver(WebDriver):
     def quit(self):
         self.driver.quit()
 
+    def execute_script(self, script, *args):
+        return self.driver.execute_script(script, *args)
+
 class WebDriverFactory:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -42,7 +45,11 @@ class WebDriverFactory:
 
     def _create_chrome_driver(self, options: Dict[str, Any] = None) -> WebDriver:
         try:
-            driver = ChromeWebDriver(options)
+            chrome_options = webdriver.ChromeOptions()
+            if options:
+                for option in options:
+                    chrome_options.add_argument(option)
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
             self.logger.info("Chrome WebDriver activated successfully")
             return driver
         except Exception as e:
