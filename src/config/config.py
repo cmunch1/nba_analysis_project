@@ -2,11 +2,11 @@
 Configuration Manager for NBA Analysis Project
 
 This module provides a centralized configuration management system for the NBA analysis project.
-It reads all JSON configuration files in the same directory and combines them into a single
+It reads all YAML configuration files in the same directory and combines them into a single
 Config object. This allows for modular and flexible configuration across different aspects
 of the project (e.g., web scraping, data processing, analysis parameters).
 
-The Config class automatically loads and parses all JSON files, handles any necessary
+The Config class automatically loads and parses all YAML files, handles any necessary
 data transformations (like unicode character decoding), and exposes all configuration
 parameters as attributes for easy access throughout the project.
 
@@ -19,7 +19,7 @@ Usage:
 """
 
 
-import json
+import yaml
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -28,9 +28,9 @@ class Config:
         config_dir = Path(__file__).parent
         
         config_dict = {}
-        for config_file in config_dir.glob('*.json'):
-            with open(config_file) as json_file:
-                config_dict.update(json.load(json_file))
+        for config_file in config_dir.glob('*.yaml'):
+            with open(config_file) as yaml_file:
+                config_dict.update(yaml.safe_load(yaml_file))
 
         # Convert the dictionary to an object with attributes
         config_obj = SimpleNamespace(**config_dict)

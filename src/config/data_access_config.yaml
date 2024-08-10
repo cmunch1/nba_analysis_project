@@ -1,0 +1,15 @@
+# Data access configuration
+newly_scraped_directory: data/newly_scraped/
+cumulative_scraped_directory: data/cumulative_scraped/
+
+# Scraped boxscore files
+scraped_boxscore_files:
+  - games_traditional.csv
+  - games_advanced.csv
+  - games_four-factors.csv
+  - games_misc.csv
+  - games_scoring.csv
+
+# Today's matchups and game IDs files
+todays_matchups_file: todays_matchups.csv
+todays_games_ids_file: todays_games_ids.csv

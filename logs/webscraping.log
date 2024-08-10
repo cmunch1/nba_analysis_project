@@ -1,93 +1,93 @@
-2024-08-10 10:20:55,222 - __main__ - INFO - Starting web scraping process
-2024-08-10 10:20:55,222 - __main__ - INFO - Scraping data from 5/11/2024 for seasons: ['2023-24']
-2024-08-10 10:20:55,223 - WDM - INFO - ====== WebDriver manager ======
-2024-08-10 10:20:55,709 - WDM - INFO - Get LATEST chromedriver version for google-chrome
-2024-08-10 10:20:55,767 - WDM - INFO - Get LATEST chromedriver version for google-chrome
-2024-08-10 10:20:55,824 - WDM - INFO - Driver [C:\Users\Chris\.wdm\drivers\chromedriver\win64\127.0.6533.99\chromedriver-win32/chromedriver.exe] found in cache
-2024-08-10 10:20:56,665 - src.webscraping.web_driver_factory - INFO - Chrome WebDriver activated successfully
-2024-08-10 10:20:56,665 - src.webscraping.page_scraper - INFO - PageScraper initialized
-2024-08-10 10:20:56,665 - src.webscraping.page_scraper - INFO - PageScraper initialized
-2024-08-10 10:20:56,666 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for traditional stats
-2024-08-10 10:20:56,667 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:20:56,667 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:20:56,667 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:00,220 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
-2024-08-10 10:21:00,220 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
-2024-08-10 10:21:03,315 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
-2024-08-10 10:21:06,353 - src.webscraping.page_scraper - WARNING - No pagination found on the page
-2024-08-10 10:21:06,353 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
-2024-08-10 10:21:06,363 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
-2024-08-10 10:21:06,416 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
-2024-08-10 10:21:07,042 - DataAccess - INFO - Data saved to data\newly_scraped\games_traditional.csv
-2024-08-10 10:21:07,042 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved traditional stats for 1 seasons
-2024-08-10 10:21:07,043 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for advanced stats
-2024-08-10 10:21:07,043 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:07,043 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:07,044 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:07,856 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
-2024-08-10 10:21:07,856 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
-2024-08-10 10:21:11,158 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
-2024-08-10 10:21:14,301 - src.webscraping.page_scraper - WARNING - No pagination found on the page
-2024-08-10 10:21:14,301 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
-2024-08-10 10:21:14,306 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
-2024-08-10 10:21:14,322 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
-2024-08-10 10:21:14,960 - DataAccess - INFO - Data saved to data\newly_scraped\games_advanced.csv
-2024-08-10 10:21:14,960 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved advanced stats for 1 seasons
-2024-08-10 10:21:14,961 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for four-factors stats
-2024-08-10 10:21:14,961 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:14,961 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:14,962 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:16,100 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
-2024-08-10 10:21:16,101 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
-2024-08-10 10:21:19,546 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
-2024-08-10 10:21:22,612 - src.webscraping.page_scraper - WARNING - No pagination found on the page
-2024-08-10 10:21:22,612 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
-2024-08-10 10:21:22,618 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
-2024-08-10 10:21:22,634 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
-2024-08-10 10:21:23,196 - DataAccess - INFO - Data saved to data\newly_scraped\games_four-factors.csv
-2024-08-10 10:21:23,196 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved four-factors stats for 1 seasons
-2024-08-10 10:21:23,197 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for misc stats
-2024-08-10 10:21:23,197 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:23,197 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:23,198 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:23,843 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
-2024-08-10 10:21:23,843 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
-2024-08-10 10:21:27,471 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
-2024-08-10 10:21:30,511 - src.webscraping.page_scraper - WARNING - No pagination found on the page
-2024-08-10 10:21:30,511 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
-2024-08-10 10:21:30,519 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
-2024-08-10 10:21:30,550 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
-2024-08-10 10:21:31,109 - DataAccess - INFO - Data saved to data\newly_scraped\games_misc.csv
-2024-08-10 10:21:31,110 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved misc stats for 1 seasons
-2024-08-10 10:21:31,110 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for scoring stats
-2024-08-10 10:21:31,110 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:31,110 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:31,111 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
-2024-08-10 10:21:32,199 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
-2024-08-10 10:21:32,200 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
-2024-08-10 10:21:35,545 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
-2024-08-10 10:21:38,606 - src.webscraping.page_scraper - WARNING - No pagination found on the page
-2024-08-10 10:21:38,608 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
-2024-08-10 10:21:38,624 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
-2024-08-10 10:21:38,649 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
-2024-08-10 10:21:39,174 - DataAccess - INFO - Data saved to data\newly_scraped\games_scoring.csv
-2024-08-10 10:21:39,174 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved scoring stats for 1 seasons
-2024-08-10 10:21:39,174 - __main__ - INFO - Finished scraping box scores
-2024-08-10 10:21:39,175 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/schedule
-2024-08-10 10:21:39,805 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdDay__3s2Xt
-2024-08-10 10:21:42,917 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
-2024-08-10 10:21:42,921 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdDay__3s2Xt after 1 attempts
-2024-08-10 10:21:42,924 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdGames__NGdO5
-2024-08-10 10:21:46,014 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
-2024-08-10 10:21:46,017 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdGames__NGdO5 after 1 attempts
-2024-08-10 10:21:46,020 - src.webscraping.schedule_scraper - ERROR - Required element not found on the page: Message: Game days or games containers not found on the page; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+2024-08-10 16:34:51,564 - __main__ - INFO - Starting web scraping process
+2024-08-10 16:34:51,565 - __main__ - INFO - Scraping data from 5/11/2024 for seasons: ['2023-24']
+2024-08-10 16:34:51,565 - WDM - INFO - ====== WebDriver manager ======
+2024-08-10 16:34:52,067 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-10 16:34:52,181 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2024-08-10 16:34:52,240 - WDM - INFO - Driver [C:\Users\Chris\.wdm\drivers\chromedriver\win64\127.0.6533.99\chromedriver-win32/chromedriver.exe] found in cache
+2024-08-10 16:34:53,162 - src.webscraping.web_driver_factory - INFO - Chrome WebDriver activated successfully
+2024-08-10 16:34:53,163 - src.webscraping.page_scraper - INFO - PageScraper initialized
+2024-08-10 16:34:53,163 - src.webscraping.page_scraper - INFO - PageScraper initialized
+2024-08-10 16:34:53,166 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for traditional stats
+2024-08-10 16:34:53,166 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:34:53,167 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:34:53,167 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:34:57,499 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-10 16:34:57,500 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-10 16:35:00,598 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
+2024-08-10 16:35:03,669 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-10 16:35:03,669 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-10 16:35:03,679 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
+2024-08-10 16:35:03,759 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
+2024-08-10 16:35:04,335 - DataAccess - INFO - Data saved to data\newly_scraped\games_traditional.csv
+2024-08-10 16:35:04,335 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved traditional stats for 1 seasons
+2024-08-10 16:35:04,335 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for advanced stats
+2024-08-10 16:35:04,336 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:04,336 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:04,337 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:05,134 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-10 16:35:05,135 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-10 16:35:09,012 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
+2024-08-10 16:35:12,073 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-10 16:35:12,075 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-10 16:35:12,090 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
+2024-08-10 16:35:12,118 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
+2024-08-10 16:35:12,699 - DataAccess - INFO - Data saved to data\newly_scraped\games_advanced.csv
+2024-08-10 16:35:12,699 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved advanced stats for 1 seasons
+2024-08-10 16:35:12,700 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for four-factors stats
+2024-08-10 16:35:12,700 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:12,701 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:12,701 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:13,354 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-10 16:35:13,354 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-10 16:35:16,643 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
+2024-08-10 16:35:19,731 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-10 16:35:19,732 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-10 16:35:19,746 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
+2024-08-10 16:35:19,767 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
+2024-08-10 16:35:20,323 - DataAccess - INFO - Data saved to data\newly_scraped\games_four-factors.csv
+2024-08-10 16:35:20,324 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved four-factors stats for 1 seasons
+2024-08-10 16:35:20,324 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for misc stats
+2024-08-10 16:35:20,325 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:20,326 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:20,326 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:21,157 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-10 16:35:21,157 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-10 16:35:24,537 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
+2024-08-10 16:35:27,593 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-10 16:35:27,595 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-10 16:35:27,608 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
+2024-08-10 16:35:27,640 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
+2024-08-10 16:35:28,149 - DataAccess - INFO - Data saved to data\newly_scraped\games_misc.csv
+2024-08-10 16:35:28,150 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved misc stats for 1 seasons
+2024-08-10 16:35:28,150 - src.webscraping.boxscore_scraper - INFO - Scraping 2023-24 from 5/11/2024 to 8/01/2024 for scoring stats
+2024-08-10 16:35:28,151 - src.webscraping.boxscore_scraper - INFO - Scraping https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:28,151 - src.webscraping.page_scraper - INFO - Starting page scrape for URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:28,152 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2023-24&DateFrom=5/11/2024&DateTo=8/01/2024
+2024-08-10 16:35:28,936 - src.webscraping.page_scraper - INFO - Url found and scraped successfully
+2024-08-10 16:35:28,937 - src.webscraping.page_scraper - INFO - Handling pagination. Pagination class: Pagination_pageDropdown__KgjBU, Dropdown class: DropDown_select__4pIg9
+2024-08-10 16:35:32,289 - src.webscraping.page_scraper - INFO - Selected 'ALL' in the pagination dropdown
+2024-08-10 16:35:35,365 - src.webscraping.page_scraper - WARNING - No pagination found on the page
+2024-08-10 16:35:35,366 - src.webscraping.page_scraper - INFO - Retrieving elements with class: Crom_table__p1iZz
+2024-08-10 16:35:35,378 - src.webscraping.page_scraper - INFO - Table found and scraped successfully
+2024-08-10 16:35:35,404 - src.webscraping.page_scraper - INFO - Retrieving subelements with class: Anchor_anchor__cSc3P
+2024-08-10 16:35:35,960 - DataAccess - INFO - Data saved to data\newly_scraped\games_scoring.csv
+2024-08-10 16:35:35,961 - src.webscraping.boxscore_scraper - INFO - Successfully scraped and saved scoring stats for 1 seasons
+2024-08-10 16:35:35,961 - __main__ - INFO - Finished scraping box scores
+2024-08-10 16:35:35,962 - src.webscraping.page_scraper - INFO - Navigating to URL: https://www.nba.com/schedule
+2024-08-10 16:35:36,889 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdDay__3s2Xt
+2024-08-10 16:35:40,081 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-10 16:35:40,082 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdDay__3s2Xt after 1 attempts
+2024-08-10 16:35:40,083 - src.webscraping.page_scraper - INFO - Retrieving elements with class: ScheduleDay_sdGames__NGdO5
+2024-08-10 16:35:43,197 - src.webscraping.page_scraper - WARNING - Element not found or stale. Attempt 1 of 1
+2024-08-10 16:35:43,200 - src.webscraping.page_scraper - ERROR - Failed to retrieve elements with class ScheduleDay_sdGames__NGdO5 after 1 attempts
+2024-08-10 16:35:43,203 - src.webscraping.schedule_scraper - ERROR - Required element not found on the page: Message: Game days or games containers not found on the page; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
 
-2024-08-10 10:21:46,023 - __main__ - INFO - Finished scraping matchups for Sat
-2024-08-10 10:21:48,183 - DataAccess - INFO - Loaded 5 dataframes from data\newly_scraped
-2024-08-10 10:21:48,194 - src.webscraping.utils - INFO - All scraped dataframes are consistent
-2024-08-10 10:21:48,194 - __main__ - INFO - Validated newly scraped data
-2024-08-10 10:21:48,195 - __main__ - INFO - Concatenated new data with existing data
-2024-08-10 10:21:48,418 - DataAccess - INFO - Loaded 5 dataframes from data\cumulative_scraped
-2024-08-10 10:21:48,512 - src.webscraping.utils - INFO - All scraped dataframes are consistent
-2024-08-10 10:21:48,516 - __main__ - INFO - Validated cumulative data
-2024-08-10 10:21:48,516 - __main__ - INFO - Web scraping process completed successfully
+2024-08-10 16:35:43,207 - __main__ - INFO - Finished scraping matchups for Sat
+2024-08-10 16:35:45,389 - DataAccess - INFO - Loaded 5 dataframes from data\newly_scraped
+2024-08-10 16:35:45,404 - src.webscraping.utils - INFO - All scraped dataframes are consistent
+2024-08-10 16:35:45,404 - __main__ - INFO - Validated newly scraped data
+2024-08-10 16:35:45,405 - __main__ - INFO - Concatenated new data with existing data
+2024-08-10 16:35:45,639 - DataAccess - INFO - Loaded 5 dataframes from data\cumulative_scraped
+2024-08-10 16:35:45,735 - src.webscraping.utils - INFO - All scraped dataframes are consistent
+2024-08-10 16:35:45,738 - __main__ - INFO - Validated cumulative data
+2024-08-10 16:35:45,738 - __main__ - INFO - Web scraping process completed successfully
