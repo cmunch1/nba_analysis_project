@@ -3,52 +3,50 @@ schedule_scraper.py
 
 This module contains the ScheduleScraper class, which is responsible for scraping NBA schedule data.
 It provides functionality to extract matchups and game IDs for specific days from the NBA website.
+The class implements the AbstractScheduleScraper interface.
 
 Key features:
 - Scrapes matchups and game IDs for a given day
 - Saves scraped data to CSV files
 - Implements error handling and logging
 - Uses Selenium WebDriver for web scraping
-
-Dependencies:
-- selenium
-- pandas
-- logging
 """
 
 import logging
 from typing import List, Optional
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
+from .abstract_scraper_classes import AbstractScheduleScraper, AbstractPageScraper
 from .page_scraper import PageScraper
 from ..config.config import config
 from ..data_access.data_access import DataAccess
 
 data_access = DataAccess()
 
-class ScheduleScraper:
+class ScheduleScraper(AbstractScheduleScraper):
     """
     A class for scraping NBA schedule data.
 
     This class provides methods to scrape matchups and game IDs for specific days.
 
     Attributes:
-        driver: A Selenium WebDriver instance.
-        page_scraper: An instance of PageScraper.
-        logger: A logging instance for this class.
+        driver (WebDriver): A Selenium WebDriver instance.
+        page_scraper (AbstractPageScraper): An instance of PageScraper.
+        logger (logging.Logger): A logging instance for this class.
     """
 
-    def __init__(self, driver):
+    def __init__(self, driver: WebDriver):
         """
         Initialize the ScheduleScraper with a WebDriver and load configuration.
 
         Args:
-            driver: A Selenium WebDriver instance.
+            driver (WebDriver): A Selenium WebDriver instance.
         """
         self.driver = driver
-        self.page_scraper = PageScraper(driver)
+        self.page_scraper: AbstractPageScraper = PageScraper(driver)
         self.logger = logging.getLogger(__name__)
 
     def scrape_and_save_matchups_for_day(self, search_day: str) -> None:

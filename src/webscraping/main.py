@@ -47,7 +47,9 @@ def main() -> None:
     try:
         logger.info("Starting web scraping process")
         
-        first_start_date, seasons = get_start_date_and_seasons()
+        #first_start_date, seasons = get_start_date_and_seasons()
+        first_start_date, seasons = "5/11/2024", ["2023-24",] #test case
+        
         logger.info(f"Scraping data from {first_start_date} for seasons: {seasons}")
 
         with NbaScraper() as scraper:
@@ -65,7 +67,7 @@ def main() -> None:
         logger.info("Validated newly scraped data")
 
         # Combine newly scraped data with cumulative scraped data
-        concatenate_scraped_data()
+        #concatenate_scraped_data()
         logger.info("Concatenated new data with existing data")
 
         # Validate cumulative data
