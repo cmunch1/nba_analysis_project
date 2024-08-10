@@ -1,0 +1,53 @@
+# Web scraping configuration
+
+# Game date header variations
+game_date_header_variations:
+  - Game Date
+  - Game_Date
+  - GAME DATE
+  - "Game\xa0Date"
+
+# Scraping settings
+full_scrape: false
+start_season: 2006
+off_season_start_month: 8
+regular_season_start_month: 10
+play_in_month: 4
+
+# NBA URLs
+nba_boxscores_url: https://www.nba.com/stats/teams/boxscores
+nba_schedule_url: https://www.nba.com/schedule
+
+# Season types
+regular_season_text: Regular+Season
+play_in_season_text: PlayIn
+playoffs_season_text: Playoffs
+
+# Stat types to scrape
+stat_types:
+  - traditional
+  - advanced
+  - four-factors
+  - misc
+  - scoring
+
+# CSS class names for scraping
+table_class_name: Crom_table__p1iZz
+pagination_class_name: Pagination_pageDropdown__KgjBU
+dropdown_class_name: DropDown_select__4pIg9
+teams_and_games_class_name: Anchor_anchor__cSc3P
+games_per_day_class_name: ScheduleDay_sdGames__NGdO5
+day_class_name: ScheduleDay_sdDay__3s2Xt
+teams_links_class_name: Anchor_anchor__cSc3P Link_styled__okbXW
+game_links_class_name: Anchor_anchor__cSc3P TabLink_link__f_15h
+
+# Retry settings
+max_retries: 2
+retry_delay: 2
+wait_time: 3
+
+# WebDriver options
+webdriver_options:
+  - --headless=new
+  - --remote-debugging-port=9222
+  - --user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36
