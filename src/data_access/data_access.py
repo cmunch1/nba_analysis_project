@@ -1,9 +1,9 @@
 """
 data_access.py
 
-Wrapper class for saving and loading data. 
+Concrete implementation of the AbstractDataAccess class for saving and loading data from CSV files.
 
-Isolates the data access layer from the rest of the application so that the data can be saved and loaded from 
+This class isolates the data access layer from the rest of the application so that the data can be saved and loaded from 
 different sources (e.g. csv files, databases, APIs) without changing the rest of the application.
 """
 
@@ -13,11 +13,12 @@ from typing import List
 from pathlib import Path
 
 from ..config.config import config
+from .abstract_data_access import AbstractDataAccess
 
 CUMULATIVE_SCRAPED_DATA_DIR = Path(config.cumulative_scraped_directory)
 NEWLY_SCRAPED_DATA_DIR = Path(config.newly_scraped_directory)
 
-class DataAccess:
+class DataAccess(AbstractDataAccess):
     def __init__(self):
         logging.basicConfig(level=getattr(logging, config.log_level),
             format='%(asctime)s - %(levelname)s - %(message)s')

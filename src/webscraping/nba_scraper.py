@@ -16,15 +16,16 @@ Dependencies:
 """
 
 from typing import List, Optional
-from selenium.webdriver.remote.webdriver import WebDriver
 
-from .boxscore_scraper import BoxscoreScraper
-from .schedule_scraper import ScheduleScraper
-from .abstract_scraper_classes import AbstractBoxscoreScraper, AbstractScheduleScraper
-from .web_driver_factory import WebDriverFactory
+from .abstract_scraper_classes import (
+    AbstractNbaScraper,
+    AbstractBoxscoreScraper, 
+    AbstractScheduleScraper,
+)
+
 from ..config.config import config
 
-class NbaScraper:
+class NbaScraper(AbstractNbaScraper):
     """
     A facade class that combines boxscore and schedule scraping functionality for NBA data.
 
@@ -34,61 +35,16 @@ class NbaScraper:
     Attributes:
         boxscore_scraper (Optional[AbstractBoxscoreScraper]): An instance of BoxscoreScraper.
         schedule_scraper (Optional[AbstractScheduleScraper]): An instance of ScheduleScraper.
-        driver (Optional[WebDriver]): The Selenium WebDriver instance.
-        driver_factory (WebDriverFactory): An instance of WebDriverFactory.
+
     """
 
-    def __init__(self):
+    def __init__(self,  boxscore_scraper: AbstractBoxscoreScraper, schedule_scraper: AbstractScheduleScraper):
         """
         Initialize the NbaScraper with a WebDriverFactory instance.
         """
-        self.boxscore_scraper: Optional[AbstractBoxscoreScraper] = None
-        self.schedule_scraper: Optional[AbstractScheduleScraper] = None
-        self.driver: Optional[WebDriver] = None
-        self.driver_factory: WebDriverFactory = WebDriverFactory()
+        self.boxscore_scraper: boxscore_scraper
+        self.schedule_scraper: schedule_scraper
 
-    def __enter__(self) -> 'NbaScraper':
-        """
-        Enter the runtime context related to this object.
-
-        Creates the WebDriver using WebDriverFactory and initializes the scraper instances.
-
-        Returns:
-            NbaScraper: The NbaScraper instance.
-
-        Raises:
-            RuntimeError: If WebDriver creation fails.
-        """
-        try:
-            self.driver = self.driver_factory.create_driver("chrome", options=config.webdriver_options)
-            self.boxscore_scraper = BoxscoreScraper(self.driver)
-            self.schedule_scraper = ScheduleScraper(self.driver)
-            return self
-        except Exception as e:
-            raise RuntimeError(f"Failed to initialize NbaScraper: {str(e)}")
-
-    def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        """
-        Exit the runtime context related to this object.
-
-        Closes the WebDriver and handles any exceptions that occurred in the context.
-
-        Args:
-            exc_type: The exception type if an exception was raised in the context.
-            exc_value: The exception value if an exception was raised in the context.
-            traceback: The traceback if an exception was raised in the context.
-
-        Returns:
-            bool: False to propagate exceptions, True to suppress them.
-        """
-        if self.driver:
-            self.driver.quit()
-
-        if exc_type is not None:
-            print(f"An error occurred: {exc_type}, {exc_value}")
-            # Log the error or perform any necessary error handling
-            return False  # Propagate the exception
-        return True
 
     def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
         """

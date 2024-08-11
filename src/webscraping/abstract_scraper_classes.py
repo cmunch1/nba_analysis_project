@@ -10,7 +10,62 @@ from typing import Optional, List, Tuple
 from selenium.webdriver.remote.webelement import WebElement
 import pandas as pd
 
+
+from ..data_access.abstract_data_access import AbstractDataAccess
+
+class AbstractNbaScraper(ABC):
+    @abstractmethod
+    def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
+        pass
+
+    @abstractmethod
+    def scrape_and_save_matchups_for_day(self, search_day: str) -> None:
+        pass
+
+class AbstractBoxscoreScraper(ABC):
+    @abstractmethod
+    def __init__(self, data_access: AbstractDataAccess):
+        pass
+
+    @abstractmethod
+    def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
+        """Scrape and save boxscores for all stat types and specified seasons."""
+        pass
+
+    @abstractmethod
+    def scrape_stat_type(self, seasons: List[str], first_start_date: str, stat_type: str) -> pd.DataFrame:
+        """Scrape a specific stat type for multiple seasons."""
+        pass
+
+    @abstractmethod
+    def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
+        """Scrape data for all sub-seasons within a given season."""
+        pass
+
+class AbstractScheduleScraper(ABC):
+    @abstractmethod
+    def __init__(self, data_access: AbstractDataAccess):
+        pass
+
+    @abstractmethod
+    def scrape_and_save_matchups_for_day(self, search_day: str) -> None:
+        """Scrape and save matchups for a specific day."""
+        pass
+
+class AbstractWebDriver(ABC):
+    @abstractmethod
+    def get(self, url: str):
+        pass
+
+    @abstractmethod
+    def quit(self):
+        pass
+
 class AbstractPageScraper(ABC):
+    @abstractmethod
+    def __init__(self, driver: AbstractWebDriver):
+        pass
+    
     @abstractmethod
     def go_to_url(self, url: str) -> bool:
         """Navigate to the specified URL."""
@@ -36,24 +91,5 @@ class AbstractPageScraper(ABC):
         """Safely wait for an element to be clickable and then click it, with retries."""
         pass
 
-class AbstractBoxscoreScraper(ABC):
-    @abstractmethod
-    def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
-        """Scrape and save boxscores for all stat types and specified seasons."""
-        pass
 
-    @abstractmethod
-    def scrape_stat_type(self, seasons: List[str], first_start_date: str, stat_type: str) -> pd.DataFrame:
-        """Scrape a specific stat type for multiple seasons."""
-        pass
 
-    @abstractmethod
-    def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
-        """Scrape data for all sub-seasons within a given season."""
-        pass
-
-class AbstractScheduleScraper(ABC):
-    @abstractmethod
-    def scrape_and_save_matchups_for_day(self, search_day: str) -> None:
-        """Scrape and save matchups for a specific day."""
-        pass

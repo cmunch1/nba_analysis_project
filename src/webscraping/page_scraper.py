@@ -17,7 +17,10 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from .abstract_scraper_classes import AbstractPageScraper
+from .abstract_scraper_classes import (
+    AbstractPageScraper,
+    AbstractWebDriver,
+)
 from ..config.config import config
 
 class PageScraper(AbstractPageScraper):
@@ -27,17 +30,17 @@ class PageScraper(AbstractPageScraper):
     retrieving elements by class name, and scraping table data from web pages.
     """
 
-    def __init__(self, driver: WebDriver) -> None:
+    def __init__(self, driver: AbstractWebDriver) -> None:
         """
         Initialize the PageScraper with a WebDriver instance.
 
         Args:
             driver (WebDriver): The Selenium WebDriver instance to use for scraping.
         """
-        self.driver: WebDriver = driver
+        self.driver = driver
         self.wait: WebDriverWait = WebDriverWait(self.driver, config.wait_time)
         self.logger: logging.Logger = logging.getLogger(__name__)
-        self.logger.info("PageScraper initialized")
+        
 
     def go_to_url(self, url: str) -> bool:
         """

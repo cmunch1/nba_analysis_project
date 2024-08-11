@@ -25,6 +25,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from ..config.config import config
 from ..data_access.data_access import DataAccess
+from ..data_access.abstract_data_access import (
+    AbstractDataAccess
+)
 
 data_access = DataAccess()
 

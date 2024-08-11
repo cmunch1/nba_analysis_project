@@ -16,14 +16,19 @@ from datetime import datetime
 from typing import Tuple, List
 import logging
 
-from .nba_scraper import NbaScraper
+from ..logging.logging_setup import setup_logging
+
 from .utils import (
     get_start_date_and_seasons,
     validate_data,
     concatenate_scraped_data,
 )
 
-from ..logging.logging_setup import setup_logging
+
+# Dependency Injection Setup
+from .di_container import DIContainer
+container = DIContainer()
+
 
 # Set up logging
 setup_logging("webscraping.log")
@@ -52,15 +57,16 @@ def main() -> None:
         
         logger.info(f"Scraping data from {first_start_date} for seasons: {seasons}")
 
-        with NbaScraper() as scraper:
-            # Scrape all boxscores for all seasons
-            scraper.scrape_and_save_all_boxscores(seasons, first_start_date)
-            logger.info("Finished scraping box scores")
+        scraper = container.nba_scraper()
+            
+        # Scrape all boxscores for all seasons
+        scraper.scrape_and_save_all_boxscores(seasons, first_start_date)
+        logger.info("Finished scraping box scores")
 
-            # Scrape schedule for today's matchups
-            search_day = datetime.today().strftime('%A, %B %d')[:3]
-            scraper.scrape_and_save_matchups_for_day(search_day)
-            logger.info(f"Finished scraping matchups for {search_day}")
+        # Scrape schedule for today's matchups
+        search_day = datetime.today().strftime('%A, %B %d')[:3]
+        scraper.scrape_and_save_matchups_for_day(search_day)
+        logger.info(f"Finished scraping matchups for {search_day}")
 
         # Validate newly scraped data
         validate_data(cumulative=False)

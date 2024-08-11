@@ -19,10 +19,15 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
-from .abstract_scraper_classes import AbstractScheduleScraper, AbstractPageScraper
-from .page_scraper import PageScraper
+from .abstract_scraper_classes import (
+    AbstractScheduleScraper, 
+    AbstractPageScraper,
+)
+from ..data_access.abstract_data_access import (
+    AbstractDataAccess
+)
 from ..config.config import config
-from ..data_access.data_access import DataAccess
+
 
 data_access = DataAccess()
 
@@ -33,20 +38,20 @@ class ScheduleScraper(AbstractScheduleScraper):
     This class provides methods to scrape matchups and game IDs for specific days.
 
     Attributes:
-        driver (WebDriver): A Selenium WebDriver instance.
+        
         page_scraper (AbstractPageScraper): An instance of PageScraper.
         logger (logging.Logger): A logging instance for this class.
     """
 
-    def __init__(self, driver: WebDriver):
+    def __init__(self, data_access: AbstractDataAccess, page_scraper: AbstractPageScraper) -> None:
         """
         Initialize the ScheduleScraper with a WebDriver and load configuration.
 
         Args:
-            driver (WebDriver): A Selenium WebDriver instance.
+            
         """
-        self.driver = driver
-        self.page_scraper: AbstractPageScraper = PageScraper(driver)
+        self.data_access = data_access
+        self.page_scraper = page_scraper
         self.logger = logging.getLogger(__name__)
 
     def scrape_and_save_matchups_for_day(self, search_day: str) -> None:
