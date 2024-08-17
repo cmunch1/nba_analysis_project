@@ -26,10 +26,9 @@ from .abstract_scraper_classes import (
 from ..data_access.abstract_data_access import (
     AbstractDataAccess
 )
-from ..config.config import config
+from ..config.config import AbstractConfig
 
 
-data_access = DataAccess()
 
 class ScheduleScraper(AbstractScheduleScraper):
     """
@@ -43,13 +42,14 @@ class ScheduleScraper(AbstractScheduleScraper):
         logger (logging.Logger): A logging instance for this class.
     """
 
-    def __init__(self, data_access: AbstractDataAccess, page_scraper: AbstractPageScraper) -> None:
+    def __init__(self, config: AbstractConfig, data_access: AbstractDataAccess, page_scraper: AbstractPageScraper) -> None:
         """
         Initialize the ScheduleScraper with a WebDriver and load configuration.
 
         Args:
             
         """
+        self.config = config
         self.data_access = data_access
         self.page_scraper = page_scraper
         self.logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ class ScheduleScraper(AbstractScheduleScraper):
             NoSuchElementException: If required elements are not found on the page.
         """
         try:
-            self.page_scraper.go_to_url(config.nba_schedule_url)
+            self.page_scraper.go_to_url(self.config.nba_schedule_url)
 
             days_games = self._find_games_for_day(search_day)
             
@@ -99,8 +99,8 @@ class ScheduleScraper(AbstractScheduleScraper):
         Raises:
             NoSuchElementException: If the required elements are not found on the page.
         """
-        game_days = self.page_scraper.get_elements_by_class(config.day_class_name)
-        games_containers = self.page_scraper.get_elements_by_class(config.games_per_day_class_name)
+        game_days = self.page_scraper.get_elements_by_class(self.config.day_class_name)
+        games_containers = self.page_scraper.get_elements_by_class(self.config.games_per_day_class_name)
 
         if not game_days or not games_containers:
             raise NoSuchElementException("Game days or games containers not found on the page")
@@ -123,7 +123,7 @@ class ScheduleScraper(AbstractScheduleScraper):
         Raises:
             NoSuchElementException: If the team links are not found on the page.
         """
-        links = self.page_scraper.get_elements_by_class(config.teams_links_class_name, todays_games)
+        links = self.page_scraper.get_elements_by_class(self.config.teams_links_class_name, todays_games)
         
         if not links:
             raise NoSuchElementException("Team links not found on the page")
@@ -150,7 +150,7 @@ class ScheduleScraper(AbstractScheduleScraper):
         Raises:
             NoSuchElementException: If the game links are not found on the page.
         """
-        links = self.page_scraper.get_elements_by_class(config.game_links_class_name, todays_games)
+        links = self.page_scraper.get_elements_by_class(self.config.game_links_class_name, todays_games)
         
         if not links:
             raise NoSuchElementException("Game links not found on the page")

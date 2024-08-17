@@ -19,8 +19,8 @@ from .abstract_scraper_classes import (
 from ..data_access.abstract_data_access import (
     AbstractDataAccess
 )
+from ..config.config import AbstractConfig
 
-from ..config.config import config
 
 
 class BoxscoreScraper(AbstractBoxscoreScraper):
@@ -34,13 +34,14 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         logger (logging.Logger): Logger for this class.
     """
 
-    def __init__(self,  data_access: AbstractDataAccess, page_scraper: AbstractPageScraper) -> None:
+    def __init__(self,  config: AbstractConfig, data_access: AbstractDataAccess, page_scraper: AbstractPageScraper) -> None:
         """
         Initialize the BoxscoreScraper with a WebDriver and load configuration.
 
         Args:
             driver (WebDriver): A Selenium WebDriver instance.
         """  
+        self.config = config
         self.data_access = data_access
         self.page_scraper = page_scraper
         self.logger = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         if not self._is_valid_date(first_start_date):
             raise ValueError(f"Invalid first_start_date: {first_start_date}")
 
-        for stat_type in config.stat_types:
+        for stat_type in self.config.stat_types:
             try:
                 new_games = self.scrape_stat_type(seasons, first_start_date, stat_type)
                 file_name = f"games_{stat_type}.csv"
@@ -85,7 +86,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         Raises:
             ValueError: If stat_type is not supported.
         """
-        if stat_type not in config.stat_types:
+        if stat_type not in self.config.stat_types:
             raise ValueError(f"Unsupported stat type: {stat_type}")
 
         new_games = pd.DataFrame()
@@ -93,10 +94,10 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
 
         for season in seasons:
             season_year = int(season[:4])    
-            end_date = f"{config.off_season_start_month}/01/{season_year+1}"
+            end_date = f"{self.config.off_season_start_month}/01/{season_year+1}"
             df_season = self.scrape_sub_seasons(str(season), str(start_date), str(end_date), stat_type)
             new_games = pd.concat([new_games, df_season], axis=0)
-            start_date = f"{config.regular_season_start_month}/01/{season_year+1}"
+            start_date = f"{self.config.regular_season_start_month}/01/{season_year+1}"
 
         return new_games
 
@@ -143,16 +144,16 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
 
         start_date = datetime.strptime(start_date, "%m/%d/%Y")
         end_date = datetime.strptime(end_date, "%m/%d/%Y")
-        play_in_date = datetime(start_date.year, config.play_in_month, 1)
+        play_in_date = datetime(start_date.year, self.config.play_in_month, 1)
 
         if start_date < play_in_date and end_date < play_in_date:
-            sub_season_types.append(config.regular_season_text)
+            sub_season_types.append(self.config.regular_season_text)
         elif start_date > play_in_date and end_date > play_in_date:
-            sub_season_types.append(config.playoffs_season_text)
+            sub_season_types.append(self.config.playoffs_season_text)
         else:
-            sub_season_types.append(config.regular_season_text)
-            sub_season_types.append(config.playoffs_season_text)
-            sub_season_types.append(config.play_in_season_text)
+            sub_season_types.append(self.config.regular_season_text)
+            sub_season_types.append(self.config.playoffs_season_text)
+            sub_season_types.append(self.config.play_in_season_text)
 
         return sub_season_types
 
@@ -195,7 +196,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         nba_url = self._construct_nba_url(stat_type, season_type, Season, DateFrom, DateTo)
         self.logger.info(f"Scraping {nba_url}")
 
-        return self.page_scraper.scrape_page_table(nba_url, config.table_class_name, config.pagination_class_name, config.dropdown_class_name)
+        return self.page_scraper.scrape_page_table(nba_url, self.config.table_class_name, self.config.pagination_class_name, self.config.dropdown_class_name)
 
     def convert_table_to_df(self, data_table: WebElement) -> pd.DataFrame:
         """
@@ -231,7 +232,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         Returns:
             str: The constructed URL string.
         """
-        base_url = f"{config.nba_boxscores_url}-{stat_type}" if stat_type != 'traditional' else config.nba_boxscores_url
+        base_url = f"{self.config.nba_boxscores_url}-{stat_type}" if stat_type != 'traditional' else self.config.nba_boxscores_url
         nba_url = f"{base_url}?SeasonType={season_type}"
         
         if not Season:
@@ -253,7 +254,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         Returns:
             Tuple[pd.Series, pd.Series]: A tuple of Series containing team IDs and game IDs.
         """
-        links = self.page_scraper.get_elements_by_class(config.teams_and_games_class_name, data_table)       
+        links = self.page_scraper.get_elements_by_class(self.config.teams_and_games_class_name, data_table)       
         links_list = [i.get_attribute("href") for i in links]
     
         team_id = pd.Series([i[-10:] for i in links_list if ('stats' in i)])

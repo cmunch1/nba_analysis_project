@@ -1,4 +1,4 @@
-"""main_webscraper.py
+"""main.py
 
 This module serves as the main entry point for the NBA web scraping application.
 It orchestrates the process of scraping box scores and matchups from NBA websites,
@@ -13,26 +13,17 @@ Key features:
 """
 
 from datetime import datetime
-from typing import Tuple, List
 import logging
 
 from ..logging.logging_setup import setup_logging
-
 from .utils import (
     get_start_date_and_seasons,
     validate_data,
     concatenate_scraped_data,
 )
-
-
-# Dependency Injection Setup
 from .di_container import DIContainer
-container = DIContainer()
 
-
-# Set up logging
-setup_logging("webscraping.log")
-logger = logging.getLogger(__name__)
+LOG_FILE = "webscraping.log"
 
 def main() -> None:
     """
@@ -49,36 +40,47 @@ def main() -> None:
     Raises:
         Exception: If any error occurs during the scraping process
     """
+
+    # Initialize the Dependency Injection container
+    container = DIContainer()
+
+    # Get instances from the container
+    config = container.config()
+    data_access = container.data_access()
+    nba_scraper = container.nba_scraper()
+    
     try:
+
+        setup_logging(config, LOG_FILE)
+        logger = logging.getLogger(__name__)
         logger.info("Starting web scraping process")
+
+        # Determine start date and seasons to scrape data for
+        logger.info("Retrieving start date and seasons to scrape data for")
+        #first_start_date, seasons = get_start_date_and_seasons(config, data_access)
+        first_start_date = "5/11/2024"
+        seasons = ["2023-24", ]
         
-        #first_start_date, seasons = get_start_date_and_seasons()
-        first_start_date, seasons = "5/11/2024", ["2023-24",] #test case
-        
+        # Scrape Boxscores
         logger.info(f"Scraping data from {first_start_date} for seasons: {seasons}")
+        nba_scraper.scrape_and_save_all_boxscores(seasons, first_start_date)
 
-        scraper = container.nba_scraper()
-            
-        # Scrape all boxscores for all seasons
-        scraper.scrape_and_save_all_boxscores(seasons, first_start_date)
-        logger.info("Finished scraping box scores")
-
-        # Scrape schedule for today's matchups
+        # Scrape Schedule for Matchups
         search_day = datetime.today().strftime('%A, %B %d')[:3]
-        scraper.scrape_and_save_matchups_for_day(search_day)
-        logger.info(f"Finished scraping matchups for {search_day}")
-
+        logger.info(f"Scraping matchups for {search_day}")
+        nba_scraper.scrape_and_save_matchups_for_day(search_day)
+ 
         # Validate newly scraped data
-        validate_data(cumulative=False)
-        logger.info("Validated newly scraped data")
+        logger.info("Validating newly scraped data")
+        validate_data(config, data_access, cumulative=False)
 
         # Combine newly scraped data with cumulative scraped data
-        #concatenate_scraped_data()
-        logger.info("Concatenated new data with existing data")
-
+        logger.info("Concatenating newly scraped data with cumulative scraped data")
+        #concatenate_scraped_data(config, data_access)
+        
         # Validate cumulative data
-        validate_data(cumulative=True)
-        logger.info("Validated cumulative data")
+        logger.info("Validating cumulative scraped data")
+        validate_data(config, data_access, cumulative=True)
 
         logger.info("Web scraping process completed successfully")
 

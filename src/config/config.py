@@ -23,8 +23,13 @@ import yaml
 from pathlib import Path
 from types import SimpleNamespace
 
-class Config:
+from .abstract_config import (
+    AbstractConfig,
+)
+
+class Config(AbstractConfig):
     def __init__(self):
+        super().__init__()
         config_dir = Path(__file__).parent
         
         config_dict = {}
@@ -46,7 +51,5 @@ class Config:
         for key, value in vars(config_obj).items():
             setattr(self, key, value)
 
-# Create a single instance of Config
-config = Config()
 
 
