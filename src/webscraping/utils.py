@@ -2,11 +2,10 @@
 utils.py
 
 This module provides utility functions for web scraping NBA data.
-It includes functions for activating web drivers, determining scraping dates and seasons,
+It includes functions for determining scraping dates and seasons,
 validating scraped data, and concatenating scraped datasets.
 
 Key components:
-- Web driver activation
 - Scraping date and season determination
 - Data validation
 - Data concatenation
@@ -19,26 +18,20 @@ from typing import List, Tuple, Optional, Union
 import numpy as np
 import pandas as pd
 from pytz import timezone
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
-from ..config.config import config
-from ..data_access.data_access import DataAccess
-from ..data_access.abstract_data_access import (
-    AbstractDataAccess
-)
-
-data_access = DataAccess()
+from ..config.abstract_config import AbstractConfig
+from ..data_access.abstract_data_access import AbstractDataAccess
 
 logger = logging.getLogger(__name__)
 
-
-
-def get_start_date_and_seasons() -> Tuple[str, List[str]]:
+def get_start_date_and_seasons(config: AbstractConfig, data_access: AbstractDataAccess) -> Tuple[str, List[str]]:
     """
     Determine the start date and seasons for scraping.
     Example format: "10/1/2021", ["2023-24", "2022-23", "2021-22"]
+
+    Args:
+        config (AbstractConfig): The configuration object.
+        data_access (AbstractDataAccess): The data access object.
 
     Returns:
         Tuple[str, List[str]]: A tuple containing the start date (str) and a list of seasons (List[str]).
@@ -52,11 +45,14 @@ def get_start_date_and_seasons() -> Tuple[str, List[str]]:
             first_start_date = f"{config.regular_season_start_month}/1/{config.start_season}"
         else:
             scraped_data = data_access.load_scraped_data(cumulative=True)
-            first_start_date, seasons = determine_scrape_start(scraped_data)
+            first_start_date, seasons = determine_scrape_start(scraped_data, config)
 
-            if first_start_date is None:
+            if first_start_date is None and seasons is None:
                 logger.error("Previous scraped data has inconsistent dates")
                 raise ValueError("Inconsistent dates in scraped data")
+            if first_start_date is None:
+                logger.error("Error in determining scrape start date")
+                raise ValueError("Error in determining scrape start date")
 
         logger.info(f"Start date: {first_start_date}, Seasons: {seasons}")
         return first_start_date, seasons
@@ -64,12 +60,13 @@ def get_start_date_and_seasons() -> Tuple[str, List[str]]:
         logger.error(f"Error in get_start_date_and_seasons: {str(e)}")
         raise
 
-def determine_scrape_start(scraped_data: List[pd.DataFrame]) -> Tuple[Optional[str], Optional[List[str]]]:
+def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractConfig) -> Tuple[Optional[str], Optional[List[str]]]:
     """
     Determine where to begin scraping for more games based on the latest game in the dataset.
 
     Args:
         scraped_data (List[pd.DataFrame]): List of DataFrames that have been scraped.
+        config (AbstractConfig): The configuration object.
 
     Returns:
         Tuple[Optional[str], Optional[List[str]]]: A tuple containing the start date (str) and a list of seasons (List[str]).
@@ -114,11 +111,13 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame]) -> Tuple[Optional[s
         logger.error(f"Error in determine_scrape_start: {str(e)}")
         return None, None
 
-def validate_data(cumulative: bool = False) -> None:
+def validate_data(config: AbstractConfig, data_access: AbstractDataAccess, cumulative: bool = False) -> None:
     """
     Validate the boxscores dataframe.
 
     Args:
+        config (AbstractConfig): The configuration object.
+        data_access (AbstractDataAccess): The data access object.
         cumulative (bool): Whether to validate cumulative data or not.
     """
     try:
@@ -170,9 +169,13 @@ def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
         logger.error(f"Error in validate_scraped_dataframes: {str(e)}")
         return f"Error during validation: {str(e)}"
 
-def concatenate_scraped_data() -> None:
+def concatenate_scraped_data(config: AbstractConfig, data_access: AbstractDataAccess) -> None:
     """
     Concatenate newly scraped data with cumulative scraped data.
+
+    Args:
+        config (AbstractConfig): The configuration object.
+        data_access (AbstractDataAccess): The data access object.
     """
     try:
         newly_scraped = data_access.load_scraped_data(cumulative=False)
@@ -202,5 +205,3 @@ def concatenate_scraped_data() -> None:
         logger.info("Completed concatenation of all scraped data files")
     except Exception as e:
         logger.error(f"Error in concatenate_scraped_data: {str(e)}")
-
-

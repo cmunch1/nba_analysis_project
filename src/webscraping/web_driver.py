@@ -8,12 +8,15 @@ import logging
 from .abstract_scraper_classes import (
     AbstractWebDriver,
 )
+from ..config.config import AbstractConfig
 
-class WebDriver(AbstractWebDriver):
-    def __init__(self):
+class WebDriver_(AbstractWebDriver):
+    def __init__(self, config: AbstractConfig):
+        self.config = config
         self.logger = logging.getLogger(__name__)
 
-    def create_driver(self, browser: str, options: Dict[str, Any] = None) -> WebDriver:
+    def create_driver(self, browser: str = 'chrome'):
+        options = self.config.webdriver_options
         browser = browser.lower()
         if browser == "chrome":
             return self._create_chrome_driver(options)
@@ -21,7 +24,7 @@ class WebDriver(AbstractWebDriver):
             self.logger.error(f"Unsupported browser: {browser}")
             raise ValueError(f"Unsupported browser: {browser}")
 
-    def _create_chrome_driver(self, options: Dict[str, Any] = None) -> WebDriver:
+    def _create_chrome_driver(self, options: Dict[str, Any] = None):
         try:
             chrome_options = webdriver.ChromeOptions()
             if options:

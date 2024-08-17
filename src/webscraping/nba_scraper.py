@@ -23,7 +23,7 @@ from .abstract_scraper_classes import (
     AbstractScheduleScraper,
 )
 
-from ..config.config import config
+from ..config.config import AbstractConfig
 
 class NbaScraper(AbstractNbaScraper):
     """
@@ -38,12 +38,13 @@ class NbaScraper(AbstractNbaScraper):
 
     """
 
-    def __init__(self,  boxscore_scraper: AbstractBoxscoreScraper, schedule_scraper: AbstractScheduleScraper):
+    def __init__(self, config: AbstractConfig, boxscore_scraper: AbstractBoxscoreScraper, schedule_scraper: AbstractScheduleScraper):
         """
         Initialize the NbaScraper with a WebDriverFactory instance.
         """
-        self.boxscore_scraper: boxscore_scraper
-        self.schedule_scraper: schedule_scraper
+        self.config = config
+        self.boxscore_scraper = boxscore_scraper
+        self.schedule_scraper =  schedule_scraper
 
 
     def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
@@ -59,7 +60,7 @@ class NbaScraper(AbstractNbaScraper):
             RuntimeError: If scraping fails for any reason.
         """
         if not self.boxscore_scraper:
-            raise ValueError("BoxscoreScraper is not initialized. Use NbaScraper as a context manager.")
+            raise ValueError("BoxscoreScraper is not initialized.")
 
         try:
             self.boxscore_scraper.scrape_and_save_all_boxscores(seasons, first_start_date)

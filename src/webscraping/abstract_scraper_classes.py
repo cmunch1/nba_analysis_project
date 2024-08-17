@@ -10,7 +10,7 @@ from typing import Optional, List, Tuple
 from selenium.webdriver.remote.webelement import WebElement
 import pandas as pd
 
-
+from ..config.config import AbstractConfig
 from ..data_access.abstract_data_access import AbstractDataAccess
 
 class AbstractNbaScraper(ABC):
@@ -24,7 +24,7 @@ class AbstractNbaScraper(ABC):
 
 class AbstractBoxscoreScraper(ABC):
     @abstractmethod
-    def __init__(self, data_access: AbstractDataAccess):
+    def __init__(self, config: AbstractConfig, data_access: AbstractDataAccess):
         pass
 
     @abstractmethod
@@ -44,7 +44,7 @@ class AbstractBoxscoreScraper(ABC):
 
 class AbstractScheduleScraper(ABC):
     @abstractmethod
-    def __init__(self, data_access: AbstractDataAccess):
+    def __init__(self, config: AbstractConfig, data_access: AbstractDataAccess):
         pass
 
     @abstractmethod
@@ -54,16 +54,12 @@ class AbstractScheduleScraper(ABC):
 
 class AbstractWebDriver(ABC):
     @abstractmethod
-    def get(self, url: str):
-        pass
-
-    @abstractmethod
-    def quit(self):
+    def __init__(self, config: AbstractConfig):
         pass
 
 class AbstractPageScraper(ABC):
     @abstractmethod
-    def __init__(self, driver: AbstractWebDriver):
+    def __init__(self, config: AbstractConfig, web_driver: AbstractWebDriver):
         pass
     
     @abstractmethod

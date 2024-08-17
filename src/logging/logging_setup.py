@@ -1,8 +1,9 @@
 import os
 import logging
-from ..config.config import config
+from ..config.abstract_config import AbstractConfig
 
-def setup_logging(filename=None):
+
+def setup_logging(config: AbstractConfig, filename: str):
     logging.basicConfig(
         level=getattr(logging, config.log_level),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'

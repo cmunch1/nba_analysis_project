@@ -1,6 +1,6 @@
 # Web scraping configuration
 
-# Game date header variations
+# Game date spelled in different ways in each stat_type table
 game_date_header_variations:
   - Game Date
   - Game_Date
