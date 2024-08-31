@@ -18,14 +18,11 @@ Usage:
     headers = config.headers
 """
 
-
 import yaml
 from pathlib import Path
 from types import SimpleNamespace
 
-from .abstract_config import (
-    AbstractConfig,
-)
+from .abstract_config import AbstractConfig
 
 class Config(AbstractConfig):
     def __init__(self):
@@ -50,6 +47,16 @@ class Config(AbstractConfig):
         # Set all config parameters as attributes of this instance
         for key, value in vars(config_obj).items():
             setattr(self, key, value)
+
+        # Load app_config.yaml separately to ensure it's not overwritten
+        app_config_path = config_dir / 'app_config.yaml'
+        if app_config_path.exists():
+            with open(app_config_path) as yaml_file:
+                app_config = yaml.safe_load(yaml_file)
+                for key, value in app_config.items():
+                    setattr(self, key, value)
+        else:
+            raise FileNotFoundError(f"app_config.yaml not found in {config_dir}")
 
 
 

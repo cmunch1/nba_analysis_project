@@ -1,4 +1,5 @@
 # Custom Dictionary Words
 boxscore
 boxscores
+webelement
 webscraping

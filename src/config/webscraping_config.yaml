@@ -41,13 +41,43 @@ day_class_name: ScheduleDay_sdDay__3s2Xt
 teams_links_class_name: Anchor_anchor__cSc3P Link_styled__okbXW
 game_links_class_name: Anchor_anchor__cSc3P TabLink_link__f_15h
 
+# Timeout settings if page or dynamic content (tables) take too long to load
+page_load_timeout: 30
+dynamic_content_timeout: 30 
+
 # Retry settings
 max_retries: 2
 retry_delay: 2
-wait_time: 3
+wait_time: 10
 
-# WebDriver options
-webdriver_options:
-  - --headless=new
-  - --remote-debugging-port=9222
-  - --user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36
+
+# Browser options (first is the default, second is the fallback)
+browsers:
+  - chrome
+  - firefox
+
+  # Chrome-specific options
+chrome_options:
+  --headless: "new"
+  --no-sandbox: null
+  --start-maximized: null
+  --disable-dev-shm-usage: null
+  --ignore-certificate-errors: null
+  --ignore-ssl-errors: null
+  --disable-gpu: null
+  --disable-extensions: null
+  --disable-popup-blocking: null
+  --disable-notifications: null
+  --remote-debugging-port: 9222
+  --disable-3d-apis: null
+  --disable-blink-features=AutomationControlled: null
+  --user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+
+
+
+# Firefox-specific options
+firefox_options:
+  --headless: null
+  --disable-blink-features=AutomationControlled: null
+  --user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:53.0) Gecko/20100101 Firefox/53.0"
+

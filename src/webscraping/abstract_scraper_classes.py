@@ -68,11 +68,6 @@ class AbstractPageScraper(ABC):
         pass
 
     @abstractmethod
-    def handle_pagination(self, pagination_class: str, dropdown_class: str) -> None:
-        """Handle pagination on the page."""
-        pass
-
-    @abstractmethod
     def get_elements_by_class(self, class_name: str, parent_element: Optional[WebElement] = None) -> Optional[List[WebElement]]:
         """Retrieve elements by class name, optionally within a parent element."""
         pass
@@ -82,10 +77,7 @@ class AbstractPageScraper(ABC):
         """Scrape a table from a web page, handling pagination if necessary."""
         pass
 
-    @abstractmethod
-    def safe_wait_and_click(self, locator: Tuple[str, str]) -> None:
-        """Safely wait for an element to be clickable and then click it, with retries."""
-        pass
+
 
 
 

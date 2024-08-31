@@ -10,22 +10,17 @@ import logging
 import time
 from typing import Optional, List, Tuple
 
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, WebDriverException
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 
-
-
-from .abstract_scraper_classes import AbstractPageScraper, AbstractWebDriver
+from .abstract_scraper_classes import AbstractPageScraper
 from ..config.config import AbstractConfig
 from ..error_handling.custom_exceptions import WebDriverError, PageLoadError, ElementNotFoundError, DataExtractionError, DynamicContentLoadError
-from ..logging.logging_utils import log_performance, log_context, structured_log
+from ..logging.logging_utils import log_performance, structured_log
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +32,7 @@ class PageScraper(AbstractPageScraper):
 
         Args:
             config (AbstractConfig): Configuration object.
-            web_driver (AbstractWebDriver): Web driver object.
+            web_driver (WebDriver): Web driver object.
 
         Raises:
             WebDriverError: If there's an issue initializing the WebDriver.
@@ -48,7 +43,6 @@ class PageScraper(AbstractPageScraper):
         structured_log(logger, logging.INFO, "PageScraper initialized successfully",
                        config_type=type(config).__name__,
                        web_driver_type=type(web_driver).__name__)
-
 
     @log_performance
     def go_to_url(self, url: str) -> bool:
@@ -71,14 +65,9 @@ class PageScraper(AbstractPageScraper):
         structured_log(logger, logging.INFO, "Navigating to URL", url=url)
         
         try:
-            self.web_driver.set_page_load_timeout(self.config.page_load_timeout)
             self.web_driver.get(url)
             
-            # Wait for the page to be interactive
-            WebDriverWait(self.web_driver, self.config.wait_time).until(
-                lambda d: d.execute_script("return document.readyState") == "interactive"
-            )
-            
+
             structured_log(logger, logging.INFO, "Navigation to URL completed successfully", url=url)
             return True
         
@@ -137,7 +126,7 @@ class PageScraper(AbstractPageScraper):
                                           locator=locator, error_message=str(e))
 
     @log_performance
-    def handle_pagination(self, pagination_class: str, dropdown_class: str) -> None:
+    def _handle_pagination(self, pagination_class: str, dropdown_class: str) -> None:
         """
         Handle pagination on the page by selecting 'ALL' in the dropdown if available.
 
@@ -152,18 +141,15 @@ class PageScraper(AbstractPageScraper):
                        pagination_class=pagination_class, dropdown_class=dropdown_class)
         try:
             pagination = self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, pagination_class)))
-            structured_log(logger, logging.DEBUG, "Pagination element found")
+            structured_log(logger, logging.INFO, "Pagination element found")
             try:
                 page_dropdown = pagination.find_element(By.CLASS_NAME, dropdown_class)
-                structured_log(logger, logging.DEBUG, "Dropdown element found")
+                structured_log(logger, logging.INFO, "Dropdown element found")
                 page_dropdown.send_keys("ALL")
                 time.sleep(3)
                 self.web_driver.execute_script('arguments[0].click()', page_dropdown)
                 structured_log(logger, logging.INFO, "Selected 'ALL' in the pagination dropdown")
-                self.wait.until(EC.staleness_of(pagination))
-                structured_log(logger, logging.DEBUG, "Original pagination element became stale")
-                self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, pagination_class)))
-                structured_log(logger, logging.DEBUG, "New pagination element loaded")
+
             except NoSuchElementException:
                 raise ElementNotFoundError("No dropdown found in pagination element", 
                                            pagination_class=pagination_class, 
@@ -196,23 +182,22 @@ class PageScraper(AbstractPageScraper):
                 else:
                     elements = self.wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, class_name)))
                 if not elements:
-                    structured_log(logger, logging.DEBUG, "No elements found",
+                    structured_log(logger, logging.INFO, "No elements found",
                                    class_name=class_name, attempt=attempt+1)
                     return None
-                structured_log(logger, logging.DEBUG, "Elements found",
+                structured_log(logger, logging.INFO, "Elements found",
                                class_name=class_name, element_count=len(elements))
                 return elements
             except (TimeoutException, NoSuchElementException, StaleElementReferenceException):
-                structured_log(logger, logging.DEBUG, "Element not found or stale",
+                structured_log(logger, logging.INFO, "Element not found or stale",
                                class_name=class_name, attempt=attempt+1)
             except Exception as e:
-                structured_log(logger, logging.DEBUG, "Unexpected error occurred",
+                structured_log(logger, logging.INFO, "Unexpected error occurred",
                                class_name=class_name, attempt=attempt+1,
                                error_message=str(e), error_type=type(e).__name__)
             if attempt < self.config.max_retries - 1:
                 time.sleep(self.config.retry_delay)
         raise ElementNotFoundError(f"Failed to retrieve elements with class {class_name} after {self.config.max_retries} attempts")
-
 
     @log_performance
     def scrape_page_table(self, url: str, table_class: str, pagination_class: str, dropdown_class: str) -> Optional[WebElement]:
@@ -236,25 +221,15 @@ class PageScraper(AbstractPageScraper):
         """
         structured_log(logger, logging.INFO, "Starting page scrape", url=url)
         try:
-            # Step 1: Load the page
-            success = self.go_to_url(url)
-            if not success:
+            if not self.go_to_url(url):
                 raise PageLoadError("Could not navigate to URL", url=url)
             
-            # Step 2: Wait for the dynamic content (table) to load
-            try:
-                table_loaded = self.wait_for_dynamic_content((By.CLASS_NAME, table_class))
-                if not table_loaded:
-                    raise DynamicContentLoadError("Table did not load within the specified timeout", 
-                                                  table_class=table_class)
-            except TimeoutException:
-                raise DynamicContentLoadError("Timeout while waiting for table to load", 
+            if not self.wait_for_dynamic_content((By.CLASS_NAME, table_class)):
+                raise DynamicContentLoadError("Table did not load within the specified timeout", 
                                               table_class=table_class)
 
-            # Step 3: Handle pagination
-            self.handle_pagination(pagination_class, dropdown_class)
+            self._handle_pagination(pagination_class, dropdown_class)
             
-            # Step 4: Get the table element
             tables = self.get_elements_by_class(table_class)
             if tables is None:
                 raise ElementNotFoundError("Table not found after pagination", 
@@ -273,9 +248,8 @@ class PageScraper(AbstractPageScraper):
             raise DataExtractionError("Unexpected error during page scrape", 
                                       url=url, error_message=str(e))
 
-
     @log_performance
-    def safe_wait_and_click(self, locator: Tuple[str, str]) -> None:
+    def _safe_wait_and_click(self, locator: Tuple[str, str]) -> None:
         """
         Safely wait for an element to be clickable and then click it, with retries.
 
@@ -304,12 +278,5 @@ class PageScraper(AbstractPageScraper):
                                locator=locator, retry_delay=self.config.retry_delay)
                 time.sleep(self.config.retry_delay)
 
-    def __del__(self):
-        if hasattr(self, 'web_driver') and self.web_driver:
-            try:
-                self.web_driver.quit()
-                structured_log(logger, logging.INFO, "WebDriver successfully closed")
-            except Exception as e:
-                structured_log(logger, logging.ERROR, "Error while closing WebDriver",
-                            error_message=str(e), error_type=type(e).__name__)
+
                 
