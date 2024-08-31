@@ -1,0 +1,21 @@
+default_percentage_value: 75
+regular_game_minutes: 240
+season_year_offset: 2000
+regular_season_game_id_threshold: 2
+
+game_id_column: GAME_ID
+team_id_column: TEAM_ID
+
+game_info_columns:
+  - GAME_ID
+  - SEASON
+  - Game Date
+  - PLAYOFF
+  - OVERTIME
+  - MIN
+
+team_info_columns:
+  - TEAM_ID
+  - HOME_TEAM
+  - Team
+  - Match Up

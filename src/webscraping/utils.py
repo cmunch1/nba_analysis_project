@@ -9,6 +9,13 @@ Key components:
 - Scraping date and season determination
 - Data validation
 - Data concatenation
+
+Functions:
+- get_start_date_and_seasons: Determine the start date and seasons for scraping
+- determine_scrape_start: Determine where to begin scraping based on existing data
+- validate_data: Validate the boxscores dataframe
+- validate_scraped_dataframes: Validate the consistency of scraped dataframes
+- concatenate_scraped_data: Concatenate newly scraped data with cumulative scraped data
 """
 
 import logging
@@ -21,6 +28,9 @@ from pytz import timezone
 
 from ..config.abstract_config import AbstractConfig
 from ..data_access.abstract_data_access import AbstractDataAccess
+from ..error_handling.custom_exceptions import (
+    DataValidationError, DataProcessingError, ConfigurationError
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +47,9 @@ def get_start_date_and_seasons(config: AbstractConfig, data_access: AbstractData
         Tuple[str, List[str]]: A tuple containing the start date (str) and a list of seasons (List[str]).
     
     Raises:
-        ValueError: If there are inconsistent dates in scraped data.
+        ConfigurationError: If there's an issue with the configuration.
+        DataValidationError: If there are inconsistent dates in scraped data.
+        DataProcessingError: If there's an error processing the data.
     """
     try:
         if config.full_scrape:
@@ -48,17 +60,16 @@ def get_start_date_and_seasons(config: AbstractConfig, data_access: AbstractData
             first_start_date, seasons = determine_scrape_start(scraped_data, config)
 
             if first_start_date is None and seasons is None:
-                logger.error("Previous scraped data has inconsistent dates")
-                raise ValueError("Inconsistent dates in scraped data")
+                raise DataValidationError("Previous scraped data has inconsistent dates")
             if first_start_date is None:
-                logger.error("Error in determining scrape start date")
-                raise ValueError("Error in determining scrape start date")
+                raise DataProcessingError("Error in determining scrape start date")
 
         logger.info(f"Start date: {first_start_date}, Seasons: {seasons}")
         return first_start_date, seasons
+    except AttributeError as e:
+        raise ConfigurationError(f"Missing required configuration: {str(e)}")
     except Exception as e:
-        logger.error(f"Error in get_start_date_and_seasons: {str(e)}")
-        raise
+        raise DataProcessingError(f"Error in get_start_date_and_seasons: {str(e)}")
 
 def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractConfig) -> Tuple[Optional[str], Optional[List[str]]]:
     """
@@ -70,18 +81,19 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractCon
 
     Returns:
         Tuple[Optional[str], Optional[List[str]]]: A tuple containing the start date (str) and a list of seasons (List[str]).
-        Returns (None, None) if there's an error.
+
+    Raises:
+        DataValidationError: If there are inconsistencies in the scraped data.
+        DataProcessingError: If there's an error processing the data.
     """
     try:
         last_date = None
         for i, df in enumerate(scraped_data):
             if df.empty:
-                logger.error(f"Dataframe {i} is empty")
-                return None, None
+                raise DataValidationError(f"Dataframe {i} is empty")
             date_col = next((col for col in config.game_date_header_variations if col in df.columns), None)
             if date_col is None:
-                logger.error(f"Dataframe {i} does not have a recognized game date column")
-                return None, None
+                raise DataValidationError(f"Dataframe {i} does not have a recognized game date column")
             
             df[date_col] = pd.to_datetime(df[date_col])
             current_last_date = df[date_col].max()
@@ -89,9 +101,10 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractCon
             if last_date is None:
                 last_date = current_last_date
             elif current_last_date != last_date:
-                logger.error(f"Dataframe {i} has a different last date than the first dataframe")
-                return None, None
+                raise DataValidationError(f"Dataframe {i} has a different last date than the first dataframe")
 
+        # Calculate the last season based on the last date
+        # If the month is October or later, it's considered part of the next season
         last_season = last_date.year if last_date.month >= 10 else last_date.year - 1
         start_date = (last_date + timedelta(days=1)).strftime("%m/%d/%Y")
 
@@ -107,9 +120,10 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractCon
         logger.info(f"Start date: {start_date}")
 
         return start_date, seasons
+    except DataValidationError:
+        raise
     except Exception as e:
-        logger.error(f"Error in determine_scrape_start: {str(e)}")
-        return None, None
+        raise DataProcessingError(f"Error in determine_scrape_start: {str(e)}")
 
 def validate_data(config: AbstractConfig, data_access: AbstractDataAccess, cumulative: bool = False) -> None:
     """
@@ -119,6 +133,10 @@ def validate_data(config: AbstractConfig, data_access: AbstractDataAccess, cumul
         config (AbstractConfig): The configuration object.
         data_access (AbstractDataAccess): The data access object.
         cumulative (bool): Whether to validate cumulative data or not.
+
+    Raises:
+        DataValidationError: If the scraped dataframes are inconsistent.
+        DataProcessingError: If there's an error during the validation process.
     """
     try:
         scraped_data = data_access.load_scraped_data(cumulative)
@@ -127,9 +145,11 @@ def validate_data(config: AbstractConfig, data_access: AbstractDataAccess, cumul
         if response == "Pass":
             logger.info("All scraped dataframes are consistent")
         else:
-            logger.error(f"Scraped dataframes are inconsistent: {response}")
+            raise DataValidationError(f"Scraped dataframes are inconsistent: {response}")
+    except DataValidationError:
+        raise
     except Exception as e:
-        logger.error(f"Error in validate_data: {str(e)}")
+        raise DataProcessingError(f"Error in validate_data: {str(e)}")
 
 def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
     """
@@ -140,6 +160,9 @@ def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
 
     Returns:
         str: "Pass" if all dataframes are consistent, otherwise an error message.
+
+    Raises:
+        DataValidationError: If there are inconsistencies in the scraped dataframes.
     """
     try:
         num_rows = 0
@@ -147,10 +170,10 @@ def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
         
         for i, df in enumerate(scraped_dataframes):
             if df.duplicated().any():
-                return f"Dataframe {i} has duplicate records"
+                raise DataValidationError(f"Dataframe {i} has duplicate records")
             
             if df.isnull().values.any():
-                return f"Dataframe {i} has null values"
+                raise DataValidationError(f"Dataframe {i} has null values")
 
             df = df.sort_values(by='GAME_ID')
 
@@ -159,15 +182,16 @@ def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
                 game_ids = df['GAME_ID']
             else:
                 if num_rows != df.shape[0]:
-                    return f"Dataframe {i} does not match the number of rows of the first dataframe"
+                    raise DataValidationError(f"Dataframe {i} does not match the number of rows of the first dataframe")
                 
                 if not np.array_equal(game_ids.values, df['GAME_ID'].values):
-                    return f"Dataframe {i} does not match the game ids of the first dataframe"
+                    raise DataValidationError(f"Dataframe {i} does not match the game ids of the first dataframe")
         
         return "Pass"
+    except DataValidationError:
+        raise
     except Exception as e:
-        logger.error(f"Error in validate_scraped_dataframes: {str(e)}")
-        return f"Error during validation: {str(e)}"
+        raise DataProcessingError(f"Error in validate_scraped_dataframes: {str(e)}")
 
 def concatenate_scraped_data(config: AbstractConfig, data_access: AbstractDataAccess) -> None:
     """
@@ -176,14 +200,17 @@ def concatenate_scraped_data(config: AbstractConfig, data_access: AbstractDataAc
     Args:
         config (AbstractConfig): The configuration object.
         data_access (AbstractDataAccess): The data access object.
+
+    Raises:
+        DataValidationError: If there are issues with the scraped data.
+        DataProcessingError: If there's an error during the concatenation process.
     """
     try:
         newly_scraped = data_access.load_scraped_data(cumulative=False)
         cumulative_scraped = data_access.load_scraped_data(cumulative=True)
 
         if not newly_scraped or not cumulative_scraped:
-            logger.error("Either newly scraped or cumulative data is missing")
-            return
+            raise DataValidationError("Either newly scraped or cumulative data is missing")
 
         # Check for empty dataframes in newly_scraped
         empty_dfs = [i for i, df in enumerate(newly_scraped) if df.empty]
@@ -197,11 +224,14 @@ def concatenate_scraped_data(config: AbstractConfig, data_access: AbstractDataAc
 
             combined_df = pd.concat([cum_df, new_df], ignore_index=True)
             combined_df = combined_df.sort_values(by=['GAME_ID', 'TEAM_ID'])
+            # Remove duplicates, keeping the last occurrence (which should be the most recent data)
             combined_df = combined_df.drop_duplicates(subset=['GAME_ID', 'TEAM_ID'], keep='last')
             
             data_access.save_scraped_data(combined_df, file_name, cumulative=True)
             logger.info(f"Successfully concatenated and saved {file_name}")
 
         logger.info("Completed concatenation of all scraped data files")
+    except DataValidationError:
+        raise
     except Exception as e:
-        logger.error(f"Error in concatenate_scraped_data: {str(e)}")
+        raise DataProcessingError(f"Error in concatenate_scraped_data: {str(e)}")

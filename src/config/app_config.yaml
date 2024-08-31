@@ -1,0 +1,43 @@
+# Application Configuration
+
+# Version information
+app_version: "1.0.0"
+
+# Environment (development, staging, production)
+environment: "development"
+
+# Application name
+app_name: "NBA Prediction App"
+
+# Maintainer contact
+maintainer_email: "cmunch1@yahoo.com"
+
+# API rate limiting
+api_rate_limit: not implemented
+
+# Data retention policy
+data_retention_days: not implemented
+
+# Feature flags
+features:
+  use_proxy: not implemented
+  enable_caching: not implemented
+  perform_data_validation: not implemented
+
+# Notification settings
+notifications:
+  email_alerts: not implemented
+  slack_alerts: not implemented
+  alert_recipients: 
+    - "admin@example.com"
+    - "analyst@example.com"
+
+# External service URLs
+external_services:
+  team_logos_cdn: "https://cdn.nba.com/logos/"
+
+# Default language and locale
+default_language: "en-US"
+
+# Time zone for timestamps
+timezone: "UTC"
