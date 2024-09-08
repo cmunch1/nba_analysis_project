@@ -1,15 +1,15 @@
 from dependency_injector import containers, providers
 
 from ..config.config import Config  
+from ..data_access.data_access import DataAccess
+from ..data_validation.data_validator import DataValidator
 
-from .concrete_classes_imports import (
-  CustomWebDriver, 
-  DataAccess, 
-  PageScraper, 
-  BoxscoreScraper, 
-  ScheduleScraper, 
-  NbaScraper,
-)
+from .web_driver import CustomWebDriver
+from .page_scraper import PageScraper 
+from .boxscore_scraper import BoxscoreScraper 
+from .schedule_scraper import ScheduleScraper 
+from .nba_scraper import NbaScraper
+
 
 class DIContainer(containers.DeclarativeContainer):
     config = providers.Singleton(Config)
@@ -20,8 +20,8 @@ class DIContainer(containers.DeclarativeContainer):
           web_driver_factory=web_driver_factory
       )
 
-    
     data_access = providers.Factory(DataAccess, config=config)
+    data_validator = providers.Factory(DataValidator, config=config, data_access=data_access)
     page_scraper = providers.Factory(PageScraper, config=config, web_driver=driver)
     boxscore_scraper = providers.Factory(BoxscoreScraper, config=config, data_access=data_access, page_scraper=page_scraper)
     schedule_scraper = providers.Factory(ScheduleScraper, config=config, data_access=data_access, page_scraper=page_scraper)

@@ -19,13 +19,12 @@ import sys
 import traceback
 from datetime import datetime
 import logging
+import pandas as pd
 
 from ..logging.logging_setup import setup_logging
 from ..logging.logging_utils import log_performance, log_context, structured_log
 from .utils import (
     get_start_date_and_seasons,
-    validate_data,
-    concatenate_scraped_data,
 )
 from .di_container import DIContainer
 from ..error_handling.custom_exceptions import (
@@ -63,6 +62,7 @@ def main() -> None:
     data_access = container.data_access()
     nba_scraper = container.nba_scraper()
     web_driver = container.web_driver_factory()
+    data_validator = container.data_validator()
     
     try:
         error_logger = setup_logging(config, LOG_FILE)
@@ -78,8 +78,16 @@ def main() -> None:
             first_start_date, seasons = get_scraping_parameters(config, data_access, logger)
             scrape_boxscores(nba_scraper, seasons, first_start_date, logger)
             scrape_matchups(nba_scraper, logger)
-            validate_and_concatenate_data(config, data_access, logger)
 
+            structured_log(logger, logging.INFO, "Loading scraped data for validation and concatenation")
+            newly_scraped, file_names = data_access.load_scraped_data(cumulative=False)
+            cumulative_scraped, file_names = data_access.load_scraped_data(cumulative=True)
+            if validate_data(newly_scraped, cumulative_scraped, data_validator, logger):
+                concatenated_data = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger)
+                if validate_data(newly_scraped, concatenated_data, data_validator, logger): #make sure concatenated data is valid
+                    data_access.save_dataframes(concatenated_data, file_names, cumulative=True)
+
+    
         structured_log(logger, logging.INFO, "Web scraping process completed successfully")
 
     except (ConfigurationError, ScrapingError, DataValidationError, 
@@ -110,18 +118,60 @@ def scrape_matchups(nba_scraper, logger):
     else:
         structured_log(logger, logging.INFO, "No matchups found for today")
 
-def validate_and_concatenate_data(config, data_access, logger):
+def validate_data(newly_scraped, cumulative_scraped, data_validator, logger) -> bool:
+
+    if not newly_scraped or not cumulative_scraped:
+        raise DataValidationError("Either newly scraped or cumulative data is missing")
+
     structured_log(logger, logging.INFO, "Validating newly scraped data")
-    validate_data(config, data_access, cumulative=False)
-    structured_log(logger, logging.INFO, "New data validation completed")
-
-    structured_log(logger, logging.INFO, "Concatenating newly scraped data with cumulative data")
-    concatenate_scraped_data(config, data_access)
-    structured_log(logger, logging.INFO, "Data concatenation completed")
-
+    if not data_validator.validate_scraped_dataframes(newly_scraped):
+        raise DataValidationError("Data validation failed")
+    
     structured_log(logger, logging.INFO, "Validating cumulative scraped data")
-    validate_data(config, data_access, cumulative=True)
-    structured_log(logger, logging.INFO, "Cumulative data validation completed")
+    if not data_validator.validate_scraped_dataframes(cumulative_scraped):
+        raise DataValidationError("Data validation failed")
+
+    structured_log(logger, logging.INFO, "Data validation completed")
+
+    return True
+
+def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger) -> list[pd.DataFrame]:
+    """
+    Concatenate newly scraped data with cumulative scraped data.
+
+    Args:
+        config (AbstractConfig): The configuration object.
+        data_access (AbstractDataAccess): The data access object.
+        logger (logging.Logger): The logger object for structured logging.
+
+    Raises:
+        DataValidationError: If there are issues with the scraped data.
+        DataProcessingError: If there's an error during the concatenation process.
+    """
+    try:
+        structured_log(logger, logging.INFO, "Starting data concatenation process")
+        combined_dataframes = []
+
+        for i, (new_df, cum_df, file_name) in enumerate(zip(newly_scraped, cumulative_scraped, config.scraped_boxscore_files)):
+            if new_df.empty:
+                structured_log(logger, logging.WARNING, "Skipping empty dataframe", file_name=file_name)
+                continue
+
+            combined_df = pd.concat([cum_df, new_df], ignore_index=True)
+            combined_df = combined_df.sort_values(by=[config.game_id_column, config.team_id_column])
+            combined_df = combined_df.drop_duplicates(subset=[config.game_id_column, config.team_id_column], keep='last')
+            
+            combined_dataframes.append(combined_df)
+            
+            structured_log(logger, logging.INFO, "Successfully concatenated and saved file", file_name=file_name)
+
+        structured_log(logger, logging.INFO, "Completed concatenation of all scraped data files")
+
+        return combined_dataframes
+    except DataValidationError:
+        raise
+    except Exception as e:
+        raise DataProcessingError(f"Error in concatenate_scraped_data: {str(e)}")
 
 def _handle_known_error(error_logger, e):
     structured_log(error_logger, logging.ERROR, f"{type(e).__name__} occurred", 
