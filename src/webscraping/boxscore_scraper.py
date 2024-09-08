@@ -92,19 +92,22 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             raise DataValidationError(f"Invalid first_start_date: {first_start_date}")
 
         with log_context(operation="scrape_all_boxscores", seasons=seasons, start_date=first_start_date):
+            boxscores_dataframes = []
+            file_names = []
             for stat_type in self.config.stat_types:
                 try:
                     structured_log(logger, logging.INFO, f"Scraping {stat_type} stats", stat_type=stat_type)
                     new_games = self.scrape_stat_type(seasons, first_start_date, stat_type)
                     file_name = f"games_{stat_type}.csv"
-                    self.data_access.save_scraped_data(new_games, file_name)
+                    boxscores_dataframes.append(new_games)
+                    file_names.append(file_name)
                     structured_log(logger, logging.INFO, f"Successfully scraped and saved {stat_type} stats", 
                                    stat_type=stat_type, seasons_count=len(seasons))
                 except ScrapingError as e:
                     structured_log(logger, logging.ERROR, f"Error scraping {stat_type} stats", 
                                    stat_type=stat_type, error_message=str(e))
                     raise
-
+            self.data_access.save_dataframes(boxscores_dataframes, file_names)
     @log_performance
     def scrape_stat_type(self, seasons: List[str], first_start_date: str, stat_type: str) -> pd.DataFrame:
         """

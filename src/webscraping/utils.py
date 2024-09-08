@@ -3,19 +3,15 @@ utils.py
 
 This module provides utility functions for web scraping NBA data.
 It includes functions for determining scraping dates and seasons,
-validating scraped data, and concatenating scraped datasets.
+
 
 Key components:
 - Scraping date and season determination
-- Data validation
-- Data concatenation
+
 
 Functions:
 - get_start_date_and_seasons: Determine the start date and seasons for scraping
 - determine_scrape_start: Determine where to begin scraping based on existing data
-- validate_data: Validate the boxscores dataframe
-- validate_scraped_dataframes: Validate the consistency of scraped dataframes
-- concatenate_scraped_data: Concatenate newly scraped data with cumulative scraped data
 """
 
 import logging
@@ -56,7 +52,7 @@ def get_start_date_and_seasons(config: AbstractConfig, data_access: AbstractData
             seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(config.start_season, datetime.now().year)]
             first_start_date = f"{config.regular_season_start_month}/1/{config.start_season}"
         else:
-            scraped_data = data_access.load_scraped_data(cumulative=True)
+            scraped_data, file_names = data_access.load_scraped_data(cumulative=True)
             first_start_date, seasons = determine_scrape_start(scraped_data, config)
 
             if first_start_date is None and seasons is None:
@@ -125,113 +121,4 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractCon
     except Exception as e:
         raise DataProcessingError(f"Error in determine_scrape_start: {str(e)}")
 
-def validate_data(config: AbstractConfig, data_access: AbstractDataAccess, cumulative: bool = False) -> None:
-    """
-    Validate the boxscores dataframe.
 
-    Args:
-        config (AbstractConfig): The configuration object.
-        data_access (AbstractDataAccess): The data access object.
-        cumulative (bool): Whether to validate cumulative data or not.
-
-    Raises:
-        DataValidationError: If the scraped dataframes are inconsistent.
-        DataProcessingError: If there's an error during the validation process.
-    """
-    try:
-        scraped_data = data_access.load_scraped_data(cumulative)
-        response = validate_scraped_dataframes(scraped_data)
-
-        if response == "Pass":
-            logger.info("All scraped dataframes are consistent")
-        else:
-            raise DataValidationError(f"Scraped dataframes are inconsistent: {response}")
-    except DataValidationError:
-        raise
-    except Exception as e:
-        raise DataProcessingError(f"Error in validate_data: {str(e)}")
-
-def validate_scraped_dataframes(scraped_dataframes: List[pd.DataFrame]) -> str:
-    """
-    Validate the consistency of scraped dataframes.
-
-    Args:
-        scraped_dataframes (List[pd.DataFrame]): List of scraped dataframes to validate.
-
-    Returns:
-        str: "Pass" if all dataframes are consistent, otherwise an error message.
-
-    Raises:
-        DataValidationError: If there are inconsistencies in the scraped dataframes.
-    """
-    try:
-        num_rows = 0
-        game_ids = None
-        
-        for i, df in enumerate(scraped_dataframes):
-            if df.duplicated().any():
-                raise DataValidationError(f"Dataframe {i} has duplicate records")
-            
-            if df.isnull().values.any():
-                raise DataValidationError(f"Dataframe {i} has null values")
-
-            df = df.sort_values(by='GAME_ID')
-
-            if i == 0:
-                num_rows = df.shape[0]
-                game_ids = df['GAME_ID']
-            else:
-                if num_rows != df.shape[0]:
-                    raise DataValidationError(f"Dataframe {i} does not match the number of rows of the first dataframe")
-                
-                if not np.array_equal(game_ids.values, df['GAME_ID'].values):
-                    raise DataValidationError(f"Dataframe {i} does not match the game ids of the first dataframe")
-        
-        return "Pass"
-    except DataValidationError:
-        raise
-    except Exception as e:
-        raise DataProcessingError(f"Error in validate_scraped_dataframes: {str(e)}")
-
-def concatenate_scraped_data(config: AbstractConfig, data_access: AbstractDataAccess) -> None:
-    """
-    Concatenate newly scraped data with cumulative scraped data.
-
-    Args:
-        config (AbstractConfig): The configuration object.
-        data_access (AbstractDataAccess): The data access object.
-
-    Raises:
-        DataValidationError: If there are issues with the scraped data.
-        DataProcessingError: If there's an error during the concatenation process.
-    """
-    try:
-        newly_scraped = data_access.load_scraped_data(cumulative=False)
-        cumulative_scraped = data_access.load_scraped_data(cumulative=True)
-
-        if not newly_scraped or not cumulative_scraped:
-            raise DataValidationError("Either newly scraped or cumulative data is missing")
-
-        # Check for empty dataframes in newly_scraped
-        empty_dfs = [i for i, df in enumerate(newly_scraped) if df.empty]
-        if empty_dfs:
-            logger.warning(f"Empty dataframes found in newly scraped data at indices: {empty_dfs}")
-
-        for i, (new_df, cum_df, file_name) in enumerate(zip(newly_scraped, cumulative_scraped, config.scraped_boxscore_files)):
-            if new_df.empty:
-                logger.warning(f"Skipping empty dataframe for {file_name}")
-                continue
-
-            combined_df = pd.concat([cum_df, new_df], ignore_index=True)
-            combined_df = combined_df.sort_values(by=['GAME_ID', 'TEAM_ID'])
-            # Remove duplicates, keeping the last occurrence (which should be the most recent data)
-            combined_df = combined_df.drop_duplicates(subset=['GAME_ID', 'TEAM_ID'], keep='last')
-            
-            data_access.save_scraped_data(combined_df, file_name, cumulative=True)
-            logger.info(f"Successfully concatenated and saved {file_name}")
-
-        logger.info("Completed concatenation of all scraped data files")
-    except DataValidationError:
-        raise
-    except Exception as e:
-        raise DataProcessingError(f"Error in concatenate_scraped_data: {str(e)}")

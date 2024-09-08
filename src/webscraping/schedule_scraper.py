@@ -227,7 +227,7 @@ class ScheduleScraper(AbstractScheduleScraper):
     @log_performance
     def _save_matchups_and_games(self, matchups: List[List[str]], games: List[str]) -> None:
         """
-        Save matchups and game IDs to CSV files.
+        Converts matchups and game IDs dataframes and saves them to CSV files.
 
         Args:
             matchups (List[List[str]]): A list of lists containing visitor and home team IDs.
@@ -240,17 +240,22 @@ class ScheduleScraper(AbstractScheduleScraper):
         try:
             structured_log(logger, logging.INFO, "Saving matchups and games", 
                            matchups_count=len(matchups), games_count=len(games))
-            
+            schedule_dataframes = []
+            file_names = []
             if not matchups or not games:
                 raise DataValidationError("Matchups or games list is empty")
 
             matchups_df = pd.DataFrame(matchups, columns=['visitor_id', 'home_id'])
-            self.data_access.save_scraped_data(matchups_df, "matchups")
-            structured_log(logger, logging.INFO, "Successfully saved matchups data")
+            schedule_dataframes.append(matchups_df)
+            file_names.append(self.config.todays_matchups_file)
 
             games_df = pd.DataFrame(games, columns=['game_id'])
-            self.data_access.save_scraped_data(games_df, "games_ids")
-            structured_log(logger, logging.INFO, "Successfully saved game IDs data")
+            schedule_dataframes.append(games_df)
+            file_names.append(self.config.todays_games_ids_file)
+
+            self.data_access.save_dataframes(schedule_dataframes, file_names)
+            structured_log(logger, logging.INFO, "Successfully saved matchups and game IDs data")
+            
         except DataValidationError:
             raise
         except Exception as e:

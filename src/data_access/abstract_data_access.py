@@ -8,25 +8,25 @@ by concrete classes for different data sources (e.g., CSV files, databases, APIs
 
 from abc import ABC, abstractmethod
 import pandas as pd
-from typing import List
+from typing import List, Tuple
 
 
 
 class AbstractDataAccess(ABC):
     @abstractmethod
-    def save_scraped_data(self, df: pd.DataFrame, file_name: str, cumulative: bool = False) -> None:
+    def save_dataframes(self, dataframes: List[pd.DataFrame], file_names: List[str], cumulative: bool = False) -> None:
         """
-        Save the scraped data to a storage medium.
+        Save the list of dataframes to separate CSV files in the appropriate directory.
 
-        Args:
-            df (pd.DataFrame): The scraped data to save.
-            file_name (str): The name of the file to save the data to.
-            cumulative (bool): Whether to save to newly scraped data or the cumulative scraped data.
+        Args:           
+            dataframes (List[pd.DataFrame]): The list of dataframes to save.
+            file_names (List[str]): The list of file names to save the dataframes to.
+            cumulative (bool): Whether to save to the cumulative scraped data directory (True) or the newly scraped data directory (False).
         """
         pass
 
     @abstractmethod
-    def load_scraped_data(self, cumulative: bool = False) -> List[pd.DataFrame]:
+    def load_scraped_data(self, cumulative: bool = False) -> Tuple[List[pd.DataFrame], List[str]]:
         """
         Load the scraped data from a storage medium.
 
