@@ -8,7 +8,7 @@ by concrete classes for different data sources (e.g., CSV files, databases, APIs
 
 from abc import ABC, abstractmethod
 import pandas as pd
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 
 
@@ -35,5 +35,16 @@ class AbstractDataAccess(ABC):
 
         Returns:
             List[pd.DataFrame]: List of DataFrames containing the loaded data.
+        """
+        pass
+
+    @abstractmethod
+    def save_column_mapping(self, column_mapping: Dict[str, str], file_name: str) -> bool:
+        """
+        Save the column mapping to a json file.
+
+        Args:
+            column_mapping (Dict[str, str]): The column mapping to save.
+            file_name (str): The name of the file to save the column mapping to.
         """
         pass

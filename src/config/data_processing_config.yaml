@@ -4,12 +4,17 @@ season_year_offset: 2000
 regular_season_game_id_threshold: 2
 
 game_id_column: GAME_ID
+new_game_id_column: game_id
 team_id_column: TEAM_ID
+new_team_id_column: team_id
+date_column: GAME_DATE
+new_date_column: game_date
 
 game_info_columns:
   - game_id
   - season
   - game_date
+  - sub_season_id
   - is_playoff
   - is_overtime
   - min
@@ -24,6 +29,7 @@ processed_schema:
   - game_id
   - season
   - game_date
+  - sub_season_id
   - is_playoff
   - is_overtime
   - min

@@ -1,6 +1,7 @@
 # Data access configuration
 newly_scraped_directory: data/newly_scraped/
 cumulative_scraped_directory: data/cumulative_scraped/
+processed_data_directory: data/processed/
 
 # Scraped boxscore files
 scraped_boxscore_files:
@@ -16,3 +17,6 @@ todays_games_ids_file: todays_games_ids.csv
 
 # Processed data files
 cleaned_and_combined_data_file: cleaned_and_combined_data.csv
+
+# Column mapping file
+column_mapping_file: column_mapping.json
