@@ -63,6 +63,40 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
                            error_type=type(e).__name__)
             raise DataProcessingError("Unexpected error in process_data",
                                       error_message=str(e))
+        
+    @log_performance
+    def merge_team_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        structured_log(logger, logging.INFO, "Starting merge_team_data",
+                       dataframe_shape=df.shape)
+        try:    
+            # separate out the game info columns but keep the new_game_id_column so we can merge on it
+            game_info_columns = [col for col in self.config.game_info_columns if col != self.config.new_game_id_column]
+            game_info_df = df[df['is_home_team'] == 1][game_info_columns + [self.config.new_game_id_column]].copy()
+            
+            # Remove game info columns from the main dataframe, but keep new_game_id_column
+            df_without_game_info = df.drop(columns=game_info_columns)
+            
+            # Split into home and away dataframes
+            df_home_team = df_without_game_info[df_without_game_info['is_home_team'] == 1]
+            df_away_team = df_without_game_info[df_without_game_info['is_home_team'] == 0]
+            
+            # Merge home and away data
+            merged_df = pd.merge(df_home_team, df_away_team, on=self.config.new_game_id_column, suffixes=('_home', '_visitor'))
+            
+            # Merge back the game info columns
+            final_df = pd.merge(game_info_df, merged_df, on=self.config.new_game_id_column)
+
+            # move the new_game_id_column to the front
+            final_df = final_df[[self.config.new_game_id_column] + [col for col in final_df.columns if col != self.config.new_game_id_column]]
+
+            structured_log(logger, logging.INFO, "Team data combined successfully",
+                           dataframe_shape=final_df.shape)
+            return final_df
+        except Exception as e:
+            raise DataProcessingError("Error in combine_team_data",
+                                      error_message=str(e),
+                                      dataframe_shape=df.shape)
+        
 
 
     @log_performance

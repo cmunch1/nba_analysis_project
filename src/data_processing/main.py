@@ -48,13 +48,19 @@ def main() -> None:
                 raise DataValidationError("Initial data validation of unprocessed scraped data failed")
 
             processed_dataframe, column_mapping = process_scraped_NBA_data.process_data(scraped_dataframes)
-            processed_file_name = config.cleaned_and_combined_data_file
+            processed_file_name = config.team_centric_data_file
             
             if not data_validator.validate_processed_dataframe(processed_dataframe, processed_file_name):
                 raise DataValidationError("Data validation of processed data failed")
 
             data_access.save_dataframes([processed_dataframe], [processed_file_name], cumulative=True) # expects a list of dataframes and a list of file names
             data_access.save_column_mapping(column_mapping, config.column_mapping_file)
+
+            # combine team data into a single row per game
+            processed_dataframe = process_scraped_NBA_data.merge_team_data(processed_dataframe)
+            processed_file_name = config.game_centric_data_file
+
+            data_access.save_dataframes([processed_dataframe], [processed_file_name], cumulative=True) # expects a list of dataframes and a list of file names
 
         structured_log(logger, logging.INFO, "Data processing completed successfully")
 

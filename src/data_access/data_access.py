@@ -151,7 +151,9 @@ class DataAccess(AbstractDataAccess):
 
         if file_name == self.config.column_mapping_file:
             return Path(self.config.processed_data_directory)
-        if file_name == self.config.cleaned_and_combined_data_file:
+        if file_name == self.config.team_centric_data_file:
+            return Path(self.config.processed_data_directory)
+        if file_name == self.config.game_centric_data_file:
             return Path(self.config.processed_data_directory)
         if cumulative:
             if not Path(self.config.cumulative_scraped_directory).exists():
