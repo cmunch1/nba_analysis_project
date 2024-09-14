@@ -18,4 +18,15 @@ class AbstractNBADataProcessor(ABC):
         """
         pass
 
-
+    @abstractmethod
+    def merge_team_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Abstract method to merge team data.
+        
+        Args:
+            df (pd.DataFrame): The dataframe to merge.
+        
+        Returns:
+            pd.DataFrame: Merged dataframe.
+        """
+        pass

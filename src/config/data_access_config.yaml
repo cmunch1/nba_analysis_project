@@ -16,7 +16,8 @@ todays_matchups_file: todays_matchups.csv
 todays_games_ids_file: todays_games_ids.csv
 
 # Processed data files
-cleaned_and_combined_data_file: cleaned_and_combined_data.csv
+team_centric_data_file: teams_boxscores.csv # one row per team per game
+game_centric_data_file: games_boxscores.csv # one row per game, both teams combined
 
 # Column mapping file
 column_mapping_file: column_mapping.json
