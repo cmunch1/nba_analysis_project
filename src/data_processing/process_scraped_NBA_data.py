@@ -237,8 +237,8 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
 
             df[self.config.new_game_id_column] = df[self.config.new_game_id_column].astype(str)
             df["season"] = df[self.config.new_game_id_column].str[1:3].astype(int) + self.config.season_year_offset
-            df[self.config.new_game_id_column] = df[self.config.new_game_id_column].str[1:]
             df["sub_season_id"] = df[self.config.new_game_id_column].str[:1].astype(int)
+            df[self.config.new_game_id_column] = df[self.config.new_game_id_column].str[1:]
             df["is_playoff"] = (df["sub_season_id"] > self.config.regular_season_game_id_threshold).astype(int)
             
             
