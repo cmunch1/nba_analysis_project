@@ -7,15 +7,89 @@ game_id_column: GAME_ID
 team_id_column: TEAM_ID
 
 game_info_columns:
-  - GAME_ID
-  - SEASON
-  - Game Date
-  - PLAYOFF
-  - OVERTIME
-  - MIN
+  - game_id
+  - season
+  - game_date
+  - is_playoff
+  - is_overtime
+  - min
 
 team_info_columns:
-  - TEAM_ID
-  - HOME_TEAM
-  - Team
-  - Match Up
+  - team_id
+  - is_home_team
+  - team
+  - match_up
+
+processed_schema:
+  - game_id
+  - season
+  - game_date
+  - is_playoff
+  - is_overtime
+  - min
+  - team_id
+  - is_home_team
+  - team
+  - match_up
+  - pts
+  - fgm
+  - fga
+  - fg_pct
+  - 3pm
+  - 3pa
+  - 3p_pct
+  - ftm
+  - fta
+  - ft_pct
+  - oreb
+  - dreb
+  - reb
+  - ast
+  - stl
+  - blk
+  - tov
+  - pf
+  - plus_minus
+  - off_rtg
+  - def_rtg
+  - net_rtg
+  - ast_pct
+  - ast_turnover_ratio
+  - ast_ratio
+  - oreb_pct
+  - dreb_pct
+  - reb_pct
+  - tov_pct
+  - efg_pct
+  - ts_pct
+  - pace
+  - pie
+  - fta_rate
+  - opp_efg_pct
+  - opp_fta_rate
+  - opp_tov_pct
+  - opp_oreb_pct
+  - pts_off_to
+  - 2nd_pts
+  - fbps
+  - pitp
+  - opp_pts_off_to
+  - opp_2nd_pts
+  - opp_fbps
+  - opp_pitp
+  - pct_fga_2pt
+  - pct_fga_3pt
+  - pct_pts_2pt
+  - pct_pts_2pt_mr
+  - pct_pts_3pt
+  - pct_pts_fbps
+  - pct_pts_ft
+  - pct_pts_off_to
+  - pct_pts_pitp
+  - 2fgm_pct_ast
+  - 2fgm_pct_uast
+  - 3fgm_pct_ast
+  - 3fgm_pct_uast
+  - fgm_pct_ast
+  - fgm_pct_uast
+  - is_win

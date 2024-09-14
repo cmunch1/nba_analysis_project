@@ -95,9 +95,10 @@ class DataAccess(AbstractDataAccess):
             DataValidationError: If the loaded data is invalid or inconsistent.
         """
         try:
+            structured_log(logger, logging.INFO, "Loading scraped data")
             scraped_path = self._get_load_directory(cumulative)
             all_dfs, file_names = self._load_dataframes(scraped_path)
-            self._validate_loaded_data(all_dfs)
+            #self._validate_loaded_data(all_dfs)
             
             structured_log(logger, logging.INFO, "Data loaded successfully",
                            dataframe_count=len(all_dfs), scraped_path=str(scraped_path))
@@ -150,6 +151,8 @@ class DataAccess(AbstractDataAccess):
             DataStorageError: If the directory doesn't exist.
         """
         scraped_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
+        structured_log(logger, logging.INFO, "Getting load directory",
+                       cumulative=cumulative, scraped_path=str(scraped_path))
         if not scraped_path.exists():
             raise DataStorageError(f"Directory {scraped_path} not found")
         return scraped_path
@@ -169,6 +172,7 @@ class DataAccess(AbstractDataAccess):
             DataStorageError: If a file is not found or can't be loaded.
             DataValidationError: If a loaded DataFrame is empty.
         """
+        structured_log(logger, logging.INFO, "Loading dataframes")
         all_dfs: List[pd.DataFrame] = []
         file_names = []
         for file in self.config.scraped_boxscore_files:

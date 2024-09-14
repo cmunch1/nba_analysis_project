@@ -79,22 +79,22 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
         structured_log(logger, logging.INFO, "Starting merge_dataframes",
                        dataframe_count=len(scraped_dataframes))
         try:
-            for df in scraped_dataframes:
-                if 'TEAM' in df.columns:
-                    df = df.rename(columns={'TEAM': 'Team', 'MATCH UP': 'Match Up', 'GAME DATE': 'Game Date'})
-                df.columns = df.columns.str.replace('\xa0', ' ') # Replace non-breaking space with regular space
 
             merged = None
             for i, df in enumerate(scraped_dataframes):
+                df.columns = df.columns.str.replace('\xa0', ' ') # Replace non-breaking space with regular space
+                df = df.rename(columns={'TEAM': 'Team', 'MATCH UP': 'Match Up', 'GAME DATE': 'Game Date'})
                 if i == 0:
                     merged = df
                 else:
-                    merged = pd.merge(merged, df, on=['GAME_ID', 'TEAM_ID'], suffixes=('', '_dupe'))
+                    merged = pd.merge(merged, df, on=[self.config.game_id_column, self.config.team_id_column], suffixes=('', '_dupe'))
 
             merged = merged.drop(columns=merged.filter(regex='_dupe').columns)
             structured_log(logger, logging.INFO, "Dataframes merged successfully",
-                           merged_shape=merged.shape)
+                           merged_shape=merged.shape)    
+                                                 
             return merged
+        
         except Exception as e:
             raise DataProcessingError("Error in merge_dataframes",
                                       error_message=str(e),
@@ -115,7 +115,7 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
             DataProcessingError: If there's an error during missing data handling.
         """
         structured_log(logger, logging.INFO, "Starting handle_anomalous_data",
-                       initial_nan_count=df.isna().sum().sum())
+                       initial_nan_count=int(df.isna().sum().sum()))  
         try:
             # Drop rows where 'W/L' is NaN. These games were not played. Normally these are not included in the data, but there was a case where this happened.
             df = df.dropna(subset=['W/L'])
@@ -129,7 +129,7 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
                     df[col] = df[col].fillna(self.config.default_percentage_value)
 
             # check that all the nans are gone
-            remaining_nans = df.isna().sum().sum()
+            remaining_nans = int(df.isna().sum().sum())
             structured_log(logger, logging.INFO, "Anomalous data handling complete",
                            remaining_nan_count=remaining_nans)
             return df
@@ -189,8 +189,13 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
             original_columns = df.columns.tolist()
 
             df.columns = df.columns.str.lower().str.replace(' ', '_')
-            df.columns = df.columns.str.replace('%', 'pct_')
-            df.columns = df.columns.str.replace('_$', '')
+            df.columns = df.columns.str.replace('%', '_pct_')
+            df.columns = df.columns.str.replace('rtg', '_rtg')  
+            df.columns = df.columns.str.replace('__', '_')
+            df.columns = df.columns.str.rstrip('_')
+            df.columns = df.columns.str.lstrip('_')
+            df.columns = df.columns.str.replace('+/-', 'plus_minus')
+            df.columns = df.columns.str.replace('ast/to', 'ast_turnover_ratio')
 
             column_mapping = dict(zip(original_columns, df.columns.tolist()))
             structured_log(logger, logging.INFO, "Columns renamed successfully",
@@ -215,18 +220,25 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
         Raises:
             DataProcessingError: If there's an error during new column extraction.
         """
+        initial_column_count=len(df.columns)
         structured_log(logger, logging.INFO, "Starting extract_new_columns",
-                       initial_column_count=len(df.columns))
+                       initial_column_count=initial_column_count)
         try:
-            df["is_win"] = df["W/L"].str.contains("W").astype(int)
-            df = df.drop(columns=['W/L'])
+            # note that a previous step converted column names to lowercase and substituted an underscore for a space
+            df["is_win"] = df["w/l"].str.contains("W").astype(int)
+            df = df.drop(columns=['w/l'])
 
-            df["is_home_team"] = df["Match Up"].str.contains("vs.").astype(int)
-            df["is_overtime"] = (df["MIN"] > self.config.regular_game_minutes).astype(int)
+            
+            
+            print(df.columns)
 
-            df["GAME_ID"] = df["GAME_ID"].astype(str)
-            df["season"] = df["GAME_ID"].str[1:3].astype(int) + self.config.season_year_offset
-            df["is_playoff"] = (df["GAME_ID"].str[0].astype(int) > self.config.regular_season_game_id_threshold).astype(int)
+            
+            df["is_home_team"] = df["match_up"].str.contains("vs.").astype(int)
+            df["is_overtime"] = (df["min"] > self.config.regular_game_minutes).astype(int)
+
+            df["game_id"] = df["game_id"].astype(str)
+            df["season"] = df["game_id"].str[1:3].astype(int) + self.config.season_year_offset
+            df["is_playoff"] = (df["game_id"].str[0].astype(int) > self.config.regular_season_game_id_threshold).astype(int)
 
             new_column_count = len(df.columns) - initial_column_count
             structured_log(logger, logging.INFO, "New columns extracted successfully",
