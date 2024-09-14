@@ -27,7 +27,7 @@ def main() -> None:
     config = container.config()
     data_access = container.data_access()
     data_validator = container.data_validator()
-    process_scraped_nba_data = container.process_scraped_nba_data()
+    process_scraped_NBA_data = container.process_scraped_NBA_data()
 
     
     try:
@@ -42,20 +42,18 @@ def main() -> None:
 
         with log_context(app_version=config.app_version, environment=config.environment):
             
-            scraped_dataframes, file_names = data_access.load_dataframes(cumulative=True)
+            scraped_dataframes, file_names = data_access.load_scraped_data(cumulative=True)
 
             if not data_validator.validate_scraped_dataframes(scraped_dataframes, file_names):
                 raise DataValidationError("Initial data validation of unprocessed scraped data failed")
 
-            processed_dataframe = process_scraped_nba_data.process_data(scraped_dataframes)
-           
-            processed_dataframes = [processed_dataframe]
-            processed_file_names = [config.cleaned_and_combined_data_file]
+            processed_dataframe = process_scraped_NBA_data.process_data(scraped_dataframes)
+            processed_file_name = config.cleaned_and_combined_data_file
             
-            if not data_validator.validate_scraped_dataframes(processed_dataframes, processed_file_names):
+            if not data_validator.validate_processed_dataframe(processed_dataframe, processed_file_name):
                 raise DataValidationError("Data validation of processed data failed")
 
-            data_access.save_dataframes(processed_dataframes, processed_file_names, cumulative=True)
+            data_access.save_dataframes([processed_dataframe], [processed_file_name], cumulative=True) # expects a list of dataframes and a list of file names
             
         structured_log(logger, logging.INFO, "Data processing completed successfully")
 
@@ -71,7 +69,7 @@ def _handle_known_error(error_logger, e):
                    error_message=str(e),
                    error_type=type(e).__name__,
                    traceback=traceback.format_exc())
-    sys.exit(type(e).exit_code)
+    sys.exit(1)
 
 def _handle_unexpected_error(error_logger, e):
     structured_log(error_logger, logging.CRITICAL, "Unexpected error occurred", 
