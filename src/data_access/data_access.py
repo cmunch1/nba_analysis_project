@@ -9,8 +9,9 @@ different sources (e.g., CSV files, databases, APIs) without changing the rest o
 
 import pandas as pd
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from pathlib import Path
+import json
 
 from ..config.abstract_config import AbstractConfig
 from .abstract_data_access import AbstractDataAccess
@@ -54,7 +55,7 @@ class DataAccess(AbstractDataAccess):
             DataStorageError: If there's an error saving the data.
         """
         try:
-            file_path = self._get_save_directory(cumulative)
+            file_path = self._get_save_directory(cumulative, file_name)
                         
             df.to_csv(file_path / file_name, index=False)
             structured_log(logger, logging.INFO, "Data saved successfully",
@@ -109,9 +110,32 @@ class DataAccess(AbstractDataAccess):
             raise
         except Exception as e:
             raise DataStorageError(f"Unexpected error loading scraped data: {str(e)}")
+        
+    @log_performance
+    def save_column_mapping(self, column_mapping: Dict[str, str], file_name: str) -> bool:
+        """
+        Save the column mapping to a json file with proper formatting.
+
+        Args:
+            column_mapping (Dict[str, str]): The column mapping to save.
+            file_name (str): The name of the file to save the column mapping to.
+
+        Returns:
+            bool: True if the column mapping was saved successfully, False otherwise.
+        """
+        try:
+            file_path = self._get_save_directory(cumulative=True, file_name=file_name)
+            with open(file_path / file_name, 'w') as f:
+                json.dump(column_mapping, f, indent=4, sort_keys=True)
+            structured_log(logger, logging.INFO, "Column mapping saved successfully",
+                           file_path=str(file_path / file_name))
+            return True
+        except Exception as e:
+            raise DataStorageError(f"Error saving column mapping: {str(e)}")
+    
 
     @log_performance
-    def _get_save_directory(self, cumulative: bool) -> Path:
+    def _get_save_directory(self, cumulative: bool, file_name: str) -> Path:
         """
         Get the appropriate directory for saving data.
 
@@ -124,6 +148,11 @@ class DataAccess(AbstractDataAccess):
         Raises:
             DataStorageError: If the directory doesn't exist or can't be created.
         """
+
+        if file_name == self.config.column_mapping_file:
+            return Path(self.config.processed_data_directory)
+        if file_name == self.config.cleaned_and_combined_data_file:
+            return Path(self.config.processed_data_directory)
         if cumulative:
             if not Path(self.config.cumulative_scraped_directory).exists():
                 raise DataStorageError("Could not find directory for cumulative scraped data")

@@ -23,7 +23,7 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
                        config_type=type(config).__name__)
         
     @log_performance
-    def process_data(self, scraped_dataframes: List[pd.DataFrame]) -> pd.DataFrame:
+    def process_data(self, scraped_dataframes: List[pd.DataFrame]) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
         Process the scraped NBA data through all steps.
 
@@ -43,11 +43,14 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
                         
             df = self._merge_dataframes(scraped_dataframes)
             df = self._handle_anomalous_data(df)
-            df = self._transform_data(df)
+            df, column_mapping = self._transform_data(df)
+
+            df[self.config.new_date_column] = pd.to_datetime(df[self.config.new_date_column])
+            df = df.sort_values(by=[self.config.new_date_column, self.config.new_game_id_column, 'is_home_team'], ascending=[True, True, True])
                       
             structured_log(logger, logging.INFO, "Data processing completed successfully",
                            final_dataframe_shape=df.shape)
-            return df
+            return df, column_mapping
         
         except (DataProcessingError) as e:
             structured_log(logger, logging.ERROR, "Error in process_data",
@@ -139,7 +142,7 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
                                       dataframe_shape=df.shape)
 
     @log_performance
-    def _transform_data(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _transform_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
         Transform data by renaming columns, extracting new columns, and reordering columns.
 
@@ -155,13 +158,14 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
         structured_log(logger, logging.INFO, "Starting transform_data",
                        initial_column_count=len(df.columns))
         try:
-            df, _ = self._rename_columns(df)
+            df, column_mapping = self._rename_columns(df)
             df = self._extract_new_columns(df)
             df = self._reorder_columns(df)
+
             
             structured_log(logger, logging.INFO, "Data transformation complete",
                            final_column_count=len(df.columns))
-            return df
+            return df, column_mapping
         except Exception as e:
             raise DataProcessingError("Error in transform_data",
                                       error_message=str(e),
@@ -228,17 +232,16 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
             df["is_win"] = df["w/l"].str.contains("W").astype(int)
             df = df.drop(columns=['w/l'])
 
-            
-            
-            print(df.columns)
-
-            
             df["is_home_team"] = df["match_up"].str.contains("vs.").astype(int)
             df["is_overtime"] = (df["min"] > self.config.regular_game_minutes).astype(int)
 
-            df["game_id"] = df["game_id"].astype(str)
-            df["season"] = df["game_id"].str[1:3].astype(int) + self.config.season_year_offset
-            df["is_playoff"] = (df["game_id"].str[0].astype(int) > self.config.regular_season_game_id_threshold).astype(int)
+            df[self.config.new_game_id_column] = df[self.config.new_game_id_column].astype(str)
+            df["season"] = df[self.config.new_game_id_column].str[1:3].astype(int) + self.config.season_year_offset
+            df[self.config.new_game_id_column] = df[self.config.new_game_id_column].str[1:]
+            df["sub_season_id"] = df[self.config.new_game_id_column].str[:1].astype(int)
+            df["is_playoff"] = (df["sub_season_id"] > self.config.regular_season_game_id_threshold).astype(int)
+            
+            
 
             new_column_count = len(df.columns) - initial_column_count
             structured_log(logger, logging.INFO, "New columns extracted successfully",
