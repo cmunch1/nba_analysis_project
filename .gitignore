@@ -7,3 +7,8 @@ certfile
 keyfile
 geckodriver.log
 .env
+mlruns/
+.pytest_cache/
+zzz/
+.vscode/
+.cspell/
