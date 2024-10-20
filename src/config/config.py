@@ -27,7 +27,7 @@ from .abstract_config import AbstractConfig
 class Config(AbstractConfig):
     def __init__(self):
         super().__init__()
-        config_dir = Path(__file__).parent
+        config_dir = Path('.') / 'configs'
         
         config_dict = {}
         for config_file in config_dir.glob('*.yaml'):
@@ -48,7 +48,7 @@ class Config(AbstractConfig):
         for key, value in vars(config_obj).items():
             setattr(self, key, value)
 
-        # Load app_config.yaml separately to ensure it's not overwritten
+        
         app_config_path = config_dir / 'app_config.yaml'
         if app_config_path.exists():
             with open(app_config_path) as yaml_file:

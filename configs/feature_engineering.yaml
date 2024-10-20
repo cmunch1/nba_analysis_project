@@ -1,0 +1,63 @@
+extend_rolling_avgs: true
+extend_streaks: true
+include_postseason: true
+
+home_team_column: is_home_team
+win_column: is_win
+season_column: season
+is_playoff_column: is_playoff
+
+# used to calculate the approximate progress of the season (elapsed days over total days)
+season_start: 10-1
+season_end: 7-1
+
+# this is the target column's root name. It will have a home_team_prefix added to it in the feature engineering process
+target_column: is_win
+
+# suffixes added to the end of column names to indicate how the statistics were partitioned
+# e.g. fg_pct_rolling_avg_3_home indicates field goal percentage for the team over the last 3 home games
+home_game_suffix: home
+visitor_game_suffix: visitor
+combined_cases_suffix: all
+
+# prefixes added to the beginning of column names to indicate the team's status for the specific matchup
+# when all the games stats are combined on a single row for a given game
+home_team_prefix: h_
+visitor_team_prefix: v_
+
+
+team_rolling_avg_periods:
+  - 3
+  - 5
+  - 7
+  - 10
+  - 15
+  - 20
+
+matchup_rolling_avg_periods:
+  - 1
+  - 2
+  - 3
+  - 4
+
+# if true, only new rows will be updated with ELO ratings. If false, the entire dataframe will be updated.
+elo_update_new_rows_only: false
+
+# elo parameters
+k_factor: 20
+home_advantage: 100
+initial_elo: 1500
+elo_width: 400
+
+# elo columns added to the dataframe
+team_elo_before_column: elo_team_before
+opp_elo_before_column: elo_opp_before
+win_prob_column: elo_win_prob
+team_elo_after_column: elo_team_after
+elo_change_column: elo_change
+
+# training and validation split
+validation_split: 0.2
+stratify_column: month # used to ensure that seasonality is maintained in the validation set (e.g. same number of games from each month)
+validation_last_n_seasons: 3 # number of most recent completed seasons to include in the validation set
+

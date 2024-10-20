@@ -1,5 +1,0 @@
-name: nba_analysis
-channels:
-  - conda-forge
-  - defaults
-prefix: C:\Users\Chris\.conda\envs\nba_analysis
