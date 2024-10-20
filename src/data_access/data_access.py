@@ -41,27 +41,7 @@ class DataAccess(AbstractDataAccess):
         except AttributeError as e:
             raise ConfigurationError(f"Missing required configuration: {str(e)}")
 
-    @log_performance
-    def _save_dataframe_csv(self, df: pd.DataFrame, file_name: str, cumulative: bool = False) -> None:
-        """
-        Save the dataframe to a CSV file in the appropriate directory.
 
-        Args:
-            df (pd.DataFrame): The scraped data to save.
-            file_name (str): The name of the file to save the data to.
-            cumulative (bool): Whether to save to the cumulative scraped data directory (True) or the newly scraped data directory (False).
-
-        Raises:
-            DataStorageError: If there's an error saving the data.
-        """
-        try:
-            file_path = self._get_save_directory(cumulative, file_name)
-                        
-            df.to_csv(file_path / file_name, index=False)
-            structured_log(logger, logging.INFO, "Data saved successfully",
-                           file_path=str(file_path / file_name))
-        except Exception as e:
-            raise DataStorageError(f"Error saving data to {file_name}: {str(e)}")
         
     @log_performance
     def save_dataframes(self, dataframes: List[pd.DataFrame], file_names: List[str], cumulative: bool = False) -> None:
@@ -132,7 +112,62 @@ class DataAccess(AbstractDataAccess):
             return True
         except Exception as e:
             raise DataStorageError(f"Error saving column mapping: {str(e)}")
-    
+        
+    @log_performance    
+    def load_dataframe(self, file_name: str) -> pd.DataFrame:
+        """
+        Load the data from a CSV file.
+
+        Args:
+            file_name (str): The name of the file to load the data from.
+
+        Returns:
+            pd.DataFrame: The processed dataframe.
+
+        Raises:
+            DataStorageError: If there's an error loading the data.
+            DataValidationError: If the loaded data is invalid or inconsistent.
+        """
+        try:
+            file_path = self._get_load_directory(cumulative=True, file_name=file_name)
+            file_path = file_path / file_name
+            if not file_path.exists():
+
+                raise DataStorageError(f"File {file_name} not found in {file_path}")
+            df = pd.read_csv(file_path)
+            if df.empty:
+                raise DataValidationError(f"Loaded DataFrame from {file_name} is empty")
+            structured_log(logger, logging.INFO, "Data loaded successfully",
+                           dataframe_count=len(df), file_path=str(file_path))
+            return df
+        except (DataStorageError, DataValidationError):
+            raise
+        except Exception as e:
+            raise DataStorageError(f"Unexpected error loading processed data: {str(e)}")
+        
+    @log_performance
+    def _save_dataframe_csv(self, df: pd.DataFrame, file_name: str, cumulative: bool = False) -> None:
+        """
+
+        Save the dataframe to a CSV file in the appropriate directory.
+
+        Args:
+            df (pd.DataFrame): The scraped data to save.
+            file_name (str): The name of the file to save the data to.
+            cumulative (bool): Whether to save to the cumulative scraped data directory (True) or the newly scraped data directory (False).
+
+        Raises:
+            DataStorageError: If there's an error saving the data.
+        """
+        try:
+            file_path = self._get_save_directory(cumulative, file_name)
+                        
+            df.to_csv(file_path / file_name, index=False)
+            structured_log(logger, logging.INFO, "Data saved successfully",
+                           file_path=str(file_path / file_name))
+        except Exception as e:
+            raise DataStorageError(f"Error saving data to {file_name}: {str(e)}")
+
 
     @log_performance
     def _get_save_directory(self, cumulative: bool, file_name: str) -> Path:
@@ -149,26 +184,30 @@ class DataAccess(AbstractDataAccess):
             DataStorageError: If the directory doesn't exist or can't be created.
         """
 
-        if file_name == self.config.column_mapping_file:
-            return Path(self.config.processed_data_directory)
-        if file_name == self.config.team_centric_data_file:
-            return Path(self.config.processed_data_directory)
-        if file_name == self.config.game_centric_data_file:
-            return Path(self.config.processed_data_directory)
-        if cumulative:
-            if not Path(self.config.cumulative_scraped_directory).exists():
-                raise DataStorageError("Could not find directory for cumulative scraped data")
-            return Path(self.config.cumulative_scraped_directory)
-        else:
-            newly_scraped_dir = Path(self.config.newly_scraped_directory)
-            if not newly_scraped_dir.exists():
-                structured_log(logger, logging.WARNING, "Directory for newly scraped data not found")
-                structured_log(logger, logging.INFO, "Creating directory for newly scraped data")
-                newly_scraped_dir.mkdir(parents=True, exist_ok=True)
-            return newly_scraped_dir
+        match file_name:
+            case self.config.column_mapping_file:
+                save_path = Path(self.config.processed_data_directory)
+            case self.config.team_centric_data_file:
+                save_path = Path(self.config.processed_data_directory)
+            case self.config.game_centric_data_file:
+                save_path = Path(self.config.processed_data_directory)
+            case self.config.engineered_data_file:
+                save_path = Path(self.config.engineered_data_directory)
+            case self.config.training_data_file:
+                save_path = Path(self.config.training_data_directory)
+            case self.config.validation_data_file:
+                save_path = Path(self.config.training_data_directory)
+            case _:
+                save_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
+
+        if not save_path.exists():
+            raise DataStorageError(f"Directory {save_path} not found")
+        
+        return save_path
 
 
-    def _get_load_directory(self, cumulative: bool) -> Path:
+
+    def _get_load_directory(self, cumulative: bool, file_name: str) -> Path:
         """
         Get the appropriate directory for loading data.
 
@@ -181,12 +220,31 @@ class DataAccess(AbstractDataAccess):
         Raises:
             DataStorageError: If the directory doesn't exist.
         """
-        scraped_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
         structured_log(logger, logging.INFO, "Getting load directory",
-                       cumulative=cumulative, scraped_path=str(scraped_path))
-        if not scraped_path.exists():
-            raise DataStorageError(f"Directory {scraped_path} not found")
-        return scraped_path
+                       cumulative=cumulative, file_name=str(file_name))
+        
+        match file_name:
+            case self.config.column_mapping_file:
+                load_path = Path(self.config.processed_data_directory)
+            case self.config.team_centric_data_file:
+                load_path = Path(self.config.processed_data_directory)
+            case self.config.game_centric_data_file:
+                load_path = Path(self.config.processed_data_directory)
+            case self.config.engineered_data_file:
+                load_path = Path(self.config.engineered_data_directory)
+            case self.config.training_data_file:
+                load_path = Path(self.config.training_data_directory)
+            case self.config.validation_data_file:
+                load_path = Path(self.config.training_data_directory)
+            case _:
+                load_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
+
+        if not load_path.exists():
+            raise DataStorageError(f"Directory {load_path} not found")
+        
+        return load_path
+
+
 
     @log_performance
     def _load_dataframes(self, scraped_path: Path) -> List[pd.DataFrame]:

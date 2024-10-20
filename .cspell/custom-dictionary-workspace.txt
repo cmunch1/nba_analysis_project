@@ -1,4 +1,5 @@
 # Custom Dictionary Words
+avgs
 boxscore
 boxscores
 webelement

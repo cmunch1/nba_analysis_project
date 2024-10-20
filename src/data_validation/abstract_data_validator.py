@@ -16,3 +16,5 @@ class AbstractDataValidator(ABC):
     @abstractmethod
     def validate_processed_dataframe(self, df: pd.DataFrame, file_name: str) -> bool:
         pass
+
+

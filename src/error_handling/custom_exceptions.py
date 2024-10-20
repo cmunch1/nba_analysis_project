@@ -64,3 +64,23 @@ class DynamicContentLoadError(ScrapingError):
     """Raised when dynamic content fails to load within the specified timeout."""
     def __init__(self, message, log_level=logging.ERROR, **kwargs):
         super().__init__(message, log_level, **kwargs)
+
+class FeatureEngineeringError(NBAScraperError):
+    """Raised when there's an error in the feature engineering process."""
+    def __init__(self, message, log_level=logging.ERROR, **kwargs):
+        super().__init__(message, log_level, **kwargs)
+
+class FeatureSelectionError(NBAScraperError):
+    """Raised when there's an error in the feature selection process."""
+    def __init__(self, message, log_level=logging.ERROR, **kwargs):
+        super().__init__(message, log_level, **kwargs)
+
+class ModelTrainingError(NBAScraperError):
+    """Raised when there's an error in the model training process."""
+    def __init__(self, message, log_level=logging.ERROR, **kwargs):
+        super().__init__(message, log_level, **kwargs)
+
+class ChartCreationError(NBAScraperError):
+    """Raised when there's an error in the chart creation process."""
+    def __init__(self, message, log_level=logging.ERROR, **kwargs):
+        super().__init__(message, log_level, **kwargs)

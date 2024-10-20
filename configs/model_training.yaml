@@ -1,0 +1,42 @@
+
+# these columns are not useful for modeling - just informational text that is already encoded elsewhere
+# they will be dropped from the dataframe right before modeling
+non_useful_columns: 
+  - team    
+  - match_up 
+
+# these are already encoded as integers, but some models may benefit from explicitly encoding them as categorical or one-hot encoded
+categorical_columns:
+  - is_playoff
+  - is_overtime
+  - is_home_team
+  - team_id
+  - season
+  - sub_season_id
+
+# random state for cross validation and model training
+random_state: 42
+
+# models
+models:
+  - XGBClassifier
+  #- LGBMClassifier
+
+# cross validation types
+cross_validation_types:
+  #- StratifiedKFold
+  - TimeSeriesSplit
+
+# number of cross validation splits
+n_splits: 5
+
+# hyperparameters 
+use_best_params: true
+tune_hyperparameters: false
+
+# chart options
+feature_importance_chart: true
+shap_summary_plot: true
+shap_force_plot: true
+shap_dependence_plot: true
+

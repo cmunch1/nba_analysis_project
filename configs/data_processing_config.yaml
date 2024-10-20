@@ -1,4 +1,4 @@
-default_percentage_value: 75
+default_percentage_value: 75 # for the extremely rare case when no free throw attempts are made, this is assigned as the free throw percentage
 regular_game_minutes: 240
 season_year_offset: 2000
 regular_season_game_id_threshold: 2
@@ -9,6 +9,8 @@ team_id_column: TEAM_ID
 new_team_id_column: team_id
 date_column: GAME_DATE
 new_date_column: game_date
+
+
 
 game_info_columns:
   - game_id

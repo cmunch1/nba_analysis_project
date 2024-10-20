@@ -48,3 +48,13 @@ class AbstractDataAccess(ABC):
             file_name (str): The name of the file to save the column mapping to.
         """
         pass
+
+    @abstractmethod
+    def load_dataframe(self, file_name: str) -> pd.DataFrame:
+        """
+        Load the indicated dataframe from the appropriate directory.
+
+        Returns:
+            pd.DataFrame: The indicated dataframe.
+        """
+        pass

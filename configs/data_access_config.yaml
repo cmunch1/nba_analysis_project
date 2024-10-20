@@ -2,6 +2,8 @@
 newly_scraped_directory: data/newly_scraped/
 cumulative_scraped_directory: data/cumulative_scraped/
 processed_data_directory: data/processed/
+engineered_data_directory: data/engineered/
+training_data_directory: data/training/
 
 # Scraped boxscore files
 scraped_boxscore_files:
@@ -19,5 +21,12 @@ todays_games_ids_file: todays_games_ids.csv
 team_centric_data_file: teams_boxscores.csv # one row per team per game
 game_centric_data_file: games_boxscores.csv # one row per game, both teams combined
 
+# Engineered data files
+engineered_data_file: engineered_features.csv
+
 # Column mapping file
 column_mapping_file: column_mapping.json
+
+# Training data files
+training_data_file: training_data.csv
+validation_data_file: validation_data.csv
