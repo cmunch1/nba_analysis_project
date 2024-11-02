@@ -54,9 +54,9 @@ processed_schema:
   - dreb
   - reb
   - ast
+  - tov
   - stl
   - blk
-  - tov
   - pf
   - plus_minus
   - off_rtg

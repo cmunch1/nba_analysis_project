@@ -139,8 +139,12 @@ class DataValidator(AbstractDataValidator):
         """
         structured_log(logger, logging.INFO, f"Checking {file_name} for correct schema")
 
-        if not df.columns.tolist() == schema:
+        if df.columns.tolist() != schema:
             structured_log(logger, logging.WARNING, f"Dataframe {file_name} has incorrect schema")
+            schema_diff = set(df.columns.tolist()) - set(schema)
+            print(df.columns.tolist())
+            print(schema)
+            structured_log(logger, logging.WARNING, f"Columns in dataframe that are not in schema: {schema_diff}")
             return False    
         
         structured_log(logger, logging.INFO, f"Dataframe {file_name} passes schema checks",
