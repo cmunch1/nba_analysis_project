@@ -21,7 +21,7 @@ class DIContainer(containers.DeclarativeContainer):
       )
 
     data_access = providers.Factory(DataAccess, config=config)
-    data_validator = providers.Factory(DataValidator, config=config, data_access=data_access)
+    data_validator = providers.Factory(DataValidator, config=config)
     page_scraper = providers.Factory(PageScraper, config=config, web_driver=driver)
     boxscore_scraper = providers.Factory(BoxscoreScraper, config=config, data_access=data_access, page_scraper=page_scraper)
     schedule_scraper = providers.Factory(ScheduleScraper, config=config, data_access=data_access, page_scraper=page_scraper)

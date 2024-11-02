@@ -21,6 +21,10 @@ Usage:
 import yaml
 from pathlib import Path
 from types import SimpleNamespace
+import unicodedata
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .abstract_config import AbstractConfig
 
@@ -31,18 +35,12 @@ class Config(AbstractConfig):
         
         config_dict = {}
         for config_file in config_dir.glob('*.yaml'):
-            with open(config_file) as yaml_file:
+            with open(config_file, 'r', encoding='utf-8') as yaml_file:
                 config_dict.update(yaml.safe_load(yaml_file))
 
         # Convert the dictionary to an object with attributes
         config_obj = SimpleNamespace(**config_dict)
 
-        # Handle the unicode character in game date headers
-        if hasattr(config_obj, 'game_date_header_variations'):
-            config_obj.game_date_header_variations = [
-                header.encode().decode('unicode_escape')
-                for header in config_obj.game_date_header_variations
-            ]
 
         # Set all config parameters as attributes of this instance
         for key, value in vars(config_obj).items():
@@ -57,6 +55,8 @@ class Config(AbstractConfig):
                     setattr(self, key, value)
         else:
             raise FileNotFoundError(f"app_config.yaml not found in {config_dir}")
+
+
 
 
 

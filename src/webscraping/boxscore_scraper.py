@@ -92,6 +92,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             raise DataValidationError(f"Invalid first_start_date: {first_start_date}")
 
         with log_context(operation="scrape_all_boxscores", seasons=seasons, start_date=first_start_date):
+            #cycle through each stat type, then each season, then each sub-season type
             boxscores_dataframes = []
             file_names = []
             for stat_type in self.config.stat_types:
@@ -134,11 +135,18 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
                 start_date = first_start_date
 
                 for season in seasons:
+
                     season_year = int(season[:4])    
                     end_date = f"{self.config.off_season_start_month}/01/{season_year+1}"
+                    if datetime.strptime(end_date, "%m/%d/%Y").date() > datetime.now().date():
+                        end_date = datetime.now().strftime("%m/%d/%Y")
+
+                    structured_log(logger, logging.INFO, f"Scraping {stat_type} stats for {season}", 
+                                   stat_type=stat_type, season=season, start_date=start_date, end_date=end_date)
+                        
                     df_season = self.scrape_sub_seasons(str(season), str(start_date), str(end_date), stat_type)
                     new_games = pd.concat([new_games, df_season], axis=0)
-                    start_date = f"{self.config.regular_season_start_month}/01/{season_year+1}"
+                    start_date = f"{self.config.regular_season_start_month}/01/{season_year+1}" #update start date for next season
 
                 structured_log(logger, logging.INFO, f"Successfully scraped {stat_type} stats for all seasons", 
                                stat_type=stat_type, seasons_count=len(seasons))
@@ -169,7 +177,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             structured_log(logger, logging.INFO, f"Scraping {season} from {start_date} to {end_date} for {stat_type} stats")
             
             all_sub_seasons = pd.DataFrame()
-            sub_season_types = self._determine_sub_season_types(start_date, end_date)
+            sub_season_types = self._determine_sub_season_types(season,start_date, end_date)
 
             for sub_season_type in sub_season_types:
                 try:
@@ -185,7 +193,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
 
             return all_sub_seasons
     
-    def _determine_sub_season_types(self, start_date: str, end_date: str) -> List[str]:
+    def _determine_sub_season_types(self, season: str, start_date: str, end_date: str) -> List[str]:
         """
         Determine sub-season types based on start and end dates.
 
@@ -200,11 +208,17 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             DataValidationError: If the dates are invalid or cannot be parsed.
         """
         try:
-            sub_season_types = []
 
+            structured_log(logger, logging.INFO, "Determining sub-season types", 
+                           start_date=start_date, end_date=end_date)
+            sub_season_types = []
+            season_year = int(season[:4])
             start_date = datetime.strptime(start_date, "%m/%d/%Y")
             end_date = datetime.strptime(end_date, "%m/%d/%Y")
-            play_in_date = datetime(start_date.year, self.config.play_in_month, 1)
+            play_in_date = datetime(season_year + 1, self.config.play_in_month, 1)
+
+            structured_log(logger, logging.INFO, "Play-in date", 
+                           play_in_date=str(play_in_date))
 
             if start_date < play_in_date and end_date < play_in_date:
                 sub_season_types.append(self.config.regular_season_text)
@@ -338,7 +352,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             ConfigurationError: If there's an error constructing the URL.
         """
         try:
-            base_url = f"{self.config.nba_boxscores_url}-{stat_type}" if stat_type != 'traditional' else self.config.nba_boxscores_url
+            base_url = f"{self.config.nba_boxscores_url}-{stat_type}" 
             nba_url = f"{base_url}?SeasonType={season_type}"
             
             if not Season:
@@ -347,9 +361,19 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
                 if DateFrom == "NONE" and DateTo == "NONE":
                     nba_url = f"{nba_url}&Season={Season}"
                 else:
-                    nba_url = f"{nba_url}&Season={Season}&DateFrom={DateFrom}&DateTo={DateTo}"
+                    #if season is current season, then we don't need to specify the season in the url
+                    today = datetime.now()
+                    current_season = today.year if today.month >= self.config.regular_season_start_month else today.year - 1
+
+                    if Season[:4] == str(current_season):
+                        nba_url = f"{nba_url}&DateFrom={DateFrom}&DateTo={DateTo}"
+                    else:
+                        nba_url = f"{nba_url}&Season={Season}&DateFrom={DateFrom}&DateTo={DateTo}"
             
             structured_log(logger, logging.INFO, "Constructed NBA URL", url=nba_url)
+
+            nba_url = nba_url.rstrip('\\').strip()
+            
             return nba_url
         except Exception as e:
             structured_log(logger, logging.ERROR, "Error constructing NBA URL", 
@@ -400,3 +424,4 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             return True
         except ValueError:
             return False
+

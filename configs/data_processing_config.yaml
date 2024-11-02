@@ -3,6 +3,7 @@ regular_game_minutes: 240
 season_year_offset: 2000
 regular_season_game_id_threshold: 2
 
+# Column names
 game_id_column: GAME_ID
 new_game_id_column: game_id
 team_id_column: TEAM_ID

@@ -8,7 +8,7 @@ game_date_header_variations:
   - "Game\xa0Date"
 
 # Scraping settings
-full_scrape: false
+full_scrape: False
 start_season: 2006
 off_season_start_month: 8
 regular_season_start_month: 10
@@ -38,8 +38,18 @@ dropdown_class_name: DropDown_select__4pIg9
 teams_and_games_class_name: Anchor_anchor__cSc3P
 games_per_day_class_name: ScheduleDay_sdGames__NGdO5
 day_class_name: ScheduleDay_sdDay__3s2Xt
-teams_links_class_name: Anchor_anchor__cSc3P Link_styled__okbXW
+teams_links_class_name: Anchor_anchor__cSc3P Link_styled__okbXW 
 game_links_class_name: Anchor_anchor__cSc3P TabLink_link__f_15h
+no_data_class_name: NoDataMessage_base__xUA61  # a message appears if there is no data for the parameters being searched for
+
+# Text to find links that contain game ids
+schedule_preview_text: PREVIEW
+
+# Schedule scraper column names - 
+# these are the columns created when converting lists to dataframes for todays_matchups_file and todays_games_ids_file
+schedule_home_team_id_column: home_id
+schedule_visitor_team_id_column: visitor_id
+schedule_game_id_column: game_id
 
 # Timeout settings if page or dynamic content (tables) take too long to load
 page_load_timeout: 30

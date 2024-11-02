@@ -3,6 +3,7 @@ import logging
 
 class NBAScraperError(Exception):
     """Base exception class for NBA scraper errors."""
+    exit_code = 1  # Default exit code
     def __init__(self, message, log_level=logging.ERROR, **kwargs):
         self.message = message
         self.log_level = log_level
@@ -17,18 +18,15 @@ class NBAScraperError(Exception):
 
 class ConfigurationError(NBAScraperError):
     """Raised when there's an error in the configuration."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    exit_code = 2
 
 class WebDriverError(NBAScraperError):
     """Raised when there's an error with the WebDriver."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    exit_code = 3
 
 class ScrapingError(NBAScraperError):
     """Base class for scraping-related errors."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    exit_code = 4
 
 class PageLoadError(ScrapingError):
     """Raised when a page fails to load."""
@@ -47,8 +45,7 @@ class DataExtractionError(ScrapingError):
 
 class DataProcessingError(NBAScraperError):
     """Raised when there's an error processing the scraped data."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    exit_code = 5
 
 class DataValidationError(NBAScraperError):
     """Raised when data validation fails."""

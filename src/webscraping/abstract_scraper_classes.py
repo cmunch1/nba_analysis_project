@@ -73,6 +73,11 @@ class AbstractPageScraper(ABC):
         pass
 
     @abstractmethod
+    def get_links_by_class(self, class_name: str, parent_element: Optional[WebElement] = None) -> Optional[List[WebElement]]:
+        """Retrieve link elements (a tags) by class name, optionally within a parent element."""
+        pass
+
+    @abstractmethod
     def scrape_page_table(self, url: str, table_class: str, pagination_class: str, dropdown_class: str) -> Optional[WebElement]:
         """Scrape a table from a web page, handling pagination if necessary."""
         pass
