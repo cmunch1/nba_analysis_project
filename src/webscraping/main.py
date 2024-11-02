@@ -75,17 +75,19 @@ def main() -> None:
                        config_summary=str(config.__dict__))
 
         with log_context(app_version=config.app_version, environment=config.environment):
-            first_start_date, seasons = get_scraping_parameters(config, data_access, logger)
+            
+            first_start_date, seasons = get_start_date_and_seasons(config, data_access)
             scrape_boxscores(nba_scraper, seasons, first_start_date, logger)
             scrape_matchups(nba_scraper, logger)
 
             structured_log(logger, logging.INFO, "Loading scraped data for validation and concatenation")
+            
             newly_scraped, file_names = data_access.load_scraped_data(cumulative=False)
             cumulative_scraped, file_names = data_access.load_scraped_data(cumulative=True)
-            if validate_data(newly_scraped, cumulative_scraped, data_validator, logger):
+            if validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, logger):
                 concatenated_data = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger)
-                if validate_data(newly_scraped, concatenated_data, data_validator, logger): #make sure concatenated data is valid
-                    data_access.save_dataframes(concatenated_data, file_names, cumulative=True)
+                
+            data_access.save_dataframes(concatenated_data, file_names, cumulative=True)
 
     
         structured_log(logger, logging.INFO, "Web scraping process completed successfully")
@@ -98,9 +100,6 @@ def main() -> None:
     finally:
         _close_web_driver(web_driver, error_logger)
 
-def get_scraping_parameters(config, data_access, logger):
-    structured_log(logger, logging.INFO, "Retrieving start date and seasons")
-    return get_start_date_and_seasons(config, data_access)
 
 def scrape_boxscores(nba_scraper, seasons, first_start_date, logger):
     structured_log(logger, logging.INFO, "Initiating boxscore scraping", 
@@ -118,17 +117,17 @@ def scrape_matchups(nba_scraper, logger):
     else:
         structured_log(logger, logging.INFO, "No matchups found for today")
 
-def validate_data(newly_scraped, cumulative_scraped, data_validator, logger) -> bool:
+def validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, logger) -> bool:
 
     if not newly_scraped or not cumulative_scraped:
         raise DataValidationError("Either newly scraped or cumulative data is missing")
 
     structured_log(logger, logging.INFO, "Validating newly scraped data")
-    if not data_validator.validate_scraped_dataframes(newly_scraped):
+    if not data_validator.validate_scraped_dataframes(newly_scraped, file_names):
         raise DataValidationError("Data validation failed")
     
     structured_log(logger, logging.INFO, "Validating cumulative scraped data")
-    if not data_validator.validate_scraped_dataframes(cumulative_scraped):
+    if not data_validator.validate_scraped_dataframes(cumulative_scraped, file_names):
         raise DataValidationError("Data validation failed")
 
     structured_log(logger, logging.INFO, "Data validation completed")

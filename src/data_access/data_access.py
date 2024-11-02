@@ -207,7 +207,7 @@ class DataAccess(AbstractDataAccess):
 
 
 
-    def _get_load_directory(self, cumulative: bool, file_name: str) -> Path:
+    def _get_load_directory(self, cumulative: bool, file_name: str = None) -> Path:
         """
         Get the appropriate directory for loading data.
 

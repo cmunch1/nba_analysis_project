@@ -154,9 +154,9 @@ class PageScraper(AbstractPageScraper):
                 raise ElementNotFoundError("No dropdown found in pagination element", 
                                            pagination_class=pagination_class, 
                                            dropdown_class=dropdown_class)
-        except TimeoutException:
-            raise ElementNotFoundError("No pagination found on the page", 
-                                       pagination_class=pagination_class)
+        except:
+            structured_log(logger, logging.INFO, "No pagination found on the page",
+                           pagination_class=pagination_class, dropdown_class=dropdown_class)
 
     @log_performance
     def get_elements_by_class(self, class_name: str, parent_element: Optional[WebElement] = None) -> Optional[List[WebElement]]:
@@ -224,9 +224,19 @@ class PageScraper(AbstractPageScraper):
             if not self.go_to_url(url):
                 raise PageLoadError("Could not navigate to URL", url=url)
             
-            if not self.wait_for_dynamic_content((By.CLASS_NAME, table_class)):
-                raise DynamicContentLoadError("Table did not load within the specified timeout", 
-                                              table_class=table_class)
+            # see if a table is present, if not, check for a no data message (which liekly means there were no games played for these parameters)
+            try:
+                if self.get_elements_by_class(table_class) is None:
+                    structured_log(logger, logging.INFO, "No table found, checking for no data message", url=url)
+            except:
+                try:
+                    if self.get_elements_by_class(self.config.no_data_class_name) is not None:
+                        structured_log(logger, logging.INFO, "No data message found", url=url)
+                        return None
+                except:
+                    raise DynamicContentLoadError("Table did not load within the specified timeout", 
+                                                  table_class=table_class)
+
 
             self._handle_pagination(pagination_class, dropdown_class)
             
@@ -277,6 +287,55 @@ class PageScraper(AbstractPageScraper):
                 structured_log(logger, logging.DEBUG, "Retrying click attempt",
                                locator=locator, retry_delay=self.config.retry_delay)
                 time.sleep(self.config.retry_delay)
+
+    @log_performance
+    def get_links_by_class(self, class_name: str, parent_element: Optional[WebElement] = None) -> Optional[List[WebElement]]:
+        """
+        Retrieve link elements (a tags) by class name, optionally within a parent element.
+
+        Args:
+            class_name (str): The class name to search for.
+            parent_element (Optional[WebElement]): The parent element to search within, if any.
+
+        Returns:
+            Optional[List[WebElement]]: A list of found link elements, or None if no elements were found.
+
+        Raises:
+            ElementNotFoundError: If the elements are not found after multiple attempts.
+        """
+        structured_log(logger, logging.INFO, "Retrieving link elements by class",
+                       class_name=class_name, has_parent=parent_element is not None)
+        
+        for attempt in range(self.config.max_retries):
+            try:
+                xpath = f".//a[@class='{class_name}']" if parent_element else f"//a[@class='{class_name}']"
+                if parent_element:
+                    elements = parent_element.find_elements(By.XPATH, xpath)
+                else:
+                    elements = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, xpath)))
+                
+                if not elements:
+                    structured_log(logger, logging.INFO, "No link elements found",
+                                   class_name=class_name, attempt=attempt+1)
+                    return None
+                
+                structured_log(logger, logging.INFO, "Link elements found",
+                               class_name=class_name, element_count=len(elements))
+                return elements
+                
+            except (TimeoutException, NoSuchElementException, StaleElementReferenceException):
+                structured_log(logger, logging.INFO, "Link elements not found or stale",
+                               class_name=class_name, attempt=attempt+1)
+                
+            except Exception as e:
+                structured_log(logger, logging.INFO, "Unexpected error occurred",
+                               class_name=class_name, attempt=attempt+1,
+                               error_message=str(e), error_type=type(e).__name__)
+                
+            if attempt < self.config.max_retries - 1:
+                time.sleep(self.config.retry_delay)
+                
+        raise ElementNotFoundError(f"Failed to retrieve link elements with class {class_name} after {self.config.max_retries} attempts")
 
 
                 

@@ -50,7 +50,7 @@ def get_start_date_and_seasons(config: AbstractConfig, data_access: AbstractData
     try:
         if config.full_scrape:
             seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(config.start_season, datetime.now().year)]
-            first_start_date = f"{config.regular_season_start_month}/1/{config.start_season}"
+            first_start_date = f"{config.regular_season_start_month}/01/{config.start_season}"
         else:
             scraped_data, file_names = data_access.load_scraped_data(cumulative=True)
             first_start_date, seasons = determine_scrape_start(scraped_data, config)
@@ -87,7 +87,9 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractCon
         for i, df in enumerate(scraped_data):
             if df.empty:
                 raise DataValidationError(f"Dataframe {i} is empty")
+            
             date_col = next((col for col in config.game_date_header_variations if col in df.columns), None)
+        
             if date_col is None:
                 raise DataValidationError(f"Dataframe {i} does not have a recognized game date column")
             
@@ -97,15 +99,15 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: AbstractCon
             if last_date is None:
                 last_date = current_last_date
             elif current_last_date != last_date:
-                raise DataValidationError(f"Dataframe {i} has a different last date than the first dataframe")
+                raise DataValidationError(f"Dataframe {i} has a different last date: {current_last_date} than the first dataframe: {last_date}")
 
         # Calculate the last season based on the last date
         # If the month is October or later, it's considered part of the next season
-        last_season = last_date.year if last_date.month >= 10 else last_date.year - 1
+        last_season = last_date.year if last_date.month >= config.regular_season_start_month else last_date.year - 1
         start_date = (last_date + timedelta(days=1)).strftime("%m/%d/%Y")
 
         today = datetime.now(timezone('EST'))
-        current_season = today.year if today.month >= 10 else today.year - 1
+        current_season = today.year if today.month >= config.regular_season_start_month else today.year - 1
 
         seasons = [f"{season}-{str(season + 1)[-2:]}" for season in range(last_season, current_season + 1)]
 

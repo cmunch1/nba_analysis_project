@@ -130,14 +130,14 @@ class ScheduleScraper(AbstractScheduleScraper):
                 raise ElementNotFoundError("Game days or games containers not found on the page")
             
             for day, days_games in zip(game_days, games_containers):
-                if search_day == day.text[:3]:
+                if search_day.upper() == day.text[:3].upper():
                     structured_log(logger, logging.INFO, "Found games for the specified day", search_day=search_day)
                     return days_games
             
             structured_log(logger, logging.WARNING, "No games found for the specified day", search_day=search_day)
             return None
         except ElementNotFoundError:
-            raise
+            raise 
         except Exception as e:
             structured_log(logger, logging.ERROR, "Error finding games for day", 
                            search_day=search_day, error_message=str(e), error_type=type(e).__name__)
@@ -160,8 +160,8 @@ class ScheduleScraper(AbstractScheduleScraper):
         """
         try:
             structured_log(logger, logging.INFO, "Extracting team IDs from schedule")
-            
-            links = self.page_scraper.get_elements_by_class(self.config.teams_links_class_name, todays_games)
+                        
+            links = self.page_scraper.get_links_by_class(self.config.teams_links_class_name, todays_games)
             
             if not links:
                 raise ElementNotFoundError("Team links not found on the page")
@@ -201,17 +201,17 @@ class ScheduleScraper(AbstractScheduleScraper):
         try:
             structured_log(logger, logging.INFO, "Extracting game IDs from schedule")
             
-            links = self.page_scraper.get_elements_by_class(self.config.game_links_class_name, todays_games)
+            links = self.page_scraper.get_links_by_class(self.config.game_links_class_name, todays_games)
             
             if not links:
                 raise ElementNotFoundError("Game links not found on the page")
 
-            links = [i for i in links if "PREVIEW" in i.text]
+            links = [i for i in links if self.config.schedule_preview_text in i.text]
             game_id_list = [i.get_attribute("href") for i in links]
             
             games = []
             for game in game_id_list:
-                game_id = game.partition("-00")[2].partition("?")[0]
+                game_id = game.partition("-00")[2]
                 if len(game_id) > 0:               
                     games.append(game_id)
             
@@ -245,11 +245,11 @@ class ScheduleScraper(AbstractScheduleScraper):
             if not matchups or not games:
                 raise DataValidationError("Matchups or games list is empty")
 
-            matchups_df = pd.DataFrame(matchups, columns=['visitor_id', 'home_id'])
+            matchups_df = pd.DataFrame(matchups, columns=[self.config.schedule_visitor_team_id_column, self.config.schedule_home_team_id_column])
             schedule_dataframes.append(matchups_df)
             file_names.append(self.config.todays_matchups_file)
 
-            games_df = pd.DataFrame(games, columns=['game_id'])
+            games_df = pd.DataFrame(games, columns=[self.config.schedule_game_id_column])
             schedule_dataframes.append(games_df)
             file_names.append(self.config.todays_games_ids_file)
 
