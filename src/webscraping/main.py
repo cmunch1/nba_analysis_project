@@ -79,17 +79,18 @@ def main() -> None:
             first_start_date, seasons = get_start_date_and_seasons(config, data_access)
             scrape_boxscores(nba_scraper, seasons, first_start_date, logger)
             scrape_matchups(nba_scraper, logger)
-
-            structured_log(logger, logging.INFO, "Loading scraped data for validation and concatenation")
             
             newly_scraped, file_names = data_access.load_scraped_data(cumulative=False)
-            cumulative_scraped, file_names = data_access.load_scraped_data(cumulative=True)
-            if validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, logger):
-                concatenated_data = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger)
-                
+            
+            if config.full_scrape:
+                concatenated_data = newly_scraped #no need to concatenate if full scrape is true
+            else:        
+                cumulative_scraped, file_names = data_access.load_scraped_data(cumulative=True)
+                if validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, logger):
+                    concatenated_data = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger)
+                    
             data_access.save_dataframes(concatenated_data, file_names, cumulative=True)
 
-    
         structured_log(logger, logging.INFO, "Web scraping process completed successfully")
 
     except (ConfigurationError, ScrapingError, DataValidationError, 

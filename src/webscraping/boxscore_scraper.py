@@ -58,20 +58,14 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         Raises:
             ConfigurationError: If there's an issue with the provided configuration or dependencies.
         """
-        try:
-            self.config = config
-            self.data_access = data_access
-            self.page_scraper = page_scraper
+        if not all([config, data_access, page_scraper]):
+            raise ConfigurationError("All dependencies must be provided: config, data_access, and page_scraper")
+        self.config = config
+        self.data_access = data_access
+        self.page_scraper = page_scraper
 
-
-
-            structured_log(logger, logging.INFO, "BoxscoreScraper initialized successfully", 
-                           page_scraper_type=type(page_scraper).__name__)
-        except Exception as e:
-            structured_log(logger, logging.ERROR, "Error initializing BoxscoreScraper", 
-                           error_message=str(e),
-                           error_type=type(e).__name__)
-            raise ConfigurationError(f"Error initializing BoxscoreScraper: {str(e)}")
+        structured_log(logger, logging.INFO, "BoxscoreScraper initialized successfully", 
+                       page_scraper_type=type(page_scraper).__name__)
 
     @log_performance
     def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
