@@ -17,6 +17,7 @@ Dependencies:
 
 from typing import List
 import logging
+import re
 
 from .abstract_scraper_classes import (
     AbstractNbaScraper,
@@ -168,7 +169,9 @@ class NbaScraper(AbstractNbaScraper):
         """
         if not seasons:
             raise DataValidationError("Seasons list cannot be empty")
-        if not isinstance(first_start_date, str) or len(first_start_date) != 10:
+        
+        # Check date format MM/DD/YYYY
+        if not isinstance(first_start_date, str) or not re.match(r'^\d{2}/\d{2}/\d{4}$', first_start_date):
             raise DataValidationError("Invalid first_start_date format. Expected MM/DD/YYYY")
 
     def _validate_search_day(self, search_day: str) -> None:
