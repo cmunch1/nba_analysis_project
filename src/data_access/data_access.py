@@ -269,9 +269,15 @@ class DataAccess(AbstractDataAccess):
             if not file_path.exists():
                 raise DataStorageError(f"File {file} not found in {scraped_path}")
             file_names.append(file)
-            df = pd.read_csv(file_path)
-            if df.empty:
-                raise DataValidationError(f"Loaded DataFrame from {file} is empty")
+            try:
+                df = pd.read_csv(file_path)
+            except pd.errors.EmptyDataError:
+                structured_log(logger, logging.WARNING, "Empty CSV file encountered",
+                             file_path=str(file_path))
+                df = pd.DataFrame()  # Create empty DataFrame - some days no games are played so it might be empty
+            except Exception as e:
+                raise DataStorageError(f"Error loading dataframe from {file}: {str(e)}")
+
             all_dfs.append(df)
         structured_log(logger, logging.INFO, "Dataframes loaded successfully",
                        dataframe_count=len(all_dfs), scraped_path=str(scraped_path))
