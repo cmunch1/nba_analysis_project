@@ -234,10 +234,15 @@ class ModelTrainer(AbstractModelTrainer):
             if not hasattr(self.config, 'model_hyperparameters') or model_name not in self.config.model_hyperparameters:
                 raise ValueError(f"Hyperparameters for {model_name} not found in config")
 
-            hyperparameters = self.config.model_hyperparameters[model_name]
+            # Find the 'current_best' configuration
+            hyperparameters_list = self.config.model_hyperparameters[model_name]
+            current_best = next((config['params'] for config in hyperparameters_list if config['name'] == 'current_best'), None)
+            
+            if current_best is None:
+                raise ValueError(f"'current_best' configuration not found for {model_name}")
 
-            structured_log(logger, logging.INFO, f"Hyperparameters for {model_name} loaded successfully from config")
-            return model_class(**hyperparameters), hyperparameters
+            structured_log(logger, logging.INFO, f"Loaded 'current_best' hyperparameters for {model_name}")
+            return model_class(**current_best), current_best
         except Exception as e:
             raise ModelTrainingError(f"Error getting hyperparameters for {model_name}",
                                      error_message=str(e))

@@ -39,6 +39,10 @@ class DataValidator(AbstractDataValidator):
                            dataframe_count=len(scraped_dataframes))
             num_rows = 0
             game_ids = None
+
+            if scraped_dataframes[0].empty:
+                structured_log(logger, logging.WARNING, "First dataframe is empty, skipping validation")
+                return True
          
             for i, df in enumerate(scraped_dataframes):
                 
