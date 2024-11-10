@@ -72,8 +72,8 @@ class FeatureSelectionError(NBAScraperError):
     def __init__(self, message, log_level=logging.ERROR, **kwargs):
         super().__init__(message, log_level, **kwargs)
 
-class ModelTrainingError(NBAScraperError):
-    """Raised when there's an error in the model training process."""
+class ModelTestingError(NBAScraperError):
+    """Raised when there's an error in the model testing process."""
     def __init__(self, message, log_level=logging.ERROR, **kwargs):
         super().__init__(message, log_level, **kwargs)
 

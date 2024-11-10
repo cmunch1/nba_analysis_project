@@ -34,7 +34,7 @@ Complicating Factors
 2. To access by date, you also have to designate what part of the season you are interested in (pre-season, regular season, play-in, playoffs). I call these sub\_seasons in the code.   
    ![][image2]
 
-	We will concatenate all the sub\_seasons together since there is no difference in table layout. The GAME\_ID has a code to indicate which sub\_season it is from, so we will be able to designate (and filter) the sub\_season later without having to do anything special now. The GAME\_ID will be something like 0042300401\. The third digit (4 here) designate the sub\_season (4 \= playoffs), while the 4th and 5th digit designate the season (23 \= 2023-24 season).
+	We will concatenate all the sub\_seasons together since there is no difference in table layout. The GAME\_ID has a code to indicate which sub\_season it is from, so we will be able to designate (and filter) the sub\_season later without having to do anything special now. The GAME\_ID will be something like 0042300401\. The third digit (4 here) designates the sub\_season (4 \= playoffs), while the 4th and 5th digit designate the season (23 \= 2023-24 season).
 
 	For example, April is usually the transition month where at the beginning of the month you will have regular season games, then play-in games, and then the playoffs start. If you wanted to scrape the whole month of April, you will have to loop 3 times for each stat\_type. These “chunks” of data are all concatenated together into a single file for each stat\_type.
 
@@ -104,9 +104,22 @@ Scraping Tools
 
 In the original version of this project, I had code that could use either Selenium (an open-source scraping tool) or ScrapingAnt (an online subscription-based scraping service). ScrapingAnt actually worked pretty well, but I wanted to move away from any reliance on SaaS tools and especially remove them from core code. 
 
+Proxy Servers
+
+The reason I turned to ScrapingAnt to begin with was because it has a built-in proxy server. This is a service that basically provides you with various ip addresses so that that websites won't block you for excessive access. The NBA.com website has anti-robot tools that prevents Github Actions from scraping it without the use of a proxy server.
+
+ScrapingAnt
+
+ScrapingAnt was very convenient because 
+ - it has a python API that fit fairly easily into my code
+ - it comes with a built-in proxy server 
+ - The free plan included plenty of monthly scrapes
+
+Like all the other SaaS tools though, there would be an occasion or two where their server would be having problems and my app would fail to retrieve data for a day (though in general, it had pretty good reliability)
+
 Selenium 
 
-The key webpages at NBA.com use dynamically generated content, which means that certain web scraping tools like BeautifulSoup will not work. Selenium is one of the most popular open source tools for this kind of content and is what I used for this project.
+The key webpages at NBA.com use dynamically generated content, which means that certain web scraping tools like BeautifulSoup will not work. Selenium is one of the most popular open source tools for this kind of content and is what I used for this project. The caveat being, for the NBA.com website in particular, you might need a proxy server, especially if you are using GitHub Actions to running your scraping app.
 
 ## **Main Components**
 
