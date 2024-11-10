@@ -4,6 +4,7 @@ cumulative_scraped_directory: data/cumulative_scraped/
 processed_data_directory: data/processed/
 engineered_data_directory: data/engineered/
 training_data_directory: data/training/
+evaluation_data_directory: data/evaluation/
 
 # Scraped boxscore files
 scraped_boxscore_files:
@@ -30,3 +31,4 @@ column_mapping_file: column_mapping.json
 # Training data files
 training_data_file: training_data.csv
 validation_data_file: validation_data.csv
+evaluation_data_file: evaluation_data.csv

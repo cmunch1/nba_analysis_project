@@ -17,22 +17,22 @@ from ..error_handling.custom_exceptions import (
     ConfigurationError,
     DataValidationError,
     DataStorageError,
-    ModelTrainingError,
+    ModelTestingError,
 )
 
-LOG_FILE = "model_training.log"
+LOG_FILE = "model_testing.log"
 
 @log_performance
 def main() -> None:
     """
-    Main function to perform model training on engineered NBA data.
+    Main function to perform model testing on engineered NBA data.
     """
 
     container = DIContainer()
     config = container.config()
     data_access = container.data_access()
     data_validator = container.data_validator()
-    model_trainer = container.model_trainer()
+    model_tester = container.model_tester()
 
     try:
         error_logger = setup_logging(config, LOG_FILE)
@@ -49,19 +49,22 @@ def main() -> None:
             training_dataframe = data_access.load_dataframe(config.training_data_file)
             validation_dataframe = data_access.load_dataframe(config.validation_data_file)
           
-            X, y = model_trainer.prepare_data(training_dataframe)
-            X_val, y_val = model_trainer.prepare_data(validation_dataframe)
+            X, y = model_tester.prepare_data(training_dataframe.copy())
+            X_val, y_val = model_tester.prepare_data(validation_dataframe.copy())
 
-             
             for model_name in config.models:
                 
-                model, model_params = model_trainer.get_model_params(model_name)
+                model, model_params = model_tester.get_model_params(model_name)
+                model.set_params(**model_params)
                 
                 for cv_type in config.cross_validation_types:
                     metrics = {}
                      
                     # Perform cross-validation
-                    metrics = model_trainer.perform_cross_validation(X, y, model_name, model, cv_type, config.n_splits)
+                    metrics = model_tester.perform_cross_validation(X, y, model_name, model, cv_type, config.n_splits)
+
+                    # train model on full training data
+                    model = model_tester.train_model(X, y, model_name, model)
 
                     # run model on validation data
                     y_val_pred = model.predict(X=X_val)
@@ -70,6 +73,7 @@ def main() -> None:
                     eval_data["target"] = y_val
                     eval_data["predictions"] = y_val_pred
                                
+                    
                     with mlflow.start_run():
                         mlflow.log_params(model_params)
 
@@ -93,15 +97,17 @@ def main() -> None:
                             model_type="classifier",
                         )
 
-                        print(f"metrics:\n{result.metrics}")
-                        print(f"artifacts:\n{result.artifacts}")
+                        #mlflow.shap.log_explanation(model.predict, pd_dataset)
+
+
+  
 
             structured_log(logger, logging.INFO, "Model training completed successfully", 
                            oof_accuracy=metrics["overall_accuracy"],
                            oof_auc=metrics["overall_auc"],)
 
     except (ConfigurationError, DataValidationError, 
-            DataStorageError, ModelTrainingError) as e:
+            DataStorageError, ModelTestingError) as e:
         _handle_known_error(error_logger, e)
     except Exception as e:
         _handle_unexpected_error(error_logger, e)

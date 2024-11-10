@@ -17,6 +17,10 @@ class AbstractModelTrainer(ABC):
     @abstractmethod
     def perform_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model: Union[XGBClassifier, LGBMClassifier, RandomForestClassifier], cv_type: str, n_splits: int) -> Dict[str, np.ndarray]:
         pass
+
+    @abstractmethod
+    def train_model(self, X: pd.DataFrame, y: pd.Series, model_name: str, model: Union[XGBClassifier, LGBMClassifier, RandomForestClassifier], model_params: Dict) -> Union[XGBClassifier, LGBMClassifier, RandomForestClassifier]:
+        pass
         
     @abstractmethod
     def evaluate_model(self, model: Union[XGBClassifier, LGBMClassifier, RandomForestClassifier], X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]  :

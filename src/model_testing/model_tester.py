@@ -15,11 +15,11 @@ import mlflow.sklearn
 from ..config.config import AbstractConfig
 from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import ModelTrainingError
-from .abstract_model_training import AbstractModelTrainer
+from .abstract_model_testing import AbstractModelTester
 
 logger = logging.getLogger(__name__)
 
-class ModelTrainer(AbstractModelTrainer):
+class ModelTester(AbstractModelTester):
     @log_performance
     def __init__(self, config: AbstractConfig):
         """
@@ -116,6 +116,7 @@ class ModelTrainer(AbstractModelTrainer):
         structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
                        input_shape=X.shape, cv_type=cv_type, n_splits=n_splits)
         try:
+                        
             # Initialize OOF arrays
             oof_predictions = np.zeros(X.shape[0])
             oof_probabilities = np.zeros(X.shape[0])
@@ -165,6 +166,22 @@ class ModelTrainer(AbstractModelTrainer):
 
         except Exception as e:
             raise ModelTrainingError("Error in OOF cross-validation",
+                                     error_message=str(e),
+                                     dataframe_shape=X.shape)
+        
+    @log_performance
+    def train_model(self, X: pd.DataFrame, y: pd.Series, model_name: str, model: Union[XGBClassifier, LGBMClassifier, RandomForestClassifier]) -> Union[XGBClassifier, LGBMClassifier, RandomForestClassifier]:
+        """
+        Train the model on the full training data.
+        """
+        structured_log(logger, logging.INFO, f"{model_name} - Starting model training",
+                       input_shape=X.shape)
+        try:
+            model.fit(X, y)
+            structured_log(logger, logging.INFO, f"{model_name} - Model training completed")
+            return model
+        except Exception as e:
+            raise ModelTrainingError("Error in model training",
                                      error_message=str(e),
                                      dataframe_shape=X.shape)
 
