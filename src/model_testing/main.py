@@ -1,13 +1,7 @@
 import sys
 import traceback
 import logging
-import mlflow
-import mlflow.sklearn
-import numpy as np
-from sklearn.model_selection import cross_val_score, train_test_split
-import shap
-import matplotlib.pyplot as plt
-
+import pandas as pd
 
 from ..logging.logging_setup import setup_logging
 from ..logging.logging_utils import log_performance, log_context, structured_log
@@ -25,7 +19,7 @@ LOG_FILE = "model_testing.log"
 @log_performance
 def main() -> None:
     """
-    Main function to perform model testing on engineered NBA data.
+    Main function to perform model testing on engineered data.
     """
 
     container = DIContainer()
@@ -33,84 +27,81 @@ def main() -> None:
     data_access = container.data_access()
     data_validator = container.data_validator()
     model_tester = container.model_tester()
-
+    experiment_logger = container.experiment_logger()
+    
     try:
         error_logger = setup_logging(config, LOG_FILE)
         logger = logging.getLogger(__name__)
 
-        structured_log(logger, logging.INFO, "Starting model training", 
+        structured_log(logger, logging.INFO, "Starting model testing", 
                        app_version=config.app_version, 
                        environment=config.environment,
                        log_level=config.log_level,
                        config_summary=str(config.__dict__))
 
         with log_context(app_version=config.app_version, environment=config.environment):
-            
+           
             training_dataframe = data_access.load_dataframe(config.training_data_file)
             validation_dataframe = data_access.load_dataframe(config.validation_data_file)
-          
+            
             X, y = model_tester.prepare_data(training_dataframe.copy())
             X_val, y_val = model_tester.prepare_data(validation_dataframe.copy())
 
             for model_name in config.models:
                 
-                model, model_params = model_tester.get_model_params(model_name)
-                model.set_params(**model_params)
+                model_params = model_tester.get_model_params(model_name)
                 
-                for cv_type in config.cross_validation_types:
-                    metrics = {}
-                     
-                    # Perform cross-validation
-                    metrics = model_tester.perform_cross_validation(X, y, model_name, model, cv_type, config.n_splits)
+                
+                y_oof_predictions= pd.Series(dtype='float64')
+                y_val_predictions = pd.Series(dtype='float64')
+                
+                oof_metrics = None  
+                validation_metrics = None
 
-                    # train model on full training data
-                    model = model_tester.train_model(X, y, model_name, model)
-
-                    # run model on validation data
-                    y_val_pred = model.predict(X=X_val)
-
-                    eval_data = X_val
-                    eval_data["target"] = y_val
-                    eval_data["predictions"] = y_val_pred
-                               
+                if config.perform_oof_cross_validation: 
                     
-                    with mlflow.start_run():
-                        mlflow.log_params(model_params)
+                    y_oof_predictions = model_tester.perform_oof_cross_validation(X, y, model_name, model_params)
 
-                        # Log cross-validation scores
-                        mlflow.log_metric("oof_accuracy", metrics["overall_accuracy"])
-                        mlflow.log_metric("oof_auc", metrics["overall_auc"])
+                    oof_metrics = model_tester.calculate_classification_evaluation_metrics(y, y_oof_predictions)
+                    
+                    structured_log(logger, logging.INFO, "OOF cross-validation completed",
+                                   accuracy=oof_metrics["accuracy"], precision=oof_metrics["precision"],
+                                   recall=oof_metrics["recall"], f1=oof_metrics["f1"], auc=oof_metrics["auc"])
 
-                        # Log model
-                        mlflow.sklearn.log_model(model, model_name)
+                if config.perform_validation_set_testing:
+                    
+                    y_val_predictions = model_tester.perform_validation_set_testing(X, y, X_val, y_val, model_name, model_params)
+ 
+                    validation_metrics = model_tester.calculate_classification_evaluation_metrics(y_val, y_val_predictions)    
 
-                        # Create the PandasDataset for use in mlflow evaluate
-                        pd_dataset = mlflow.data.from_pandas(
-                            eval_data, predictions="predictions", targets="target"
-    )
-                        mlflow.log_input(pd_dataset, context="validation")
+                    structured_log(logger, logging.INFO, "Validation set testing completed",
+                                   accuracy=validation_metrics["accuracy"], precision=validation_metrics["precision"],
+                                   recall=validation_metrics["recall"], f1=validation_metrics["f1"], auc=validation_metrics["auc"])
+                    
+                eval_data = validation_dataframe.copy()
+                eval_data["validation_predictions"] = y_val_predictions
+                eval_data["oof_predictions"] = y_oof_predictions
+                eval_data["target"] = y_val
 
-                        result = mlflow.evaluate(
-                            data=eval_data,
-                            targets="target",
-                            predictions="predictions",
-                            model_type="classifier",
-                        )
-
-                        #mlflow.shap.log_explanation(model.predict, pd_dataset)
-
-
+                experiment_logger.log_experiment(experiment_name=config.experiment_name,
+                                                  experiment_description=config.experiment_description,
+                                                  model_name=model_name,
+                                                  model=model,
+                                                  model_params=model_params,
+                                                  oof_metrics=oof_metrics,
+                                                  validation_metrics=validation_metrics,
+                                                  eval_data=eval_data)
   
 
-            structured_log(logger, logging.INFO, "Model training completed successfully", 
-                           oof_accuracy=metrics["overall_accuracy"],
-                           oof_auc=metrics["overall_auc"],)
+            structured_log(logger, logging.INFO, "Model testing completed successfully")
 
     except (ConfigurationError, DataValidationError, 
             DataStorageError, ModelTestingError) as e:
         _handle_known_error(error_logger, e)
     except Exception as e:
         _handle_unexpected_error(error_logger, e)
+
+
 
 def _handle_known_error(error_logger, e):
     structured_log(error_logger, logging.ERROR, f"{type(e).__name__} occurred", 
@@ -128,3 +119,4 @@ def _handle_unexpected_error(error_logger, e):
 
 if __name__ == "__main__":
     main()
+
