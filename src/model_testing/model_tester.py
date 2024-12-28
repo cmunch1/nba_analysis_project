@@ -7,33 +7,32 @@ import os
 from sklearn import tree, ensemble
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
-from xgboost import xgb
-from lightgbm import LGBMClassifier
+import xgboost as xgb
+#from lightgbm import LGBMClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import mlflow
 import mlflow.sklearn
 from ..config.config import AbstractConfig
 from ..logging.logging_utils import log_performance, structured_log
-from ..error_handling.custom_exceptions import ModelTrainingError
+from ..error_handling.custom_exceptions import ModelTestingError
 from .abstract_model_testing import AbstractModelTester
-from .di_container import DIContainer
-from ..data_access import DataAccess
+from ..data_access.data_access import AbstractDataAccess
 
 logger = logging.getLogger(__name__)
 
 class ModelTester(AbstractModelTester):
     @log_performance
-    def __init__(self, config: AbstractConfig, data_access: DataAccess):
+    def __init__(self, config: AbstractConfig):
         """
-        Initialize the ModelTrainer class.
+        Initialize the ModelTester class.
 
         Args:
-            config (AbstractConfig): Configuration object containing model training parameters.
-            data_access (DataAccess): Data access layer for loading datasets.
+            config (AbstractConfig): Configuration object containing model testing parameters.
         """
+        
         self.config = config
-        self.data_access = data_access
-        structured_log(logger, logging.INFO, "ModelTrainer initialized",
+        
+        structured_log(logger, logging.INFO, "ModelTester initialized",
                        config_type=type(config).__name__)
         
 
@@ -68,7 +67,7 @@ class ModelTester(AbstractModelTester):
                            output_shape=X.shape)    
             return X, y
         except Exception as e:
-            raise ModelTrainingError("Error in data preparation",
+            raise ModelTestingError("Error in data preparation",
                                      error_message=str(e),
                                      dataframe_shape=df.shape)
 
@@ -97,22 +96,25 @@ class ModelTester(AbstractModelTester):
             structured_log(logger, logging.INFO, "Classification evaluation metrics calculated", metrics=metrics)
             return metrics
         except Exception as e:
-            raise ModelTrainingError("Error in model evaluation",
+            raise ModelTestingError("Error in model evaluation",
                                      error_message=str(e),
                                      dataframe_shape=y_test.shape)
 
  
-
     @log_performance
     def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict) -> pd.Series:
         """
-        Perform Out-of-Fold (OOF) cross-validation on the data. Each out-of-fold prediction is stored in a series so
-        that we can use this like a separate validation set that can be evaluated later.
+        Perform Out-of-Fold (OOF) cross-validation on the data, retaining the predictions for each fold.
+
+        This "manual" approach instead of using the built-in cross-validation methods of sklearn is used to 
+        retain the predictions for each fold, which can be used later for model evaluation (e.g SHAP values, error analysis, etc).
+        We get a full validation set to work with, not just a few metrics.
 
         Args:
             X (pd.DataFrame): The feature dataframe.
             y (pd.Series): The target series.
-                model (Union[XGBClassifier, RandomForestClassifier]): The model to use for cross-validation.
+            model_name (str): The name of the model to use for cross-validation.
+            model_params (Dict): The hyperparameters for the model.
 
         Returns:
             pd.Series: Series containing OOF predictions.
@@ -155,7 +157,7 @@ class ModelTester(AbstractModelTester):
         
 
         except Exception as e:
-            raise ModelTrainingError("Error in OOF cross-validation",
+            raise ModelTestingError("Error in OOF cross-validation",
                                      error_message=str(e),
                                      dataframe_shape=X.shape)
         
@@ -166,8 +168,9 @@ class ModelTester(AbstractModelTester):
         """
         
         model, predictions = self._train_model(X, y, X_val, y_val, model_name, model_params)
+        
    
-        return predictions
+        return model, predictions
     
     @log_performance
     def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Any:
@@ -188,7 +191,7 @@ class ModelTester(AbstractModelTester):
                     try:
                         model, predictions = self._train_sklearn_model(X, y, X_val, y_val,model_name, model_params)
                     except Exception as e:
-                        raise ModelTrainingError(f"Error in model training",
+                        raise ModelTestingError(f"Error in model training",
                                                  error_message=str(e),
                                                  dataframe_shape=X.shape)
             
@@ -196,7 +199,7 @@ class ModelTester(AbstractModelTester):
             return model, predictions
         
         except Exception as e:
-            raise ModelTrainingError("Error in model training",
+            raise ModelTestingError("Error in model training",
                                      error_message=str(e),
                                      dataframe_shape=X.shape)
 
@@ -223,7 +226,7 @@ class ModelTester(AbstractModelTester):
             return model, predictions
         
         except Exception as e:
-            raise ModelTrainingError("Error in model training",
+            raise ModelTestingError("Error in model training",
                                      error_message=str(e),
                                      dataframe_shape=X.shape)
         
@@ -248,6 +251,7 @@ class ModelTester(AbstractModelTester):
     def _optimize_data_types(self, df: pd.DataFrame, date_column: str = 'date') -> pd.DataFrame:
         """
         Optimize data types of the dataframe and convert date field to proper date type.
+        The primarily reduces the bitsize of ints and floats to reduce memory usage and improve performance.
 
         Args:
             df (pd.DataFrame): Input dataframe.
@@ -283,7 +287,7 @@ class ModelTester(AbstractModelTester):
                            output_shape=df.shape, output_memory=df.memory_usage().sum() / 1e6)
             return df
         except Exception as e:
-            raise ModelTrainingError("Error in data type optimization",
+            raise ModelTestingError("Error in data type optimization",
                                      error_message=str(e),
                                      dataframe_shape=df.shape)
 
@@ -312,5 +316,5 @@ class ModelTester(AbstractModelTester):
             structured_log(logger, logging.INFO, f"Loaded 'current_best' hyperparameters for {model_name}")
             return current_best
         except Exception as e:
-            raise ModelTrainingError(f"Error getting hyperparameters for {model_name}",
+            raise ModelTestingError(f"Error getting hyperparameters for {model_name}",
                                      error_message=str(e))

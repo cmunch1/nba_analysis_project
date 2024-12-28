@@ -8,14 +8,14 @@ import pandas as pd
 from sklearn.model_selection import cross_val_score, train_test_split
 import shap
 import matplotlib.pyplot as plt
-from .abstract_model_testing import AbstractExperimentLogger
-from ..config.config import AbstractConfig
+from ..abstract_model_testing import AbstractExperimentLogger
+from ...config.config import AbstractConfig
 
 class MLFlowLogger(AbstractExperimentLogger):
     def __init__(self, config: AbstractConfig):
         self.config = config
     
-    def log_experiment(self, experiment_name: str, experiment_description: str, model_name: str, model: object, model_params: dict, oof_metrics: dict, validation_metrics: dict, eval_data: pd.DataFrame):
+    def log_experiment(self, experiment_name: str, experiment_description: str, model_name: str, model: object, model_params: dict, oof_metrics: dict, val_metrics: dict, oof_data: pd.DataFrame, val_data: pd.DataFrame):
         
         
         with mlflow.start_run():
@@ -28,21 +28,26 @@ class MLFlowLogger(AbstractExperimentLogger):
 
             # Create the PandasDataset for use in mlflow evaluate
             pd_dataset = mlflow.data.from_pandas(
-                eval_data, predictions="oof_probabilities", targets="target"
+                oof_data, predictions="oof_predictions", targets="target"
             )
+
+            pd_dataset = mlflow.data.from_pandas(
+                val_data, predictions="val_predictions", targets="target"
+            )
+
             mlflow.log_input(pd_dataset, context="validation")
 
             oof_result = mlflow.evaluate(
-                data=eval_data,
+                data=oof_data,
                 targets="target",
-                predictions="oof_probabilities",
+                predictions="oof_predictions",
                 model_type="classifier",
             )
 
             validation_result = mlflow.evaluate(
-                data=eval_data,
+                data=val_data,
                 targets="target",
-                predictions="validation_probabilities",
+                predictions="val_predictions",
                 model_type="classifier",
             )
 
@@ -53,10 +58,4 @@ class MLFlowLogger(AbstractExperimentLogger):
 
     def log_model(self, model, model_name: str, model_params: dict):
         mlflow.sklearn.log_model(model, model_name, params=model_params)    
-
-
-
-  
-
-
 

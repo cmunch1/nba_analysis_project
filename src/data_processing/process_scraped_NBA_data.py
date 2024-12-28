@@ -46,7 +46,7 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
             df, column_mapping = self._transform_data(df)
 
             df[self.config.new_date_column] = pd.to_datetime(df[self.config.new_date_column])
-            df = df.sort_values(by=[self.config.new_date_column, self.config.new_game_id_column, 'is_home_team'], ascending=[True, True, True])
+            df = df.sort_values(by=[self.config.new_date_column, self.config.new_game_id_column, self.config.home_team_column], ascending=[True, True, True])
                       
             structured_log(logger, logging.INFO, "Data processing completed successfully",
                            final_dataframe_shape=df.shape)
@@ -77,11 +77,11 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
             df_without_game_info = df.drop(columns=game_info_columns)
             
             # Split into home and away dataframes
-            df_home_team = df_without_game_info[df_without_game_info['is_home_team'] == 1]
-            df_away_team = df_without_game_info[df_without_game_info['is_home_team'] == 0]
+            df_home_team = df_without_game_info[df_without_game_info[self.config.home_team_column] == 1]
+            df_away_team = df_without_game_info[df_without_game_info[self.config.home_team_column] == 0]
             
             # Merge home and away data
-            merged_df = pd.merge(df_home_team, df_away_team, on=self.config.new_game_id_column, suffixes=('_home', '_visitor'))
+            merged_df = pd.merge(df_home_team, df_away_team, on=self.config.new_game_id_column, suffixes=("_" + self.config.home_game_suffix, "_" + self.config.visitor_game_suffix))
             
             # Merge back the game info columns
             final_df = pd.merge(game_info_df, merged_df, on=self.config.new_game_id_column)
@@ -263,17 +263,17 @@ class ProcessScrapedNBAData(AbstractNBADataProcessor):
                        initial_column_count=initial_column_count)
         try:
             # note that a previous step converted column names to lowercase and substituted an underscore for a space
-            df["is_win"] = df["w/l"].str.contains("W").astype(int)
+            df[self.config.win_column] = df["w/l"].str.contains("W").astype(int)
             df = df.drop(columns=['w/l'])
 
-            df["is_home_team"] = df["match_up"].str.contains("vs.").astype(int)
-            df["is_overtime"] = (df["min"] > self.config.regular_game_minutes).astype(int)
+            df[self.config.home_team_column] = df["match_up"].str.contains("vs.").astype(int)
+            df[self.config.is_overtime_column] = (df["min"] > self.config.regular_game_minutes).astype(int)
 
             df[self.config.new_game_id_column] = df[self.config.new_game_id_column].astype(str)
-            df["season"] = df[self.config.new_game_id_column].str[1:3].astype(int) + self.config.season_year_offset
-            df["sub_season_id"] = df[self.config.new_game_id_column].str[:1].astype(int)
+            df[self.config.season_column] = df[self.config.new_game_id_column].str[1:3].astype(int) + self.config.season_year_offset
+            df[self.config.sub_season_id_column] = df[self.config.new_game_id_column].str[:1].astype(int)
             df[self.config.new_game_id_column] = df[self.config.new_game_id_column].str[1:]
-            df["is_playoff"] = (df["sub_season_id"] > self.config.regular_season_game_id_threshold).astype(int)
+            df[self.config.is_playoff_column] = (df[self.config.sub_season_id_column] > self.config.regular_season_game_id_threshold).astype(int)
             
             
 

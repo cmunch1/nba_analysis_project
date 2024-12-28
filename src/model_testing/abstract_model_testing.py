@@ -8,7 +8,7 @@ from lightgbm import LGBMClassifier
 from sklearn.ensemble import RandomForestClassifier
 from ..config.config import AbstractConfig
 
-class AbstractModelTrainer(ABC):
+class AbstractModelTester(ABC):
     @abstractmethod
     def __init__(self, config: AbstractConfig):
         pass
@@ -20,13 +20,9 @@ class AbstractModelTrainer(ABC):
     @abstractmethod
     def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model: Union[XGBClassifier, LGBMClassifier, RandomForestClassifier], cv_type: str, n_splits: int) -> Dict[str, np.ndarray]:
         pass
-
-    @abstractmethod
-    def train_model(self, X: pd.DataFrame, y: pd.Series, model_name: str, model: Union[XGBClassifier, LGBMClassifier, RandomForestClassifier], model_params: Dict) -> Union[XGBClassifier, LGBMClassifier, RandomForestClassifier]:
-        pass
         
     @abstractmethod
-    def calculate_model_evaluation_metrics(self, y_true: pd.Series, y_pred: np.ndarray) -> Dict[str, float]:
+    def calculate_classification_evaluation_metrics(self, y_true: pd.Series, y_pred: np.ndarray) -> Dict[str, float]:
         pass
 
     @abstractmethod
@@ -42,11 +38,17 @@ class Preprocessor:
     def fit_transform(self, X: np.ndarray, numerical_features: List[str], categorical_features: List[str]) -> np.ndarray:
         pass
 
-class ExperimentLogger(ABC):
+class AbstractExperimentLogger(ABC):
     @abstractmethod
     def __init__(self, config: AbstractConfig):
         pass
 
     @abstractmethod
-    def log_experiment(self, experiment_name: str, experiment_description: str, model_params: dict, metrics: dict, eval_data: pd.DataFrame):
+    def log_experiment(self, experiment_name: str, experiment_description: str, model_name: str, 
+                      model: object, model_params: dict, oof_metrics: dict, validation_metrics: dict, 
+                      oof_data: pd.DataFrame, val_data: pd.DataFrame):
+        pass
+
+    @abstractmethod
+    def log_model(self, model: object, model_name: str, model_params: dict):
         pass
