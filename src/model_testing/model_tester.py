@@ -75,23 +75,31 @@ class ModelTester(AbstractModelTester):
     @log_performance
     def calculate_classification_evaluation_metrics(self, y_test: pd.Series, y_pred: pd.Series) -> Dict[str, float]:
         """
-        Calculate the evaluation metrics for the trained model.
+        Calculate the evaluation metrics for binary classification predictions.
 
         Args:
-            y_test (pd.Series): The test target series.
-            y_pred (pd.Series): The predicted target series.
+            y_test (pd.Series): The true target values.
+            y_pred (pd.Series): The predicted probabilities from the model.
 
         Returns:
-            dict: Dictionary of classification evaluation metrics.
+            Dict[str, float]: Dictionary containing evaluation metrics:
+                - accuracy: Overall prediction accuracy
+                - precision: Weighted precision score
+                - recall: Weighted recall score
+                - f1: Weighted F1 score
+                - auc: Area under the ROC curve
         """
         structured_log(logger, logging.INFO, "Calculating classification evaluation metrics")
         try:
+            # Convert probabilities to binary predictions for metrics that need discrete classes
+            y_pred_binary = (y_pred >= 0.5).astype(int)
+            
             metrics = {
-                'accuracy': accuracy_score(y_test, y_pred),
-                'precision': precision_score(y_test, y_pred, average='weighted'),
-                'recall': recall_score(y_test, y_pred, average='weighted'),
-                'f1': f1_score(y_test, y_pred, average='weighted'),
-                'auc': roc_auc_score(y_test, y_pred)
+                'accuracy': accuracy_score(y_test, y_pred_binary),
+                'precision': precision_score(y_test, y_pred_binary, average='weighted'),
+                'recall': recall_score(y_test, y_pred_binary, average='weighted'),
+                'f1': f1_score(y_test, y_pred_binary, average='weighted'),
+                'auc': roc_auc_score(y_test, y_pred)  # AUC uses probabilities directly
             }
             structured_log(logger, logging.INFO, "Classification evaluation metrics calculated", metrics=metrics)
             return metrics
@@ -104,20 +112,24 @@ class ModelTester(AbstractModelTester):
     @log_performance
     def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict) -> pd.Series:
         """
-        Perform Out-of-Fold (OOF) cross-validation on the data, retaining the predictions for each fold.
+        Perform Out-of-Fold (OOF) cross-validation on the data.
 
-        This "manual" approach instead of using the built-in cross-validation methods of sklearn is used to 
-        retain the predictions for each fold, which can be used later for model evaluation (e.g SHAP values, error analysis, etc).
-        We get a full validation set to work with, not just a few metrics.
+        This method performs k-fold cross-validation while retaining predictions for each fold,
+        allowing for detailed model evaluation later (e.g., SHAP values, error analysis).
+        Supports both StratifiedKFold and TimeSeriesSplit cross-validation strategies.
 
         Args:
             X (pd.DataFrame): The feature dataframe.
             y (pd.Series): The target series.
-            model_name (str): The name of the model to use for cross-validation.
-            model_params (Dict): The hyperparameters for the model.
+            model_name (str): Name of the model to use ('XGBoost', 'LGBM', or sklearn model names).
+            model_params (Dict): Model hyperparameters.
 
         Returns:
-            pd.Series: Series containing OOF predictions.
+            pd.Series: Series containing OOF predictions for all folds.
+
+        Raises:
+            ModelTestingError: If there's an error during cross-validation.
+            ValueError: If an unsupported cross-validation type is specified.
         """
         structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
                        input_shape=X.shape)
@@ -141,14 +153,18 @@ class ModelTester(AbstractModelTester):
 
                 model, oof_predictions[val_idx] = self._train_model(X_train, y_train, X_val, y_val, model_name, model_params)
                     
-                fold_accuracy = accuracy_score(y_val, oof_predictions[val_idx])
-                fold_auc = roc_auc_score(y_val, oof_predictions[val_idx])
+                # Convert probabilities to binary predictions using 0.5 threshold
+                binary_predictions = (oof_predictions[val_idx] >= 0.5).astype(int)
+                
+                fold_accuracy = accuracy_score(y_val, binary_predictions)
+                fold_auc = roc_auc_score(y_val, oof_predictions[val_idx])  # AUC can use probabilities directly
 
                 structured_log(logger, logging.INFO, f"Fold {fold} completed",
                                fold_accuracy=fold_accuracy, fold_auc=fold_auc)
 
 
-            overall_accuracy = accuracy_score(y, oof_predictions)
+            # At the end, convert to binary for overall accuracy
+            overall_accuracy = accuracy_score(y, (oof_predictions >= 0.5).astype(int))
             overall_auc = roc_auc_score(y, oof_predictions)
             structured_log(logger, logging.INFO, "OOF cross-validation completed",
                            overall_accuracy=overall_accuracy, overall_auc=overall_auc)
@@ -162,9 +178,22 @@ class ModelTester(AbstractModelTester):
                                      dataframe_shape=X.shape)
         
     @log_performance
-    def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> pd.Series:
+    def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Tuple[Any, pd.Series]:
         """
-        Perform validation set testing.
+        Perform model training and validation on a separate validation set.
+
+        Args:
+            X (pd.DataFrame): Training feature dataframe.
+            y (pd.Series): Training target series.
+            X_val (pd.DataFrame): Validation feature dataframe.
+            y_val (pd.Series): Validation target series.
+            model_name (str): Name of the model to use.
+            model_params (Dict): Model hyperparameters.
+
+        Returns:
+            Tuple[Any, pd.Series]: Tuple containing:
+                - The trained model
+                - Series of predictions on validation set
         """
         
         model, predictions = self._train_model(X, y, X_val, y_val, model_name, model_params)
@@ -173,9 +202,25 @@ class ModelTester(AbstractModelTester):
         return model, predictions
     
     @log_performance
-    def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Any:
+    def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Tuple[Any, np.ndarray]:
         """
-        Train/fit the model.
+        Train a model on the given data.
+
+        Args:
+            X (pd.DataFrame): Training feature dataframe.
+            y (pd.Series): Training target series.
+            X_val (pd.DataFrame): Validation feature dataframe.
+            y_val (pd.Series): Validation target series.
+            model_name (str): Name of the model to train ('XGBoost', 'LGBM', or sklearn model names).
+            model_params (Dict): Model hyperparameters.
+
+        Returns:
+            Tuple[Any, np.ndarray]: Tuple containing:
+                - The trained model
+                - Array of predictions on validation set
+
+        Raises:
+            ModelTestingError: If there's an error during model training.
         """
         structured_log(logger, logging.INFO, f"{model_name} - Starting model training",
                        input_shape=X.shape)
@@ -204,9 +249,26 @@ class ModelTester(AbstractModelTester):
                                      dataframe_shape=X.shape)
 
     @log_performance
-    def _train_sklearn_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Any:
+    def _train_sklearn_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Tuple[Any, np.ndarray]:
         """
-        Train/fit the sklearn model.
+        Train a scikit-learn model.
+
+        Args:
+            X (pd.DataFrame): Training feature dataframe.
+            y (pd.Series): Training target series.
+            X_val (pd.DataFrame): Validation feature dataframe.
+            y_val (pd.Series): Validation target series.
+            model_name (str): Name of the sklearn model (from tree or ensemble modules).
+            model_params (Dict): Model hyperparameters.
+
+        Returns:
+            Tuple[Any, np.ndarray]: Tuple containing:
+                - The trained sklearn model
+                - Array of predictions on validation set
+
+        Raises:
+            ModelTestingError: If there's an error during model training.
+            ValueError: If the model name is not supported.
         """
         structured_log(logger, logging.INFO, f"{model_name} - Starting model training",
                        input_shape=X.shape)
@@ -230,20 +292,50 @@ class ModelTester(AbstractModelTester):
                                      error_message=str(e),
                                      dataframe_shape=X.shape)
         
-    def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict) -> xgb.Booster:
-       
-       
-        train_dmatrix = xgb.DMatrix(X_train, label=y_train,enable_categorical=self.config.enable_categorical)
-        val_dmatrix = xgb.DMatrix(X_val, label=y_val,enable_categorical=self.config.enable_categorical)
+    @log_performance
+    def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict) -> Tuple[xgb.Booster, np.ndarray]:
+        """
+        Train an XGBoost model.
 
-        model =  xgb.train(model_params, 
-                        train_dmatrix, 
-                        num_boost_round = self.config.num_boost_round,
-                        early_stopping_rounds=self.config.early_stopping_rounds,
-                        callbacks=[],
-                        )
+        Args:
+            X_train (pd.DataFrame): Training feature dataframe.
+            y_train (pd.Series): Training target series.
+            X_val (pd.DataFrame): Validation feature dataframe.
+            y_val (pd.Series): Validation target series.
+            model_params (Dict): Model hyperparameters.
+
+        Returns:
+            Tuple[xgb.Booster, np.ndarray]: Tuple containing:
+                - The trained XGBoost model
+                - Array of predictions on validation set
+        """
+        # Ensure X_val has the same columns in the same order as X_train
+        X_val = X_val[X_train.columns]
+        
+        train_dmatrix = xgb.DMatrix(X_train, label=y_train, enable_categorical=self.config.enable_categorical)
+        val_dmatrix = xgb.DMatrix(X_val, label=y_val, enable_categorical=self.config.enable_categorical)
+
+        # Create evaluation list for training
+        evals = [(train_dmatrix, 'train'), (val_dmatrix, 'eval')]
+        
+        # Only use early stopping if configured
+        early_stopping_rounds = self.config.early_stopping_rounds if hasattr(self.config, 'early_stopping_rounds') else None
+        
+        model = xgb.train(
+            model_params, 
+            train_dmatrix, 
+            num_boost_round=self.config.num_boost_round,
+            early_stopping_rounds=early_stopping_rounds,
+            evals=evals,
+            callbacks=[]
+        )
         
         predictions = model.predict(val_dmatrix)
+        
+        structured_log(logger, logging.INFO, "XGBoost predictions generated",
+                      predictions_type=type(predictions).__name__,
+                      predictions_shape=predictions.shape,
+                      predictions_sample=predictions[:5].tolist())
         
         return model, predictions
     
@@ -291,15 +383,20 @@ class ModelTester(AbstractModelTester):
                                      error_message=str(e),
                                      dataframe_shape=df.shape)
 
-    def get_model_params(self, model_name: str) ->  Dict:
+    def get_model_params(self, model_name: str) -> Dict:
         """
-        Get the model object and its hyperparameters from the config.
+        Get the current best hyperparameters for a model from the configuration.
 
         Args:
             model_name (str): Name of the model to get parameters for.
 
         Returns:
-            Tuple[Union[XGBClassifier, LGBMClassifier, RandomForestClassifier], Dict]: Tuple containing the model object and its hyperparameters.
+            Dict: Dictionary containing the model's hyperparameters.
+
+        Raises:
+            ModelTestingError: If there's an error retrieving the hyperparameters.
+            ValueError: If hyperparameters for the model are not found in config or if
+                       'current_best' configuration is not found.
         """
         try:
 
