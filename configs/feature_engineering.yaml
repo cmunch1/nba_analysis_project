@@ -2,11 +2,6 @@ extend_rolling_avgs: true
 extend_streaks: true
 include_postseason: true
 
-home_team_column: is_home_team
-win_column: is_win
-season_column: season
-is_playoff_column: is_playoff
-
 # used to calculate the approximate progress of the season (elapsed days over total days)
 season_start: 10-1
 season_end: 7-1
@@ -14,11 +9,6 @@ season_end: 7-1
 # this is the target column's root name. It will have a home_team_prefix added to it in the feature engineering process
 target_column: is_win
 
-# suffixes added to the end of column names to indicate how the statistics were partitioned
-# e.g. fg_pct_rolling_avg_3_home indicates field goal percentage for the team over the last 3 home games
-home_game_suffix: home
-visitor_game_suffix: visitor
-combined_cases_suffix: all
 
 # prefixes added to the beginning of column names to indicate the team's status for the specific matchup
 # when all the games stats are combined on a single row for a given game

@@ -18,7 +18,7 @@ categorical_columns:
 random_state: 42
 
 # models
-model:
+models:
   - XGBoost
   #- LGBMClassifier
 

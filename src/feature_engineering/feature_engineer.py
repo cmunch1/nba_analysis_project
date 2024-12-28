@@ -522,6 +522,10 @@ class FeatureEngineer(AbstractFeatureEngineer):
             grouped = update_df.groupby(self.config.new_game_id_column)
 
             # Iterate through each game
+
+
+            logger.info(f"Sample of home_team_column values: {df[self.config.home_team_column].value_counts()}")
+    
             for game_id, game in grouped:
                 home_team = game[game[self.config.home_team_column] == 1].iloc[0]
                 away_team = game[game[self.config.home_team_column] == 0].iloc[0]
@@ -572,4 +576,5 @@ class FeatureEngineer(AbstractFeatureEngineer):
         except Exception as e:
             raise FeatureEngineeringError("Error in updating ELO ratings",
                                             error_message=str(e),
+                                            game_id=game_id,
                                             dataframe_shape=df.shape)

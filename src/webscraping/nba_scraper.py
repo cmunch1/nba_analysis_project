@@ -15,7 +15,7 @@ Dependencies:
     - Logging utilities from logging_utils module
 """
 
-from typing import List
+from typing import List, Dict
 import logging
 import re
 
@@ -29,7 +29,8 @@ from ..error_handling.custom_exceptions import (
     ConfigurationError,
     ScrapingError,
     DataValidationError,
-    DataStorageError
+    DataStorageError,
+    DataExtractionError
 )
 from ..logging.logging_utils import log_performance, log_context, structured_log
 
@@ -186,3 +187,5 @@ class NbaScraper(AbstractNbaScraper):
         """
         if not isinstance(search_day, str) or len(search_day) != 3:
             raise DataValidationError("Invalid search_day format. Expected 3-letter day abbreviation (e.g., 'MON', 'TUE')")
+
+  

@@ -9,6 +9,7 @@ from .page_scraper import PageScraper
 from .boxscore_scraper import BoxscoreScraper 
 from .schedule_scraper import ScheduleScraper 
 from .nba_scraper import NbaScraper
+from .matchup_validator import MatchupValidator
 
 
 class DIContainer(containers.DeclarativeContainer):
@@ -26,3 +27,10 @@ class DIContainer(containers.DeclarativeContainer):
     boxscore_scraper = providers.Factory(BoxscoreScraper, config=config, data_access=data_access, page_scraper=page_scraper)
     schedule_scraper = providers.Factory(ScheduleScraper, config=config, data_access=data_access, page_scraper=page_scraper)
     nba_scraper = providers.Factory(NbaScraper, config=config, boxscore_scraper=boxscore_scraper, schedule_scraper=schedule_scraper)
+    matchup_validator = providers.Factory(
+        MatchupValidator,
+        config=config,
+        data_access=data_access,
+        page_scraper=page_scraper
+    )
+ 

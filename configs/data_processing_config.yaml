@@ -10,7 +10,18 @@ team_id_column: TEAM_ID
 new_team_id_column: team_id
 date_column: GAME_DATE
 new_date_column: game_date
+home_team_column: is_home_team
+win_column: is_win
+season_column: season
+is_playoff_column: is_playoff
+is_overtime_column: is_overtime
+sub_season_id_column: sub_season_id
 
+# suffixes added to the end of column names to indicate how the statistics were partitioned
+# e.g. fg_pct_rolling_avg_3_home indicates field goal percentage for the team over the last 3 home games
+home_game_suffix: home
+visitor_game_suffix: visitor
+combined_cases_suffix: all
 
 
 game_info_columns:

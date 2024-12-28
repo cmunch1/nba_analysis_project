@@ -30,6 +30,7 @@ from ..error_handling.custom_exceptions import (
     ConfigurationError, ElementNotFoundError
 )
 from ..logging.logging_utils import log_performance, log_context, structured_log
+from .matchup_validator import MatchupValidator
 
 logger = logging.getLogger(__name__)
 
@@ -43,26 +44,29 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         config (AbstractConfig): Configuration object.
         data_access (AbstractDataAccess): Data access object.
         page_scraper (AbstractPageScraper): An instance of PageScraper.
+        matchup_validator (MatchupValidator): An instance of MatchupValidator.
     """
 
     @log_performance
-    def __init__(self, config: AbstractConfig, data_access: AbstractDataAccess, page_scraper: AbstractPageScraper) -> None:
+    def __init__(self, config: AbstractConfig, data_access: AbstractDataAccess, page_scraper: AbstractPageScraper, matchup_validator: MatchupValidator) -> None:
         """
-        Initialize the BoxscoreScraper with configuration, data access, and page scraper.
+        Initialize the BoxscoreScraper with configuration, data access, page scraper, and matchup validator.
 
         Args:
             config (AbstractConfig): Configuration object.
             data_access (AbstractDataAccess): Data access object.
             page_scraper (AbstractPageScraper): Page scraper object.
+            matchup_validator (MatchupValidator): Matchup validator object.
 
         Raises:
             ConfigurationError: If there's an issue with the provided configuration or dependencies.
         """
-        if not all([config, data_access, page_scraper]):
-            raise ConfigurationError("All dependencies must be provided: config, data_access, and page_scraper")
+        if not all([config, data_access, page_scraper, matchup_validator]):
+            raise ConfigurationError("All dependencies must be provided: config, data_access, page_scraper, and matchup_validator")
         self.config = config
         self.data_access = data_access
         self.page_scraper = page_scraper
+        self.matchup_validator = matchup_validator
 
         structured_log(logger, logging.INFO, "BoxscoreScraper initialized successfully", 
                        page_scraper_type=type(page_scraper).__name__)
@@ -291,9 +295,19 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
 
             try:
                 table = self.page_scraper.scrape_page_table(nba_url, self.config.table_class_name, self.config.pagination_class_name, self.config.dropdown_class_name)
-                structured_log(logger, logging.INFO, "Successfully scraped boxscores table")
-                return table
-            except ElementNotFoundError as e:
+                
+                if table:
+                    # Validate matchups
+                    is_valid, invalid_game_ids = self.matchup_validator.validate_matchup_designations(table)
+                    
+                    if not is_valid:
+                        corrected_matchups = self.matchup_validator.fetch_alternative_matchup_data(invalid_game_ids)
+                        self.matchup_validator.update_files_with_corrections(corrected_matchups)
+                    
+                    return table
+                
+                return None
+            except Exception as e:
                 structured_log(logger, logging.ERROR, "Error scraping table", 
                                error_message=str(e))
                 raise ScrapingError(f"Error scraping table: {str(e)}")

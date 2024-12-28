@@ -51,18 +51,23 @@ def main() -> None:
                 
                 model_params = model_tester.get_model_params(model_name)
                 
+                oof_predictions= pd.Series(dtype='float64')
+                val_predictions = pd.Series(dtype='float64')
                 
-                y_oof_predictions= pd.Series(dtype='float64')
-                y_val_predictions = pd.Series(dtype='float64')
-                
+                oof_data = None
+                val_data = None
                 oof_metrics = None  
-                validation_metrics = None
+                val_metrics = None
+                model = None
 
                 if config.perform_oof_cross_validation: 
                     
-                    y_oof_predictions = model_tester.perform_oof_cross_validation(X, y, model_name, model_params)
+                    oof_predictions = model_tester.perform_oof_cross_validation(X, y, model_name, model_params)
+                    oof_metrics = model_tester.calculate_classification_evaluation_metrics(y, oof_predictions)
 
-                    oof_metrics = model_tester.calculate_classification_evaluation_metrics(y, y_oof_predictions)
+                    oof_data = X
+                    oof_data["oof_predictions"] = oof_predictions
+                    oof_data["target"] = y 
                     
                     structured_log(logger, logging.INFO, "OOF cross-validation completed",
                                    accuracy=oof_metrics["accuracy"], precision=oof_metrics["precision"],
@@ -70,27 +75,27 @@ def main() -> None:
 
                 if config.perform_validation_set_testing:
                     
-                    y_val_predictions = model_tester.perform_validation_set_testing(X, y, X_val, y_val, model_name, model_params)
+                    model, val_predictions = model_tester.perform_validation_set_testing(X, y, X_val, y_val, model_name, model_params)
  
-                    validation_metrics = model_tester.calculate_classification_evaluation_metrics(y_val, y_val_predictions)    
+                    val_metrics = model_tester.calculate_classification_evaluation_metrics(y_val, val_predictions) 
+
+                    val_data = X_val
+                    val_data["validation_predictions"] = val_predictions
+                    val_data["target"] = y_val   
 
                     structured_log(logger, logging.INFO, "Validation set testing completed",
-                                   accuracy=validation_metrics["accuracy"], precision=validation_metrics["precision"],
-                                   recall=validation_metrics["recall"], f1=validation_metrics["f1"], auc=validation_metrics["auc"])
+                                   accuracy=val_metrics["accuracy"], precision=val_metrics["precision"],
+                                   recall=val_metrics["recall"], f1=val_metrics["f1"], auc=val_metrics["auc"])
                     
-                eval_data = validation_dataframe.copy()
-                eval_data["validation_predictions"] = y_val_predictions
-                eval_data["oof_predictions"] = y_oof_predictions
-                eval_data["target"] = y_val
-
                 experiment_logger.log_experiment(experiment_name=config.experiment_name,
                                                   experiment_description=config.experiment_description,
                                                   model_name=model_name,
                                                   model=model,
                                                   model_params=model_params,
                                                   oof_metrics=oof_metrics,
-                                                  validation_metrics=validation_metrics,
-                                                  eval_data=eval_data)
+                                                  val_metrics=val_metrics,
+                                                  oof_data=oof_data,
+                                                  val_data=val_data)
   
 
             structured_log(logger, logging.INFO, "Model testing completed successfully")
