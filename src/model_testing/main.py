@@ -65,9 +65,9 @@ def main() -> None:
                     oof_predictions = model_tester.perform_oof_cross_validation(X, y, model_name, model_params)
                     oof_metrics = model_tester.calculate_classification_evaluation_metrics(y, oof_predictions)
 
-                    oof_data = X
+                    oof_data = X.copy()
                     oof_data["oof_predictions"] = oof_predictions
-                    oof_data["target"] = y 
+                    oof_data["target"] = y.copy() 
                     
                     structured_log(logger, logging.INFO, "OOF cross-validation completed",
                                    accuracy=oof_metrics["accuracy"], precision=oof_metrics["precision"],
@@ -79,9 +79,9 @@ def main() -> None:
  
                     val_metrics = model_tester.calculate_classification_evaluation_metrics(y_val, val_predictions) 
 
-                    val_data = X_val
+                    val_data = X_val.copy()
                     val_data["validation_predictions"] = val_predictions
-                    val_data["target"] = y_val   
+                    val_data["target"] = y_val.copy()      
 
                     structured_log(logger, logging.INFO, "Validation set testing completed",
                                    accuracy=val_metrics["accuracy"], precision=val_metrics["precision"],

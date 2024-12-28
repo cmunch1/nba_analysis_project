@@ -1,10 +1,9 @@
 model_hyperparameters:
-  XGBClassifier:
+  XGBoost:
     - name: current_best
       params:
         tree_method: 'hist'
         device: 'cuda'
-        n_estimators: 200
         max_depth: 4
         learning_rate: 0.05
         subsample: 0.8
@@ -17,8 +16,9 @@ model_hyperparameters:
         objective: 'binary:logistic'
         random_state: 42
         eval_metric: 'auc'
+        verbosity: 0
 
-  LGBMClassifier:
+  LGBM:
     - name: current_best
       params:
         n_estimators: 200
