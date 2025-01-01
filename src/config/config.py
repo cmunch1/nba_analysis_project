@@ -38,9 +38,13 @@ class Config(AbstractConfig):
             with open(config_file, 'r', encoding='utf-8') as yaml_file:
                 config_dict.update(yaml.safe_load(yaml_file))
 
-        # Convert the dictionary to an object with attributes
-        config_obj = SimpleNamespace(**config_dict)
+        # Convert nested dictionaries to SimpleNamespace recursively
+        def dict_to_namespace(d):
+            if not isinstance(d, dict):
+                return d
+            return SimpleNamespace(**{k: dict_to_namespace(v) for k, v in d.items()})
 
+        config_obj = dict_to_namespace(config_dict)
 
         # Set all config parameters as attributes of this instance
         for key, value in vars(config_obj).items():

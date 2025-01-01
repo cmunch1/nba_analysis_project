@@ -16,7 +16,7 @@ model_hyperparameters:
         objective: 'binary:logistic'
         random_state: 42
         eval_metric: 'auc'
-        verbosity: 0
+        
 
   LGBM:
     - name: current_best

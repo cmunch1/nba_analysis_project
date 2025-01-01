@@ -5,6 +5,7 @@ processed_data_directory: data/processed/
 engineered_data_directory: data/engineered/
 training_data_directory: data/training/
 evaluation_data_directory: data/evaluation/
+predictions_directory: data/predictions/
 
 # Scraped boxscore files
 scraped_boxscore_files:

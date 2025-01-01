@@ -1,3 +1,9 @@
+# model testing options
+perform_oof_cross_validation: true
+perform_validation_set_testing: true
+save_oof_predictions: true
+save_validation_predictions: true
+log_experiment: true
 
 # these columns are not useful for modeling - just informational text that is already encoded elsewhere
 # they will be dropped from the dataframe right before modeling
@@ -17,19 +23,35 @@ categorical_columns:
 # random state for cross validation and model training
 random_state: 42
 
+# set to "Default" to use a timestamp for the experiment name
+experiment_name: "Default"
+
+# set to "Default" to use a timestamp for the experiment description
+experiment_description: "Default"
+
 # models
 models:
   - XGBoost
-  #- LGBM
+  - LGBM
 
 # XGBoost settings
 enable_categorical: false
-num_boost_round: 100
-early_stopping_rounds: 10
+XGB:
+  num_boost_round: 100
+  early_stopping_rounds: 10
+  verbose_eval: 20
+  enable_categorical: false
+  use_label_encoder: false
 
-# model testing options
-perform_oof_cross_validation: true
-perform_validation_set_testing: true
+# LGBM settings
+LGBM:
+  num_boost_round: 100
+  early_stopping_rounds: 10
+  verbose_eval: 20
+
+# SHAP settings
+max_shap_interaction_memory_gb: 256.0
+calculate_shap_interactions: false
 
 # cross validation type
 #cross_validation_type: TimeSeriesSplit
