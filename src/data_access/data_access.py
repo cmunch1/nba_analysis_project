@@ -199,6 +199,8 @@ class DataAccess(AbstractDataAccess):
                 save_path = Path(self.config.training_data_directory)
             case self.config.evaluation_data_file:
                 save_path = Path(self.config.evaluation_data_directory)
+            case _ if file_name and "predictions" in file_name:
+                save_path = Path(self.config.predictions_directory)
             case _:
                 save_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
 
@@ -240,6 +242,8 @@ class DataAccess(AbstractDataAccess):
                 load_path = Path(self.config.training_data_directory)
             case self.config.evaluation_data_file:
                 load_path = Path(self.config.evaluation_data_directory)
+            case _ if file_name and "predictions" in file_name:
+                load_path = Path(self.config.predictions_directory)
             case _:
                 load_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
 

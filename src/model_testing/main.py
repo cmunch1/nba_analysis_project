@@ -2,6 +2,7 @@ import sys
 import traceback
 import logging
 import pandas as pd
+from datetime import datetime
 
 from ..logging.logging_setup import setup_logging
 from ..logging.logging_utils import log_performance, log_context, structured_log
@@ -47,6 +48,17 @@ def main() -> None:
             X, y = model_tester.prepare_data(training_dataframe.copy())
             X_val, y_val = model_tester.prepare_data(validation_dataframe.copy())
 
+            if config.experiment_name == "Default":
+                experiment_name = "Experiment_" + datetime.now().strftime("%Y%m%d%H%M%S")
+            else:
+                experiment_name=config.experiment_name
+
+            if config.experiment_description == "Default":
+                experiment_description = "Experiment_" + datetime.now().strftime("%Y%m%d%H%M%S")
+            else:
+                experiment_description=config.experiment_description
+   
+
             for model_name in config.models:
                 
                 model_params = model_tester.get_model_params(model_name)
@@ -65,10 +77,11 @@ def main() -> None:
                     oof_predictions = model_tester.perform_oof_cross_validation(X, y, model_name, model_params)
                     oof_metrics = model_tester.calculate_classification_evaluation_metrics(y, oof_predictions)
 
-                    oof_data = X.copy()
-                    oof_data["oof_predictions"] = oof_predictions
-                    oof_data["target"] = y.copy() 
-                    
+                    if config.save_oof_predictions or config.log_experiment:
+                        oof_data = X.copy()
+                        oof_data["oof_predictions"] = oof_predictions
+                        oof_data["target"] = y.copy() 
+
                     structured_log(logger, logging.INFO, "OOF cross-validation completed",
                                    accuracy=oof_metrics["accuracy"], precision=oof_metrics["precision"],
                                    recall=oof_metrics["recall"], f1=oof_metrics["f1"], auc=oof_metrics["auc"])
@@ -79,16 +92,24 @@ def main() -> None:
  
                     val_metrics = model_tester.calculate_classification_evaluation_metrics(y_val, val_predictions) 
 
-                    val_data = X_val.copy()
-                    val_data["validation_predictions"] = val_predictions
-                    val_data["target"] = y_val.copy()      
+                    if config.save_validation_predictions or config.log_experiment:
+                        val_data = X_val.copy()
+                        val_data["val_predictions"] = val_predictions
+                        val_data["target"] = y_val.copy()      
 
                     structured_log(logger, logging.INFO, "Validation set testing completed",
                                    accuracy=val_metrics["accuracy"], precision=val_metrics["precision"],
                                    recall=val_metrics["recall"], f1=val_metrics["f1"], auc=val_metrics["auc"])
                     
-                experiment_logger.log_experiment(experiment_name=config.experiment_name,
-                                                  experiment_description=config.experiment_description,
+                if config.save_oof_predictions:
+                    data_access.save_dataframes([oof_data], [f"{experiment_name}_oof_predictions.csv"])
+                    
+                if config.save_validation_predictions:
+                    data_access.save_dataframes([val_data], [f"{experiment_name}_validation_predictions.csv"])
+                    
+                if config.log_experiment:
+                    experiment_logger.log_experiment(experiment_name=experiment_name,
+                                                  experiment_description=experiment_description,
                                                   model_name=model_name,
                                                   model=model,
                                                   model_params=model_params,
