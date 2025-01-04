@@ -105,9 +105,9 @@ class ModelTester(AbstractModelTester):
         metrics.optimal_threshold = optimal_threshold
         
         structured_log(logger, logging.INFO, "Classification metrics calculated",
-                      optimal_threshold=optimal_threshold,
-                      accuracy=metrics.accuracy,
-                      auc=metrics.auc)
+                      optimal_threshold=f"{optimal_threshold:.2f}",
+                      accuracy=f"{metrics.accuracy:.2f}",
+                      auc=f"{metrics.auc:.2f}")
         
         return metrics
 
@@ -131,10 +131,15 @@ class ModelTester(AbstractModelTester):
             ModelTrainingResults: Dataclass containing OOF predictions, SHAP values, and feature importances.
         """
         structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
-                       input_shape=X.shape)
+                    input_shape=X.shape)
         try:
             full_results = ModelTrainingResults(X.shape)
-            oof_results = ModelTrainingResults(X.shape)
+            
+            # Initialize arrays for storing results
+            full_results.predictions = np.zeros(X.shape[0])
+            full_results.shap_values = np.zeros((X.shape[0], X.shape[1]))
+            if self.config.calculate_shap_interactions:
+                full_results.shap_interaction_values = np.zeros((X.shape[0], X.shape[1], X.shape[1]))
 
             # Choose CV strategy
             if self.config.cross_validation_type == "StratifiedKFold":
@@ -144,6 +149,10 @@ class ModelTester(AbstractModelTester):
             else:
                 raise ValueError(f"Unsupported CV type: {self.config.cross_validation_type}")
 
+            # Initialize feature importance scores accumulator
+            feature_importance_accumulator = np.zeros(X.shape[1])
+            n_folds_with_importance = 0
+
             # Perform k-fold cross-validation
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y), 1):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
@@ -151,9 +160,45 @@ class ModelTester(AbstractModelTester):
 
                 oof_results = self._train_model(X_train, y_train, X_val, y_val, model_name, model_params)
                 
-                # Store results
+                # Store the last trained model
+                full_results.model = oof_results.model
+                
+                # Store predictions
                 full_results.predictions[val_idx] = oof_results.predictions
                 
+                # Handle SHAP values
+                if oof_results.shap_values is not None:
+                    # Remove bias term if present
+                    if oof_results.shap_values.shape[1] == X.shape[1] + 1:
+                        oof_shap_values = oof_results.shap_values[:, :-1]
+                    else:
+                        oof_shap_values = oof_results.shap_values
+                    full_results.shap_values[val_idx] = oof_shap_values
+                
+                # Handle SHAP interaction values carefully
+                if oof_results.shap_interaction_values is not None and self.config.calculate_shap_interactions:
+                    # Remove bias terms if present
+                    if oof_results.shap_interaction_values.shape[1] == X.shape[1] + 1:
+                        oof_interaction_values = oof_results.shap_interaction_values[:, :-1, :-1]
+                    else:
+                        oof_interaction_values = oof_results.shap_interaction_values
+                        
+                    # Verify shapes before assignment
+                    if oof_interaction_values.shape[1:] == full_results.shap_interaction_values.shape[1:]:
+                        full_results.shap_interaction_values[val_idx] = oof_interaction_values
+                    else:
+                        structured_log(logger, logging.WARNING, 
+                                    f"SHAP interaction values shape mismatch in fold {fold}",
+                                    expected_shape=full_results.shap_interaction_values.shape[1:],
+                                    got_shape=oof_interaction_values.shape[1:])
+                
+                # Accumulate feature importance scores
+                if oof_results.feature_importance_scores is not None:
+                    feature_importance_accumulator += oof_results.feature_importance_scores
+                    n_folds_with_importance += 1
+                
+                # Store feature names
+                full_results.feature_names = oof_results.feature_names
                 
                 # Calculate fold metrics using 0.5 threshold for simple progress tracking
                 binary_predictions = (oof_results.predictions >= 0.5).astype(int)
@@ -161,21 +206,24 @@ class ModelTester(AbstractModelTester):
                 fold_auc = roc_auc_score(y_val, oof_results.predictions)
 
                 structured_log(logger, logging.INFO, f"Fold {fold} completed",
-                               fold_accuracy=fold_accuracy, fold_auc=fold_auc)
+                            fold_accuracy=fold_accuracy, fold_auc=fold_auc)
+
+            # Average feature importance scores across folds
+            if n_folds_with_importance > 0:
+                full_results.feature_importance_scores = feature_importance_accumulator / n_folds_with_importance
 
             # Calculate overall metrics
             overall_accuracy = accuracy_score(y, (full_results.predictions >= 0.5).astype(int))
             overall_auc = roc_auc_score(y, full_results.predictions)
             structured_log(logger, logging.INFO, "OOF cross-validation completed",
-                           overall_accuracy=overall_accuracy, overall_auc=overall_auc)
+                        overall_accuracy=f"{overall_accuracy:.2f}", overall_auc=f"{overall_auc:.2f}")
 
             return full_results
 
         except Exception as e:
             raise ModelTestingError("Error in OOF cross-validation",
-                                     error_message=str(e),
-                                     dataframe_shape=X.shape)
-        
+                                    error_message=str(e),
+                                    dataframe_shape=X.shape)        
     @log_performance
     def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Tuple[Any, pd.Series]:
         """
@@ -375,6 +423,7 @@ class ModelTester(AbstractModelTester):
 
         # Safely calculate SHAP values with error handling
         try:
+            # Calculate SHAP values only for validation set
             results.shap_values = model.predict(val_dmatrix, pred_contribs=True)
             structured_log(logger, logging.INFO, "SHAP values calculated successfully",
                         shape=results.shap_values.shape)
@@ -387,9 +436,7 @@ class ModelTester(AbstractModelTester):
         # Safely calculate SHAP interaction values
         try:
             if self.config.calculate_shap_interactions:
-                # SHAP interactions can be memory-intensive for large datasets
-                # Check if dataset size is reasonable before proceeding
-                n_features = X_val.shape[1]
+                n_features = X_val.shape[1]  # Use validation set dimensions
                 estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)  # in GB
                 
                 if estimated_memory > self.config.max_shap_interaction_memory_gb:
@@ -397,14 +444,19 @@ class ModelTester(AbstractModelTester):
                                 f"{estimated_memory:.2f}GB memory, exceeding the limit of "
                                 f"{self.config.max_shap_interaction_memory_gb}GB")
                     
-                results.shap_interaction_values = model.predict(X_val, pred_interactions=True)
+                # Calculate SHAP interaction values ONLY for validation set using val_dmatrix
+                results.shap_interaction_values = model.predict(val_dmatrix, pred_interactions=True)
+                
+                # Log the shapes to verify
                 structured_log(logger, logging.INFO, "SHAP interaction values calculated successfully",
-                            shape=results.shap_interaction_values.shape)
+                            val_shape=X_val.shape,
+                            interaction_values_shape=results.shap_interaction_values.shape)
             
         except Exception as e:
             structured_log(logger, logging.WARNING, "Failed to calculate SHAP interaction values",
                         error=str(e),
-                        error_type=type(e).__name__)
+                        error_type=type(e).__name__,
+                        val_shape=X_val.shape)
             results.shap_interaction_values = None
 
         # Safely get feature importance scores
