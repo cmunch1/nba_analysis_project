@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split, cross_val_score, Stratifie
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 #from lightgbm import LGBMClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve
 import mlflow
 import mlflow.sklearn
 from ..config.config import AbstractConfig
@@ -75,52 +75,41 @@ class ModelTester(AbstractModelTester):
 
 
     @log_performance
-    def calculate_classification_evaluation_metrics(self, y_test: pd.Series, y_pred: pd.Series) -> ClassificationMetrics:
+    def calculate_classification_evaluation_metrics(self, y_true, y_prob):
         """
-        Calculate the evaluation metrics for binary classification predictions using an optimized threshold.
-
+        Calculate classification metrics using probability scores and optimal threshold.
+        
         Args:
-            y_test (pd.Series): The true target values.
-            y_pred (pd.Series): The predicted probabilities from the model.
-
+            y_true: True binary labels
+            y_prob: Probability scores from the classifier
+            
         Returns:
-            ClassificationMetrics: Dataclass containing evaluation metrics and optimal threshold
+            ClassificationMetrics: Object containing various classification metrics
         """
-        structured_log(logger, logging.INFO, "Calculating classification evaluation metrics")
-        try:
-            # Find optimal threshold by testing different thresholds
-            # when converting probabilities to binary predictions, 
-            # a threshold of 0.5 is often not the best threshold to convert to binary
-            thresholds = np.arange(0.1, 0.9, 0.01)
-            f1_scores = []
-            
-            for threshold in thresholds:
-                y_pred_binary = (y_pred >= threshold).astype(int)
-                f1 = f1_score(y_test, y_pred_binary, average='weighted')
-                f1_scores.append(f1)
-            
-            # Get the threshold that maximizes F1 score
-            optimal_threshold = thresholds[np.argmax(f1_scores)]
-            
-            # Use optimal threshold for final predictions
-            y_pred_binary = (y_pred >= optimal_threshold).astype(int)
-            
-            metrics = ClassificationMetrics(
-                accuracy=accuracy_score(y_test, y_pred_binary),
-                precision=precision_score(y_test, y_pred_binary, average='weighted'),
-                recall=recall_score(y_test, y_pred_binary, average='weighted'),
-                f1=f1_score(y_test, y_pred_binary, average='weighted'),
-                auc=roc_auc_score(y_test, y_pred),  # AUC uses probabilities directly
-                optimal_threshold=float(optimal_threshold)
-            )
-            
-            structured_log(logger, logging.INFO, "Classification evaluation metrics calculated", 
-                         metrics=vars(metrics))
-            return metrics
-        except Exception as e:
-            raise ModelTestingError("Error in model evaluation",
-                                  error_message=str(e),
-                                  dataframe_shape=y_test.shape)
+        metrics = ClassificationMetrics()
+        
+        # Find optimal threshold using ROC curve
+        fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+        optimal_idx = np.argmax(tpr - fpr)
+        optimal_threshold = thresholds[optimal_idx]
+        
+        # Convert probabilities to predictions using optimal threshold
+        y_pred = (y_prob >= optimal_threshold).astype(int)
+        
+        # Calculate metrics
+        metrics.accuracy = accuracy_score(y_true, y_pred)
+        metrics.precision = precision_score(y_true, y_pred)
+        metrics.recall = recall_score(y_true, y_pred)
+        metrics.f1 = f1_score(y_true, y_pred)
+        metrics.auc = roc_auc_score(y_true, y_prob)  # Use probabilities for AUC
+        metrics.optimal_threshold = optimal_threshold
+        
+        structured_log(logger, logging.INFO, "Classification metrics calculated",
+                      optimal_threshold=optimal_threshold,
+                      accuracy=metrics.accuracy,
+                      auc=metrics.auc)
+        
+        return metrics
 
  
     @log_performance

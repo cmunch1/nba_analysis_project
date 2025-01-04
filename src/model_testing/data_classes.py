@@ -16,9 +16,10 @@ class ModelTrainingResults:
 
 @dataclass
 class ClassificationMetrics:
-    accuracy: float
-    precision: float
-    recall: float 
-    f1: float
-    auc: float
-    optimal_threshold: float
+    def __init__(self):
+        self.accuracy: float = 0.0
+        self.precision: float = 0.0
+        self.recall: float = 0.0
+        self.f1: float = 0.0
+        self.auc: float = 0.0
+        self.optimal_threshold: float = 0.0
