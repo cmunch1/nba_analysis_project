@@ -311,3 +311,160 @@ class ChartFunctions:
                                      error_message=str(e),
                                      feature_name=feature_name,
                                      interaction_feature=interaction_feature)
+class ChartOrchestrator:
+    @log_performance
+    def __init__(self, config):
+        """
+        Initialize the ChartOrchestrator with configuration.
+        
+        Args:
+            config: Configuration object containing chart flags
+        """
+        self.chart_functions = ChartFunctions()  # Create instance internally
+        self.config = config
+        structured_log(logger, logging.INFO, "ChartOrchestrator initialized")
+
+    @log_performance
+    def generate_charts(
+        self,
+        model: Any,
+        X: pd.DataFrame,
+        feature_names: List[str],
+        feature_importance: Optional[np.ndarray] = None,
+        y_true: Optional[np.ndarray] = None,
+        y_pred: Optional[np.ndarray] = None,
+        y_score: Optional[np.ndarray] = None,
+        shap_values: Optional[Any] = None,
+        target_names: Optional[List[str]] = None,
+    ) -> Dict[str, plt.Figure]:
+        """
+        Generate all configured charts.
+        
+        Args:
+            model: Trained model object
+            X: Feature dataframe
+            feature_names: List of feature names
+            feature_importance: Array of feature importance scores
+            y_true: True labels for classification metrics
+            y_pred: Predicted labels
+            y_score: Predicted probabilities/scores
+            shap_values: Pre-calculated SHAP values (optional)
+            target_names: List of target names for multi-output models
+            
+        Returns:
+            Dict[str, plt.Figure]: Dictionary mapping chart names to matplotlib figures
+        """
+        structured_log(logger, logging.INFO, "Starting chart generation")
+        charts = {}
+
+        try:
+            # Feature Importance Chart
+            if getattr(self.config, 'feature_importance_chart', False) and feature_importance is not None:
+                structured_log(logger, logging.INFO, "Generating feature importance chart")
+                charts['feature_importance'] = self.chart_functions.create_feature_importance_chart(
+                    feature_importance=feature_importance,
+                    feature_names=feature_names
+                )
+
+            # SHAP Summary Plot
+            if getattr(self.config, 'shap_summary_plot', False):
+                structured_log(logger, logging.INFO, "Generating SHAP summary plot")
+                charts['shap_summary'] = self.chart_functions.create_shap_summary_plot(
+                    model=model,
+                    X=X
+                )
+
+            # SHAP Force Plot
+            if getattr(self.config, 'shap_force_plot', False):
+                structured_log(logger, logging.INFO, "Generating SHAP force plot")
+                charts['shap_force'] = self.chart_functions.create_shap_force_plot(
+                    model=model,
+                    X=X
+                )
+
+            # SHAP Dependence Plot
+            if getattr(self.config, 'shap_dependence_plot', False) and shap_values is not None:
+                structured_log(logger, logging.INFO, "Generating SHAP dependence plots")
+                for feature in feature_names[:min(3, len(feature_names))]:  # Limit to top 3 features
+                    charts[f'shap_dependence_{feature}'] = self.chart_functions.create_shap_dependence_plot(
+                        shap_values=shap_values,
+                        features=X,
+                        feature_name=feature
+                    )
+
+            # Confusion Matrix (if classification metrics are provided)
+            if y_true is not None and y_pred is not None:
+                structured_log(logger, logging.INFO, "Generating confusion matrix")
+                charts['confusion_matrix'] = self.chart_functions.create_confusion_matrix(
+                    y_true=y_true,
+                    y_pred=y_pred
+                )
+
+            # ROC Curve (if classification scores are provided)
+            if y_true is not None and y_score is not None:
+                structured_log(logger, logging.INFO, "Generating ROC curve")
+                charts['roc_curve'] = self.chart_functions.create_roc_curve(
+                    y_true=y_true,
+                    y_score=y_score
+                )
+
+            # Learning Curve
+            if isinstance(X, np.ndarray) and y_true is not None:
+                structured_log(logger, logging.INFO, "Generating learning curve")
+                charts['learning_curve'] = self.chart_functions.create_learning_curve(
+                    model=model,
+                    X=X,
+                    y=y_true
+                )
+
+            # Partial Dependence Plot
+            if len(feature_names) > 0:
+                structured_log(logger, logging.INFO, "Generating partial dependence plots")
+                selected_features = feature_names[:min(3, len(feature_names))]  # Limit to top 3 features
+                charts['partial_dependence'] = self.chart_functions.create_partial_dependence_plot(
+                    model=model,
+                    X=X,
+                    feature_names=selected_features,
+                    target_names=target_names
+                )
+
+            structured_log(logger, logging.INFO, f"Chart generation completed. Generated {len(charts)} charts")
+            return charts
+
+        except Exception as e:
+            raise ChartCreationError("Error in chart generation orchestration",
+                                   error_message=str(e),
+                                   charts_generated=list(charts.keys()))
+
+    @log_performance
+    def save_charts(self, charts: Dict[str, plt.Figure], output_dir: str) -> None:
+        """
+        Save generated charts to files.
+        
+        Args:
+            charts: Dictionary of chart names and their corresponding matplotlib figures
+            output_dir: Directory to save the charts
+        """
+        import os
+        structured_log(logger, logging.INFO, "Saving charts", output_dir=output_dir)
+        
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+            
+            for name, fig in charts.items():
+                output_path = os.path.join(output_dir, f"{name}.png")
+                fig.savefig(output_path, bbox_inches='tight', dpi=300)
+                plt.close(fig)  # Clean up memory
+                
+            structured_log(logger, logging.INFO, "Charts saved successfully", 
+                         chart_count=len(charts), 
+                         output_dir=output_dir)
+                         
+        except Exception as e:
+            raise ChartCreationError("Error saving charts",
+                                   error_message=str(e),
+                                   output_dir=output_dir)
+
+
+
+
