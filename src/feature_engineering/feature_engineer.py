@@ -99,63 +99,7 @@ class FeatureEngineer(AbstractFeatureEngineer):
                                           error_message=str(e),
                                           dataframe_shape=df.shape)
 
-    @log_performance
-    def preprocess_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Preprocess the input dataframe.
 
-        Args:
-            df (pd.DataFrame): Input dataframe.
-
-        Returns:
-            pd.DataFrame: Preprocessed dataframe.
-
-        Raises:
-            FeatureEngineeringError: If there's an error during preprocessing.
-        """
-        structured_log(logger, logging.INFO, "Starting data preprocessing",
-                       input_shape=df.shape)
-        try:
-            # Add your preprocessing steps here
-            # For example:
-            # df = self._handle_missing_values(df)
-            # df = self._normalize_features(df)
-
-            structured_log(logger, logging.INFO, "Data preprocessing completed",
-                           output_shape=df.shape)
-            return df
-        except Exception as e:
-            raise FeatureEngineeringError("Error in data preprocessing",
-                                          error_message=str(e),
-                                          dataframe_shape=df.shape)
-
-
-
-
-    def _normalize_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Normalize the features of the input dataframe.
-
-        Args:
-            df (pd.DataFrame): Input dataframe.
-
-        Returns:
-            pd.DataFrame: Dataframe with normalized features.
-        """
-        try:
-
-            structured_log(logger, logging.INFO, "Beginning data normalization",
-                           output_shape=df.shape)
-
-            
-
-            structured_log(logger, logging.INFO, "Data normalization completed",
-                           output_shape=df.shape)
-            return df
-        except Exception as e:
-            raise FeatureEngineeringError("Error in data normalization",    
-                                          error_message=str(e),
-                                          dataframe_shape=df.shape)
         
     def _create_rolling_averages(self, df: pd.DataFrame, home_or_visitor_suffix: str) -> pd.DataFrame:
         """

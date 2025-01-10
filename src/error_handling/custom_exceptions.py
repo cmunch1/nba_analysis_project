@@ -81,3 +81,8 @@ class ChartCreationError(NBAScraperError):
     """Raised when there's an error in the chart creation process."""
     def __init__(self, message, log_level=logging.ERROR, **kwargs):
         super().__init__(message, log_level, **kwargs)
+
+class PreprocessingError(NBAScraperError):
+    """Raised when there's an error in the preprocessing process."""
+    def __init__(self, message, log_level=logging.ERROR, **kwargs):
+        super().__init__(message, log_level, **kwargs)

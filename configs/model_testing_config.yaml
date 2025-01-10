@@ -1,38 +1,34 @@
 # model testing options
 perform_oof_cross_validation: true
 perform_validation_set_testing: true
-save_oof_predictions: true
-save_validation_predictions: true
+save_oof_predictions: true # save the predictions for the out of fold cross validation to a csv file
+save_validation_predictions: true # save the predictions for the validation set to a csv file
 log_experiment: true
 
 # these columns are not useful for modeling - just informational text that is already encoded elsewhere
 # they will be dropped from the dataframe right before modeling
 non_useful_columns: 
-  - team    
-  - match_up 
+  - team    # already encoded in team_id
+  - match_up  # already encoded with team_ids
 
-# these are already encoded as integers, but some models may benefit from explicitly encoding them as categorical or one-hot encoded
-categorical_columns:
-  - is_playoff
-  - is_overtime
-  - is_home_team
+# these are already integers, but are not a series that starts with 0, which is required for some models
+# these will be label encoded
+categorical_features:
   - team_id
-  - season
-  - sub_season_id
-
+ 
 # random state for cross validation and model training
 random_state: 42
 
 # set to "Default" to use a timestamp for the experiment name
-experiment_name: "Default"
+experiment_name: "NBA Predictor"
 
 # set to "Default" to use a timestamp for the experiment description
-experiment_description: "Default"
+experiment_description: "NBA Predictor"
 
 # models
 models:
   - XGBoost
-  #- LGBM
+  # - LGBM
 
 # XGBoost settings
 enable_categorical: false
@@ -46,8 +42,8 @@ XGB:
 # LGBM settings
 LGBM:
   num_boost_round: 100
-  early_stopping_rounds: 10
-  verbose_eval: 20
+  early_stopping: 10
+  log_evaluation: 20
 
 # SHAP settings
 max_shap_interaction_memory_gb: 256.0

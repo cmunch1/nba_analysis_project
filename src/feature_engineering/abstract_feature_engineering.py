@@ -29,18 +29,7 @@ class AbstractFeatureEngineer(ABC):
         """
         pass
 
-    @abstractmethod
-    def preprocess_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Abstract method to preprocess data.
-        
-        Args:
-            df (pd.DataFrame): The input dataframe.
-        
-        Returns:
-            pd.DataFrame: Preprocessed dataframe.
-        """
-        pass
+
 
 class AbstractFeatureSelector(ABC):
     @abstractmethod

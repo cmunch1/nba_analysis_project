@@ -8,7 +8,6 @@ from sklearn import tree, ensemble
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
-#from lightgbm import LGBMClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve
 import mlflow
 import mlflow.sklearn
@@ -18,6 +17,7 @@ from ..error_handling.custom_exceptions import ModelTestingError
 from .abstract_model_testing import AbstractModelTester
 from ..data_access.data_access import AbstractDataAccess
 from .data_classes import ModelTrainingResults, ClassificationMetrics
+from .modular_preprocessor import ModularPreprocessor
 import lightgbm as lgb
 
 logger = logging.getLogger(__name__)
@@ -31,61 +31,215 @@ class ModelTester(AbstractModelTester):
         Args:
             config (AbstractConfig): Configuration object containing model testing parameters.
         """
-        
         self.config = config
-        
+        self.preprocessor = ModularPreprocessor(config)
         structured_log(logger, logging.INFO, "ModelTester initialized",
-                       config_type=type(config).__name__)
-        
+                      config_type=type(config).__name__)
 
-        
-    @log_performance
-    def prepare_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+    def get_model_params(self, model_name: str) -> Dict:
         """
-        Prepare the data for model training.
+        Get the current best hyperparameters for a model from the configuration.
+
+        Args:
+            model_name (str): Name of the model to get parameters for.
+
+        Returns:
+            Dict: Dictionary containing the model's hyperparameters.
+
+        Raises:
+            ModelTestingError: If there's an error retrieving the hyperparameters.
+        """
+        try:
+            if not hasattr(self.config, 'model_hyperparameters') or not hasattr(self.config.model_hyperparameters, model_name):
+                raise ValueError(f"Hyperparameters for {model_name} not found in config")
+
+            hyperparameters_list = getattr(self.config.model_hyperparameters, model_name)
+            current_best = next((config['params'] for config in hyperparameters_list if config['name'] == 'current_best'), None)
+            
+            if current_best is None:
+                raise ValueError(f"'current_best' configuration not found for {model_name}")
+
+            structured_log(logger, logging.INFO, f"Loaded 'current_best' hyperparameters for {model_name}")
+            return current_best
+        except Exception as e:
+            raise ModelTestingError(f"Error getting hyperparameters for {model_name}",
+                                  error_message=str(e))
+
+    @log_performance
+    def prepare_data(self, df: pd.DataFrame, model_name: str = None, is_training: bool = True) -> Tuple[pd.DataFrame, pd.Series]:
+        """
+        Prepare the data for model training or validation with preprocessing.
 
         Args:
             df (pd.DataFrame): Input dataframe.
+            model_name (str): Name of the model to prepare data for.
+            is_training (bool): Whether this is training data (fit_transform) or validation data (transform)
 
         Returns:
             Tuple[pd.DataFrame, pd.Series]: Tuple containing the feature dataframe and the target series.
-        """ 
-
+        """
         structured_log(logger, logging.INFO, "Starting data preparation",
-                       input_shape=df.shape)
-
+                      input_shape=df.shape,
+                      is_training=is_training)
         try:
-
-            target = self.config.home_team_prefix + self.config.target_column # need to include home team prefix
+            target = self.config.home_team_prefix + self.config.target_column
             y = df[target]
-
-            # drop target column 
             X = df.drop(columns=[target])
+                
+            
+            preprocessing_steps = ModelTrainingResults(X.shape)
+            
+            # Store original column names
+            original_columns = X.columns.tolist()
+            
+            # Apply preprocessing with tracking
+            if is_training:
+                X, preprocessing_steps = self.preprocessor.fit_transform(
+                    X,
+                    y=y,
+                    model_name=model_name,
+                    results=preprocessing_steps
+                )
+            else:
+                X = self.preprocessor.transform(
+                    X,
+                )
+            
+            # Ensure column names are preserved after preprocessing
+            if isinstance(X, pd.DataFrame):
+                if len(X.columns) == len(original_columns):
+                    X.columns = original_columns
+            else:
+                X = pd.DataFrame(X, columns=original_columns)
 
-            # optimize the data types for memory and performance
             X = self._optimize_data_types(X)
 
+            
             structured_log(logger, logging.INFO, "Data preparation completed",
-                           output_shape=X.shape)    
-            return X, y
+                         output_shape=X.shape)
+            return X, y, preprocessing_steps
+        
         except Exception as e:
             raise ModelTestingError("Error in data preparation",
-                                     error_message=str(e),
-                                     dataframe_shape=df.shape)
-
+                                  error_message=str(e),
+                                  dataframe_shape=df.shape)
 
     @log_performance
-    def calculate_classification_evaluation_metrics(self, y_true, y_prob):
+    def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict) -> ModelTrainingResults:
         """
-        Calculate classification metrics using probability scores and optimal threshold.
-        
-        Args:
-            y_true: True binary labels
-            y_prob: Probability scores from the classifier
+        Perform Out-of-Fold (OOF) cross-validation with preprocessing tracking.
+        """
+        structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
+                      input_shape=X.shape)
+        try:
+            full_results = ModelTrainingResults(X.shape)
+            full_results.predictions = np.zeros(len(y))
+            full_results.shap_values = np.zeros((len(y), X.shape[1]))
+            if self.config.calculate_shap_interactions:
+                full_results.shap_interaction_values = np.zeros((len(y), X.shape[1], X.shape[1]))
+
+            if self.config.cross_validation_type == "StratifiedKFold":
+                kf = StratifiedKFold(n_splits=self.config.n_splits, shuffle=True, random_state=self.config.random_state)
+            elif self.config.cross_validation_type == "TimeSeriesSplit":
+                kf = TimeSeriesSplit(n_splits=self.config.n_splits)
+            else:
+                raise ValueError(f"Unsupported CV type: {self.config.cross_validation_type}")
+
+            feature_importance_accumulator = np.zeros(X.shape[1])
+            n_folds_with_importance = 0
+
+            for fold, (train_idx, val_idx) in enumerate(kf.split(X, y), 1):
+                X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+                y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+                # Create fold-specific results object
+                fold_results = ModelTrainingResults(X_train.shape)
+                
+                oof_results = self._train_model(
+                    X_train, y_train,
+                    X_val, y_val,
+                    model_name, model_params
+                )
+
+                full_results.model = oof_results.model
+                full_results.predictions[val_idx] = oof_results.predictions
+                
+                if oof_results.shap_values is not None:
+                    if oof_results.shap_values.shape[1] == X.shape[1] + 1:
+                        oof_shap_values = oof_results.shap_values[:, :-1]
+                    else:
+                        oof_shap_values = oof_results.shap_values
+                    full_results.shap_values[val_idx] = oof_shap_values
+
+                if oof_results.shap_interaction_values is not None and self.config.calculate_shap_interactions:
+                    if oof_results.shap_interaction_values.shape[1] == X.shape[1] + 1:
+                        oof_interaction_values = oof_results.shap_interaction_values[:, :-1, :-1]
+                    else:
+                        oof_interaction_values = oof_results.shap_interaction_values
+                        
+                    if oof_interaction_values.shape[1:] == full_results.shap_interaction_values.shape[1:]:
+                        full_results.shap_interaction_values[val_idx] = oof_interaction_values
+                    else:
+                        structured_log(logger, logging.WARNING, 
+                                    f"SHAP interaction values shape mismatch in fold {fold}")
+
+                if oof_results.feature_importance_scores is not None:
+                    feature_importance_accumulator += oof_results.feature_importance_scores
+                    n_folds_with_importance += 1
+
+                full_results.feature_names = oof_results.feature_names
+
+                if oof_results.predictions is not None:
+                    binary_predictions = (oof_results.predictions >= 0.5).astype(int)
+                    fold_accuracy = accuracy_score(y_val, binary_predictions)
+                    fold_auc = roc_auc_score(y_val, oof_results.predictions)
+                    structured_log(logger, logging.INFO, f"Fold {fold} completed",
+                                fold_accuracy=fold_accuracy, fold_auc=fold_auc)
+
+            if n_folds_with_importance > 0:
+                full_results.feature_importance_scores = feature_importance_accumulator / n_folds_with_importance
+
+            overall_accuracy = accuracy_score(y, (full_results.predictions >= 0.5).astype(int))
+            overall_auc = roc_auc_score(y, full_results.predictions)
             
-        Returns:
-            ClassificationMetrics: Object containing various classification metrics
+
+            structured_log(logger, logging.INFO, "OOF cross-validation completed",
+                        overall_accuracy=overall_accuracy, overall_auc=overall_auc)
+
+            return full_results
+
+        except Exception as e:
+            raise ModelTestingError("Error in OOF cross-validation",
+                                  error_message=str(e),
+                                  dataframe_shape=X.shape)
+
+    @log_performance
+    def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, 
+                                     X_val: pd.DataFrame, y_val: pd.Series, 
+                                     model_name: str, model_params: Dict) -> ModelTrainingResults:
         """
+        Perform model training and validation on a separate validation set.
+        """
+        try:
+            # Create results object
+            results = ModelTrainingResults(X.shape)
+            
+            results = self._train_model(
+                X, y,
+                X_val, y_val,
+                model_name, model_params
+            )
+            
+            return results
+            
+        except Exception as e:
+            raise ModelTestingError("Error in validation set testing",
+                                  error_message=str(e),
+                                  dataframe_shape=X.shape)
+
+    @log_performance
+    def calculate_classification_evaluation_metrics(self, y_true, y_prob) -> ClassificationMetrics:
+        """Calculate classification metrics using probability scores and optimal threshold."""
         metrics = ClassificationMetrics()
         
         # Find optimal threshold using ROC curve
@@ -101,203 +255,54 @@ class ModelTester(AbstractModelTester):
         metrics.precision = precision_score(y_true, y_pred)
         metrics.recall = recall_score(y_true, y_pred)
         metrics.f1 = f1_score(y_true, y_pred)
-        metrics.auc = roc_auc_score(y_true, y_prob)  # Use probabilities for AUC
+        metrics.auc = roc_auc_score(y_true, y_prob)
         metrics.optimal_threshold = optimal_threshold
         
         structured_log(logger, logging.INFO, "Classification metrics calculated",
-                      optimal_threshold=f"{optimal_threshold:.2f}",
-                      accuracy=f"{metrics.accuracy:.2f}",
-                      auc=f"{metrics.auc:.2f}")
+                      optimal_threshold=optimal_threshold,
+                      accuracy=metrics.accuracy,
+                      auc=metrics.auc)
         
         return metrics
 
- 
     @log_performance
-    def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict) -> ModelTrainingResults:
-        """
-        Perform Out-of-Fold (OOF) cross-validation on the data.
-
-        This method performs k-fold cross-validation while retaining predictions for each fold,
-        allowing for detailed model evaluation later (e.g., SHAP values, error analysis).
-        Supports both StratifiedKFold and TimeSeriesSplit cross-validation strategies.
-
-        Args:
-            X (pd.DataFrame): The feature dataframe.
-            y (pd.Series): The target series.
-            model_name (str): Name of the model to use ('XGBoost', 'LGBM', or sklearn model names).
-            model_params (Dict): Model hyperparameters.
-
-        Returns:
-            ModelTrainingResults: Dataclass containing OOF predictions, SHAP values, and feature importances.
-        """
-        structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
-                    input_shape=X.shape)
-        try:
-            full_results = ModelTrainingResults(X.shape)
-            
-            # Initialize arrays for storing results
-            full_results.predictions = np.zeros(X.shape[0])
-            full_results.shap_values = np.zeros((X.shape[0], X.shape[1]))
-            if self.config.calculate_shap_interactions:
-                full_results.shap_interaction_values = np.zeros((X.shape[0], X.shape[1], X.shape[1]))
-
-            # Choose CV strategy
-            if self.config.cross_validation_type == "StratifiedKFold":
-                kf = StratifiedKFold(n_splits=self.config.n_splits, shuffle=True, random_state=self.config.random_state)
-            elif self.config.cross_validation_type == "TimeSeriesSplit":
-                kf = TimeSeriesSplit(n_splits=self.config.n_splits)
-            else:
-                raise ValueError(f"Unsupported CV type: {self.config.cross_validation_type}")
-
-            # Initialize feature importance scores accumulator
-            feature_importance_accumulator = np.zeros(X.shape[1])
-            n_folds_with_importance = 0
-
-            # Perform k-fold cross-validation
-            for fold, (train_idx, val_idx) in enumerate(kf.split(X, y), 1):
-                X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
-                y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
-
-                oof_results = self._train_model(X_train, y_train, X_val, y_val, model_name, model_params)
-                
-                # Store the last trained model
-                full_results.model = oof_results.model
-                
-                # Store predictions
-                full_results.predictions[val_idx] = oof_results.predictions
-                
-                # Handle SHAP values
-                if oof_results.shap_values is not None:
-                    # Remove bias term if present
-                    if oof_results.shap_values.shape[1] == X.shape[1] + 1:
-                        oof_shap_values = oof_results.shap_values[:, :-1]
-                    else:
-                        oof_shap_values = oof_results.shap_values
-                    full_results.shap_values[val_idx] = oof_shap_values
-                
-                # Handle SHAP interaction values carefully
-                if oof_results.shap_interaction_values is not None and self.config.calculate_shap_interactions:
-                    # Remove bias terms if present
-                    if oof_results.shap_interaction_values.shape[1] == X.shape[1] + 1:
-                        oof_interaction_values = oof_results.shap_interaction_values[:, :-1, :-1]
-                    else:
-                        oof_interaction_values = oof_results.shap_interaction_values
-                        
-                    # Verify shapes before assignment
-                    if oof_interaction_values.shape[1:] == full_results.shap_interaction_values.shape[1:]:
-                        full_results.shap_interaction_values[val_idx] = oof_interaction_values
-                    else:
-                        structured_log(logger, logging.WARNING, 
-                                    f"SHAP interaction values shape mismatch in fold {fold}",
-                                    expected_shape=full_results.shap_interaction_values.shape[1:],
-                                    got_shape=oof_interaction_values.shape[1:])
-                
-                # Accumulate feature importance scores
-                if oof_results.feature_importance_scores is not None:
-                    feature_importance_accumulator += oof_results.feature_importance_scores
-                    n_folds_with_importance += 1
-                
-                # Store feature names
-                full_results.feature_names = oof_results.feature_names
-                
-                # Calculate fold metrics using 0.5 threshold for simple progress tracking
-                binary_predictions = (oof_results.predictions >= 0.5).astype(int)
-                fold_accuracy = accuracy_score(y_val, binary_predictions)
-                fold_auc = roc_auc_score(y_val, oof_results.predictions)
-
-                structured_log(logger, logging.INFO, f"Fold {fold} completed",
-                            fold_accuracy=fold_accuracy, fold_auc=fold_auc)
-
-            # Average feature importance scores across folds
-            if n_folds_with_importance > 0:
-                full_results.feature_importance_scores = feature_importance_accumulator / n_folds_with_importance
-
-            # Calculate overall metrics
-            overall_accuracy = accuracy_score(y, (full_results.predictions >= 0.5).astype(int))
-            overall_auc = roc_auc_score(y, full_results.predictions)
-            structured_log(logger, logging.INFO, "OOF cross-validation completed",
-                        overall_accuracy=f"{overall_accuracy:.2f}", overall_auc=f"{overall_auc:.2f}")
-
-            return full_results
-
-        except Exception as e:
-            raise ModelTestingError("Error in OOF cross-validation",
-                                    error_message=str(e),
-                                    dataframe_shape=X.shape)        
-    @log_performance
-    def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Tuple[Any, pd.Series]:
-        """
-        Perform model training and validation on a separate validation set.
-
-        Args:
-            X (pd.DataFrame): Training feature dataframe.
-            y (pd.Series): Training target series.
-            X_val (pd.DataFrame): Validation feature dataframe.
-            y_val (pd.Series): Validation target series.
-            model_name (str): Name of the model to use.
-            model_params (Dict): Model hyperparameters.
-
-        Returns:
-            Tuple[Any, pd.Series]: Tuple containing:
-                - The trained model
-                - Series of predictions on validation set
-        """
-        full_results = ModelTrainingResults(X.shape)
-
-        full_results = self._train_model(X, y, X_val, y_val, model_name, model_params)
-           
-        return full_results
-    
-    @log_performance
-    def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> Tuple[Any, np.ndarray]:
-        """
-        Train a model on the given data.
-
-        Args:
-            X (pd.DataFrame): Training feature dataframe.
-            y (pd.Series): Training target series.
-            X_val (pd.DataFrame): Validation feature dataframe.
-            y_val (pd.Series): Validation target series.
-            model_name (str): Name of the model to train ('XGBoost', 'LGBM', or sklearn model names).
-            model_params (Dict): Model hyperparameters.
-
-        Returns:
-  
-            ModelTrainingResults: Dataclass containing OOF predictions, SHAP values, and feature importances.
-
-        Raises:
-            ModelTestingError: If there's an error during model training.
-        """
+    def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, 
+                     model_name: str, model_params: Dict) -> ModelTrainingResults:
+        """Train a model on the given data."""
         structured_log(logger, logging.INFO, f"{model_name} - Starting model training",
-                       input_shape=X.shape)
+                      input_shape=X.shape)
         try:
+            
+            print(X.columns)
+            
             results = ModelTrainingResults(X.shape)
+            
+            results.feature_names = X.columns.tolist()
+            results.update_feature_data(X_val, y_val)
             
             match model_name:
                 case "XGBoost":
-                    results = self._train_XGBoost(X, y, X_val, y_val, model_params)                         
+                    results = self._train_XGBoost(X, y, X_val, y_val, model_params)
                 case "LGBM":
                     results = self._train_LGBM(X, y, X_val, y_val, model_params)
-                case "CatBoost":
-                    pass
                 case _:
-                    # then it is probably a Scikit-Learn model
-                    try:
-                        results = self._train_sklearn_model(X, y, X_val, y_val,model_name, model_params)
-                    except Exception as e:
-                        raise ModelTestingError(f"Error in model training",
-                                                 error_message=str(e),
-                                                 dataframe_shape=X.shape)
+                    results = self._train_sklearn_model(X, y, X_val, y_val, model_name, model_params)
             
-            structured_log(logger, logging.INFO, f"{model_name} - Model training completed")
+            if results.predictions is None:
+                raise ModelTestingError("Model training completed but predictions are None")
+                                    
+            structured_log(logger, logging.INFO, f"{model_name} - Model training completed",
+                         predictions_shape=results.predictions.shape)
             
             return results
         
         except Exception as e:
             raise ModelTestingError("Error in model training",
-                                     error_message=str(e),
-                                     dataframe_shape=X.shape)
+                                  error_message=str(e),
+                                  model_name=model_name,
+                                  dataframe_shape=X.shape)
 
+        
     @log_performance
     def _train_sklearn_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> ModelTrainingResults:
         """
@@ -376,216 +381,242 @@ class ModelTester(AbstractModelTester):
     @log_performance
     def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict) -> ModelTrainingResults:
         """
-        Train an XGBoost model.
-
-        Args:
-            X_train (pd.DataFrame): Training feature dataframe.
-            y_train (pd.Series): Training target series.
-            X_val (pd.DataFrame): Validation feature dataframe.
-            y_val (pd.Series): Validation target series.
-            model_params (Dict): Model hyperparameters.
-
+        Train an XGBoost model with the enhanced ModelTrainingResults.
         Returns:
-            ModelTrainingResults: Object containing model, predictions, and various model analysis results.
+            ModelTrainingResults object with trained model and predictions
         """
-        results = ModelTrainingResults(X_train.shape)
-
-        # Ensure X_val has the same columns in the same order as X_train
-        X_val = X_val[X_train.columns]
-        
-        train_dmatrix = xgb.DMatrix(X_train, label=y_train, enable_categorical=self.config.enable_categorical)
-        val_dmatrix = xgb.DMatrix(X_val, label=y_val, enable_categorical=self.config.enable_categorical)
-
-        # Create evaluation list for training
-        evals = [(train_dmatrix, 'train'), (val_dmatrix, 'eval')]
-        
-        # Only use early stopping if configured
-        early_stopping_rounds = self.config.XGB.early_stopping_rounds if hasattr(self.config, 'early_stopping_rounds') else None
+        structured_log(logger, logging.INFO, "Starting XGBoost training", 
+                    input_shape=X_train.shape)
         
         try:
+            # Initialize results
+            results = ModelTrainingResults(X_train.shape)
+            results.model_name = "XGBoost"
+            results.model_params = model_params
+            results.feature_names = X_train.columns.tolist()
+            results.update_feature_data(X_val, y_val)
+
+            # Debug column alignment
+            structured_log(logger, logging.DEBUG, "Column comparison",
+                        train_columns=X_train.columns.tolist(),
+                        val_columns=X_val.columns.tolist())
+
+            # Instead of using column indexing, ensure columns match using merge/join
+            missing_cols = set(X_train.columns) - set(X_val.columns)
+            extra_cols = set(X_val.columns) - set(X_train.columns)
+            
+            if missing_cols or extra_cols:
+                structured_log(logger, logging.WARNING, "Column mismatch detected",
+                            missing_columns=list(missing_cols),
+                            extra_columns=list(extra_cols))
+                
+                # Add missing columns with zeros
+                for col in missing_cols:
+                    X_val[col] = 0
+                    
+                # Remove extra columns
+                X_val = X_val[X_train.columns]
+
+            # Create DMatrix objects
+            dtrain = xgb.DMatrix(
+                X_train, 
+                label=y_train,
+                feature_names=X_train.columns.tolist(),
+                enable_categorical=self.config.enable_categorical
+            )
+            dval = xgb.DMatrix(
+                X_val, 
+                label=y_val,
+                feature_names=X_val.columns.tolist(),
+                enable_categorical=self.config.enable_categorical
+            )
+
+            # Train the model
             model = xgb.train(
-                model_params, 
-                train_dmatrix, 
+                params=model_params,
+                dtrain=dtrain,
                 num_boost_round=self.config.XGB.num_boost_round,
                 early_stopping_rounds=self.config.XGB.early_stopping_rounds,
-                evals=evals,
-            callbacks=[],
-            verbose_eval=self.config.XGB.verbose_eval
+                evals=[(dtrain, 'train'), (dval, 'eval')],
+                verbose_eval=self.config.XGB.verbose_eval
             )
-        except Exception as e:
-            raise ModelTestingError("Error in model training",
-                                     error_message=str(e),
-                                     dataframe_shape=X_train.shape)
 
-        # populate the results with all the data
-        results.predictions = model.predict(val_dmatrix)
-        results.model = model
-
-        # Safely calculate SHAP values with error handling
-        try:
-            # Calculate SHAP values only for validation set
-            results.shap_values = model.predict(val_dmatrix, pred_contribs=True)
-            structured_log(logger, logging.INFO, "SHAP values calculated successfully",
-                        shape=results.shap_values.shape)
-        except Exception as e:
-            structured_log(logger, logging.WARNING, "Failed to calculate SHAP values",
-                        error=str(e),
-                        error_type=type(e).__name__)
-            results.shap_values = None
-
-        # Safely calculate SHAP interaction values
-        try:
-            if self.config.calculate_shap_interactions:
-                n_features = X_val.shape[1]  # Use validation set dimensions
-                estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)  # in GB
-                
-                if estimated_memory > self.config.max_shap_interaction_memory_gb:
-                    raise ValueError(f"SHAP interaction calculation would require approximately "
-                                f"{estimated_memory:.2f}GB memory, exceeding the limit of "
-                                f"{self.config.max_shap_interaction_memory_gb}GB")
-                    
-                # Calculate SHAP interaction values ONLY for validation set using val_dmatrix
-                results.shap_interaction_values = model.predict(val_dmatrix, pred_interactions=True)
-                
-                # Log the shapes to verify
-                structured_log(logger, logging.INFO, "SHAP interaction values calculated successfully",
-                            val_shape=X_val.shape,
-                            interaction_values_shape=results.shap_interaction_values.shape)
+            # Store model and generate predictions
+            results.model = model
+            results.predictions = model.predict(dval)
             
-        except Exception as e:
-            structured_log(logger, logging.WARNING, "Failed to calculate SHAP interaction values",
-                        error=str(e),
-                        error_type=type(e).__name__,
-                        val_shape=X_val.shape)
-            results.shap_interaction_values = None
+            structured_log(logger, logging.INFO, "Generated predictions", 
+                        predictions_shape=results.predictions.shape,
+                        predictions_mean=float(np.mean(results.predictions)))
 
-        # Safely get feature importance scores
-        try:
-            feature_importance_dict = model.get_score(importance_type='gain')
-            results.feature_importance_scores = np.array([feature_importance_dict.get(f, 0) for f in X_train.columns])
-            results.feature_names = X_train.columns.tolist()
-            structured_log(logger, logging.INFO, "Feature importance scores calculated successfully",
-                        num_features=len(results.feature_importance_scores))
-        except Exception as e:
-            structured_log(logger, logging.WARNING, "Failed to get feature importance scores",
-                        error=str(e),
-                        error_type=type(e).__name__)
-            results.feature_importance_scores = None
-            results.feature_names = None
-             
-        
-        structured_log(logger, logging.INFO, "XGBoost predictions generated",
-                      predictions_type=type(results.predictions).__name__,
-                      predictions_shape=results.predictions.shape,
-                      predictions_sample=results.predictions[:5].tolist())
-        
-        return results
+            # Calculate feature importance
+            try:
+                importance_dict = model.get_score(importance_type='gain')
+                results.feature_importance_scores = np.array([
+                    importance_dict.get(feature, 0) 
+                    for feature in X_train.columns
+                ])
+                
+                structured_log(logger, logging.INFO, "Calculated feature importance",
+                            num_features_with_importance=len(importance_dict))
+                
+            except Exception as e:
+                structured_log(logger, logging.WARNING, "Failed to calculate feature importance",
+                            error=str(e))
+                results.feature_importance_scores = np.zeros(X_train.shape[1])
+
+            # Calculate SHAP values if configured
+            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+                try:
+                    results.shap_values = model.predict(dval, pred_contribs=True)
+                    structured_log(logger, logging.INFO, "Calculated SHAP values",
+                                shap_values_shape=results.shap_values.shape)
+                    
+                    if self.config.calculate_shap_interactions:
+                        n_features = X_val.shape[1]
+                        estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
+                        
+                        if estimated_memory <= self.config.max_shap_interaction_memory_gb:
+                            results.shap_interaction_values = model.predict(dval, pred_interactions=True)
+                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values")
+                            
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, "Failed to calculate SHAP values",
+                                error=str(e))
+            
+            # Verify predictions exist and are valid
+            if results.predictions is None:
+                raise ModelTestingError("XGBoost model.predict returned None")
+            
+            if len(results.predictions) != len(y_val):
+                raise ModelTestingError(
+                    "Prediction length mismatch",
+                    expected_length=len(y_val),
+                    actual_length=len(results.predictions)
+                )
+            
+            structured_log(logger, logging.INFO, "XGBoost training completed successfully",
+                        predictions_shape=results.predictions.shape)
+            
+            return results
     
+        except Exception as e:
+            structured_log(logger, logging.ERROR, "Error in XGBoost training",
+                        error_message=str(e),
+                        error_type=type(e).__name__,
+                        dataframe_shape=X_train.shape)
+            raise ModelTestingError(
+                "Error in XGBoost model training",
+                error_message=str(e),
+                dataframe_shape=X_train.shape
+            )
+        
     @log_performance
     def _train_LGBM(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict) -> ModelTrainingResults:
         """
-        Train a LightGBM model.
-
-        Args:
-            X_train (pd.DataFrame): Training feature dataframe.
-            y_train (pd.Series): Training target series.
-            X_val (pd.DataFrame): Validation feature dataframe.
-            y_val (pd.Series): Validation target series.
-            model_params (Dict): Model hyperparameters.
-
+        Train a LightGBM model with the enhanced ModelTrainingResults.
         Returns:
-            ModelTrainingResults: Object containing model, predictions, and various model analysis results.
+            ModelTrainingResults object with trained model and predictions
         """
-        results = ModelTrainingResults(X_train.shape)
-
-        # Ensure X_val has the same columns in the same order as X_train
-        X_val = X_val[X_train.columns]
-        
-        # Create LightGBM datasets
-        train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
-        val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
-        
-        # Create evaluation list for training
-        evals = {'valid': val_data}
-        
-        # Only use early stopping if configured
-        early_stopping_rounds = self.config.LGBM.early_stopping_rounds if hasattr(self.config, 'early_stopping_rounds') else None
+        structured_log(logger, logging.INFO, "Starting LightGBM training", 
+                    input_shape=X_train.shape)
         
         try:
+            # Initialize results
+            results = ModelTrainingResults(X_train.shape)
+            results.model_name = "LightGBM"
+            results.model_params = model_params
+            results.feature_names = X_train.columns.tolist()
+            results.update_feature_data(X_val, y_val)
+
+            # Ensure X_val has the same columns
+            X_val = X_val[X_train.columns]
+            
+            train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
+            val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
+            
+            # Train the model
             model = lgb.train(
                 model_params,
                 train_data,
                 num_boost_round=self.config.LGBM.num_boost_round,
                 valid_sets=[train_data, val_data],
                 valid_names=['train', 'valid'],
-                early_stopping_rounds=self.config.LGBM.early_stopping_rounds,
-                verbose_eval=self.config.LGBM.verbose_eval
+                callbacks=[
+                    lgb.early_stopping(self.config.LGBM.early_stopping),
+                    lgb.log_evaluation(self.config.LGBM.log_evaluation)
+                ]
             )
-        except Exception as e:
-            raise ModelTestingError("Error in LGBM model training",
-                                  error_message=str(e),
-                                  dataframe_shape=X_train.shape)
 
-        # populate the results with all the data
-        results.predictions = model.predict(X_val)
-        results.model = model
-
-        # Safely calculate SHAP values with error handling
-        try:
-            results.shap_values = model.predict(X_val, pred_contrib=True)
-            structured_log(logger, logging.INFO, "SHAP values calculated successfully",
-                         shape=results.shap_values.shape)
-        except Exception as e:
-            structured_log(logger, logging.WARNING, "Failed to calculate SHAP values",
-                         error=str(e),
-                         error_type=type(e).__name__)
-            results.shap_values = None
-
-        # Safely calculate SHAP interaction values
-        try:
-            if self.config.calculate_shap_interactions:
-                # SHAP interactions can be memory-intensive for large datasets
-                # Check if dataset size is reasonable before proceeding
-                n_features = X_val.shape[1]
-                estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)  # in GB
-                
-                if estimated_memory > self.config.max_shap_interaction_memory_gb:
-                    raise ValueError(f"SHAP interaction calculation would require approximately "
-                                  f"{estimated_memory:.2f}GB memory, exceeding the limit of "
-                                  f"{self.config.max_shap_interaction_memory_gb}GB")
-                    
-                results.shap_interaction_values = model.predict(X_val, pred_interactions=True)
-                structured_log(logger, logging.INFO, "SHAP interaction values calculated successfully",
-                             shape=results.shap_interaction_values.shape)
+            # Store model and generate predictions
+            results.model = model
+            results.predictions = model.predict(X_val)
             
-        except Exception as e:
-            structured_log(logger, logging.WARNING, "Failed to calculate SHAP interaction values",
-                         error=str(e),
-                         error_type=type(e).__name__)
-            results.shap_interaction_values = None
+            structured_log(logger, logging.INFO, "Generated predictions", 
+                        predictions_shape=results.predictions.shape,
+                        predictions_mean=float(np.mean(results.predictions)))
 
-        # Safely get feature importance scores
-        try:
-            results.feature_importance_scores = model.feature_importance('gain')
-            results.feature_names = X_train.columns.tolist()
-            structured_log(logger, logging.INFO, "Feature importance scores calculated successfully",
-                         num_features=len(results.feature_importance_scores))
+            # Calculate feature importance
+            try:
+                results.feature_importance_scores = model.feature_importance('gain')
+                results.feature_names = X_train.columns.tolist()
+                
+                structured_log(logger, logging.INFO, "Calculated feature importance",
+                            num_features_with_importance=len(results.feature_importance_scores))
+                
+            except Exception as e:
+                structured_log(logger, logging.WARNING, "Failed to calculate feature importance",
+                            error=str(e))
+                results.feature_importance_scores = np.zeros(X_train.shape[1])
+
+            # Calculate SHAP values if configured
+            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+                try:
+                    results.shap_values = model.predict(X_val, pred_contrib=True)
+                    structured_log(logger, logging.INFO, "Calculated SHAP values",
+                                shap_values_shape=results.shap_values.shape)
+                    
+                    if self.config.calculate_shap_interactions:
+                        n_features = X_val.shape[1]
+                        estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
+                        
+                        if estimated_memory <= self.config.max_shap_interaction_memory_gb:
+                            results.shap_interaction_values = model.predict(X_val, pred_interactions=True)
+                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values")
+                            
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, "Failed to calculate SHAP values",
+                                error=str(e))
+            
+            # Verify predictions exist and are valid
+            if results.predictions is None:
+                raise ModelTestingError("LightGBM model.predict returned None")
+            
+            if len(results.predictions) != len(y_val):
+                raise ModelTestingError(
+                    "Prediction length mismatch",
+                    expected_length=len(y_val),
+                    actual_length=len(results.predictions)
+                )
+            
+            structured_log(logger, logging.INFO, "LightGBM training completed successfully",
+                        predictions_shape=results.predictions.shape)
+            
+            return results
+
         except Exception as e:
-            structured_log(logger, logging.WARNING, "Failed to get feature importance scores",
-                         error=str(e),
-                         error_type=type(e).__name__)
-            results.feature_importance_scores = None
-            results.feature_names = None
-             
-        structured_log(logger, logging.INFO, "LightGBM predictions generated",
-                      predictions_type=type(results.predictions).__name__,
-                      predictions_shape=results.predictions.shape,
-                      predictions_sample=results.predictions[:5].tolist())
+            structured_log(logger, logging.ERROR, "Error in LightGBM training",
+                        error_message=str(e),
+                        error_type=type(e).__name__,
+                        dataframe_shape=X_train.shape)
+            raise ModelTestingError(
+                "Error in LightGBM model training",
+                error_message=str(e),
+                dataframe_shape=X_train.shape
+            )
         
-        return results
-    
     @log_performance
-    def _optimize_data_types(self, df: pd.DataFrame, date_column: str = 'date') -> pd.DataFrame:
+    def _optimize_data_types(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Optimize data types of the dataframe and convert date field to proper date type.
         The primarily reduces the bitsize of ints and floats to reduce memory usage and improve performance.
@@ -628,34 +659,3 @@ class ModelTester(AbstractModelTester):
                                      error_message=str(e),
                                      dataframe_shape=df.shape)
 
-    def get_model_params(self, model_name: str) -> Dict:
-        """
-        Get the current best hyperparameters for a model from the configuration.
-
-        Args:
-            model_name (str): Name of the model to get parameters for.
-
-        Returns:
-            Dict: Dictionary containing the model's hyperparameters.
-
-        Raises:
-            ModelTestingError: If there's an error retrieving the hyperparameters.
-            ValueError: If hyperparameters for the model are not found in config or if
-                       'current_best' configuration is not found.
-        """
-        try:
-            if not hasattr(self.config, 'model_hyperparameters') or not hasattr(self.config.model_hyperparameters, model_name):
-                raise ValueError(f"Hyperparameters for {model_name} not found in config")
-
-            # Find the 'current_best' configuration
-            hyperparameters_list = getattr(self.config.model_hyperparameters, model_name)
-            current_best = next((config['params'] for config in hyperparameters_list if config['name'] == 'current_best'), None)
-            
-            if current_best is None:
-                raise ValueError(f"'current_best' configuration not found for {model_name}")
-
-            structured_log(logger, logging.INFO, f"Loaded 'current_best' hyperparameters for {model_name}")
-            return current_best
-        except Exception as e:
-            raise ModelTestingError(f"Error getting hyperparameters for {model_name}",
-                                     error_message=str(e))
