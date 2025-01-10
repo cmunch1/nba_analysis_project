@@ -21,7 +21,6 @@ model_hyperparameters:
   LGBM:
     - name: current_best
       params:
-        n_estimators: 200
         max_depth: 4
         learning_rate: 0.05
         subsample: 0.8

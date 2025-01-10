@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,6 +8,7 @@ import shap
 from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import ChartCreationError
 from sklearn.inspection import partial_dependence
+from .data_classes import ModelTrainingResults
 
 logger = logging.getLogger(__name__)
 
@@ -323,6 +324,64 @@ class ChartOrchestrator:
         self.chart_functions = ChartFunctions()  # Create instance internally
         self.config = config
         structured_log(logger, logging.INFO, "ChartOrchestrator initialized")
+
+    @log_performance
+    def create_charts_from_results(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
+        """
+        Create all available charts from a ModelTrainingResults object.
+        
+        Args:
+            results: ModelTrainingResults object containing model evaluation data
+            
+        Returns:
+            Dict[str, plt.Figure]: Dictionary mapping chart names to matplotlib figures
+        """
+        structured_log(logger, logging.INFO, "Creating charts from ModelTrainingResults")
+        charts = {}
+        
+        try:
+            # Feature Importance Chart
+            if results.feature_importance_scores is not None:
+                charts['feature_importance'] = self.create_feature_importance_chart(
+                    feature_importance=results.feature_importance_scores,
+                    feature_names=results.feature_names
+                )
+
+            # Confusion Matrix
+            if results.binary_predictions is not None:
+                charts['confusion_matrix'] = self.create_confusion_matrix(
+                    y_true=results.target_data,
+                    y_pred=results.binary_predictions
+                )
+
+            # ROC Curve
+            if results.probability_predictions is not None:
+                charts['roc_curve'] = self.create_roc_curve(
+                    y_true=results.target_data,
+                    y_score=results.probability_predictions
+                )
+
+            # SHAP Summary Plot
+            if results.model is not None and results.feature_data is not None:
+                charts['shap_summary'] = self.create_shap_summary_plot(
+                    model=results.model,
+                    X=results.feature_data
+                )
+
+            # Learning Curve
+            if all(x is not None for x in [results.model, results.feature_data, results.target_data]):
+                charts['learning_curve'] = self.create_learning_curve(
+                    model=results.model,
+                    X=results.feature_data.values,
+                    y=results.target_data
+                )
+
+            structured_log(logger, logging.INFO, f"Created {len(charts)} charts successfully")
+            return charts
+
+        except Exception as e:
+            raise ChartCreationError("Error creating charts from results",
+                                   error_message=str(e))
 
     @log_performance
     def generate_charts(
