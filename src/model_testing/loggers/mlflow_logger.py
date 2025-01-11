@@ -10,10 +10,12 @@ from mlflow.models.signature import infer_signature
 from typing import Dict, Any
 import numpy as np
 import pandas as pd
+import json
+
 from ..abstract_model_testing import AbstractExperimentLogger
 from ...config.config import AbstractConfig
 from ...logging.logging_utils import log_performance, structured_log
-from ...error_handling.custom_exceptions import ChartCreationError
+from ...error_handling.custom_exceptions import ChartCreationError, ModelTestingError
 from ..chart_functions import ChartFunctions
 from ..data_classes import ModelTrainingResults
 
@@ -132,13 +134,25 @@ class MLFlowLogger(AbstractExperimentLogger):
             # Log model parameters
             mlflow.log_params(results.model_params)
             
-            # Log preprocessing configuration and summary
-            if results.preprocessing_config:
-                mlflow.log_params({
-                    "preprocessing": results.preprocessing_config
+            # Log classification metrics
+            if results.metrics:
+                prefix = "val_" if results.is_validation else "oof_"
+                mlflow.log_metrics({
+                    f"{prefix}accuracy": results.metrics.accuracy,
+                    f"{prefix}precision": results.metrics.precision,
+                    f"{prefix}recall": results.metrics.recall,
+                    f"{prefix}f1": results.metrics.f1,
+                    f"{prefix}auc": results.metrics.auc,
+                    f"{prefix}optimal_threshold": results.metrics.optimal_threshold
                 })
             
-            preprocessing_summary = results.summarize_preprocessing()
+            # Log preprocessing configuration and summary
+            if results.preprocessing_results:
+                mlflow.log_params({
+                    "preprocessing": results.preprocessing_results.to_dict()
+                })
+            
+            preprocessing_summary = results.preprocessing_results.summarize()
             mlflow.log_params({
                 "n_original_features": preprocessing_summary["n_original_features"],
                 "n_final_features": preprocessing_summary["n_final_features"],
@@ -150,16 +164,41 @@ class MLFlowLogger(AbstractExperimentLogger):
                 # Save preprocessing info as JSON
                 preproc_path = os.path.join(temp_dir, "preprocessing_info.json")
                 with open(preproc_path, "w") as f:
-                    json.dump(results.preprocessing_info.to_dict(), f, indent=2)
+                    json.dump(results.preprocessing_results.to_dict(), f, indent=2)
                 mlflow.log_artifact(preproc_path, "preprocessing")
                 
                 # Save feature transformations
-                transformations = results.get_feature_transformations()
+                transformations = results.preprocessing_results.feature_transformations
                 trans_path = os.path.join(temp_dir, "feature_transformations.json")
                 with open(trans_path, "w") as f:
                     json.dump(transformations, f, indent=2)
                 mlflow.log_artifact(trans_path, "preprocessing")
             
+            # Log data shape information
+            if results.feature_data is not None:
+                mlflow.log_params({
+                    "n_samples": results.feature_data.shape[0],
+                    "n_features": results.feature_data.shape[1]
+                })
+
+            # Log evaluation context
+            mlflow.log_params({
+                "evaluation_type": results.evaluation_type,
+                "is_validation": results.is_validation
+            })
+
+            # Log SHAP values summary if available
+            if results.shap_values is not None:
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    shap_path = os.path.join(temp_dir, "shap_values_summary.json")
+                    shap_summary = {
+                        "mean_abs_shap": np.abs(results.shap_values).mean(axis=0).tolist(),
+                        "feature_names": results.feature_names
+                    }
+                    with open(shap_path, "w") as f:
+                        json.dump(shap_summary, f, indent=2)
+                    mlflow.log_artifact(shap_path, "shap")
+
             try:
                 # Prepare MLflow example data
                 mlflow_example = results.feature_data.head(5).copy()
