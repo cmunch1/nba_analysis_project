@@ -25,8 +25,145 @@ class ModularPreprocessor:
         """
         self.config = config
         self.fitted_transformers = {}
+        self.preprocessor = None
         self._current_results = None
         structured_log(logger, logging.INFO, "ModularPreprocessor initialized")
+
+    @log_performance
+    def fit_transform(self, X: pd.DataFrame, y: Optional[pd.Series] = None,
+                    model_name: str = None, preprocessing_results: PreprocessingResults = None) -> Tuple[pd.DataFrame, PreprocessingResults]:
+        """
+        Fit and transform the data according to the preprocessing config for the specified model.
+        
+        Args:
+            X: Input features DataFrame
+            y: Optional target Series for supervised preprocessing steps
+            model_name: Name of the model to get specific preprocessing config
+            
+        Returns:
+            Transformed DataFrame with preprocessed features
+        """
+        structured_log(logger, logging.INFO, "Starting preprocessing",
+                      input_shape=X.shape,
+                      model_name=model_name)
+        
+        try:
+            
+            if preprocessing_results is None:
+                preprocessing_results = PreprocessingResults()
+            preprocessing_results.original_features = X.columns.tolist()
+            
+            # Split features
+            numerical_features = X.select_dtypes(include=['int64', 'float64']).columns
+            categorical_features = X.select_dtypes(include=['object', 'category']).columns
+
+            print('categorical_features', categorical_features)
+            
+            # Create transformers list
+            transformers = []
+            
+            # Add numerical pipeline if there are numerical features
+            if len(numerical_features) > 0:
+                if num_pipeline := self._create_numerical_pipeline(model_name):
+                    transformers.append(('numerical', num_pipeline, numerical_features))
+                    
+                    self._track_numerical_preprocessing(
+                        num_pipeline, X[numerical_features], y, preproc_results
+                    )
+            
+            # Add categorical pipeline if there are categorical features
+            if len(categorical_features) > 0:
+                if cat_pipeline := self._create_categorical_pipeline(model_name):
+                    transformers.append(('categorical', cat_pipeline, categorical_features))
+                    
+                    self._track_categorical_preprocessing(
+                        cat_pipeline, X[categorical_features], preproc_results
+                    )
+            
+            # Create and fit ColumnTransformer
+            self.preprocessor = ColumnTransformer(
+                transformers=transformers,
+                remainder='passthrough'  # Keep any columns not explicitly transformed
+            )
+            
+            # Fit and transform the data
+            transformed = self.preprocessor.fit_transform(X, y)
+            
+            # Get model-specific config for additional preprocessing steps
+            model_config = self._get_model_config(model_name)
+            
+            # Apply feature selection if configured
+            if hasattr(model_config, 'feature_selection') and model_config.feature_selection:
+                transformed = self._apply_feature_selection(
+                    transformed, y, model_config.feature_selection, preprocessing_results
+                )
+            
+            # Apply feature engineering if configured
+            if hasattr(model_config, 'feature_engineering') and model_config.feature_engineering:
+                transformed = self._apply_feature_engineering(
+                    transformed, model_config.feature_engineering, preprocessing_results
+                )
+            
+            # Generate feature names for the transformed data
+            feature_names = self._get_feature_names(X, self.preprocessor)
+            
+            # Update results with final feature names if tracking
+            preprocessing_results.final_features = feature_names
+            
+            # Convert to DataFrame with proper feature names
+            transformed_df = pd.DataFrame(transformed, columns=feature_names, index=X.index)
+            
+            structured_log(logger, logging.INFO, "Preprocessing completed",
+                        output_shape=transformed_df.shape,
+                        n_features=len(feature_names))
+            
+            preprocessing_results.final_shape = transformed_df.shape
+            
+            return transformed_df, preprocessing_results
+            
+        except Exception as e:
+            raise PreprocessingError("Error in preprocessing pipeline",
+                                   error_message=str(e),
+                                   input_shape=X.shape)
+
+
+    @log_performance
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Transform new data using the fitted preprocessor.
+        
+        Args:
+            X: Input features DataFrame
+            
+        Returns:
+            Transformed DataFrame with preprocessed features
+        """
+        structured_log(logger, logging.INFO, "Starting transform of new data",
+                    input_shape=X.shape)
+        
+        try:
+            if not hasattr(self, 'preprocessor'):
+                raise PreprocessingError("Preprocessor has not been fitted. Call fit_transform first.")
+            
+            # Transform the data using the fitted preprocessor
+            transformed = self.preprocessor.transform(X)
+            
+            # Get feature names
+            feature_names = self._get_feature_names(X, self.preprocessor)
+            
+            # Convert to DataFrame with proper feature names
+            transformed_df = pd.DataFrame(transformed, columns=feature_names, index=X.index)
+            
+            structured_log(logger, logging.INFO, "Transform completed",
+                        output_shape=transformed_df.shape)
+            
+            return transformed_df
+            
+        except Exception as e:
+            raise PreprocessingError("Error in transform pipeline",
+                                error_message=str(e),
+                                input_shape=X.shape)
+
         
     def _get_model_config(self, model_name: str):
         """Get preprocessing config for specific model, falling back to default if not specified."""
@@ -107,100 +244,6 @@ class ModularPreprocessor:
             
         return Pipeline(steps) if steps else None
     
-    @log_performance
-    def fit_transform(self, X: pd.DataFrame, y: Optional[pd.Series] = None,
-                    model_name: str = None) -> Tuple[pd.DataFrame, PreprocessingResults]:
-        """
-        Fit and transform the data according to the preprocessing config for the specified model.
-        
-        Args:
-            X: Input features DataFrame
-            y: Optional target Series for supervised preprocessing steps
-            model_name: Name of the model to get specific preprocessing config
-            
-        Returns:
-            Transformed DataFrame with preprocessed features
-        """
-        structured_log(logger, logging.INFO, "Starting preprocessing",
-                    input_shape=X.shape,
-                    model_name=model_name)
-        
-        try:
-            preproc_results = PreprocessingResults()
-            preproc_results.original_shape = X.shape
-            
-            # Split features
-            numerical_features = X.select_dtypes(include=['int64', 'float64']).columns
-            categorical_features = X.select_dtypes(include=['object', 'category']).columns
-            
-            # Create transformers list
-            transformers = []
-            
-            # Add numerical pipeline if there are numerical features
-            if len(numerical_features) > 0:
-                if num_pipeline := self._create_numerical_pipeline(model_name):
-                    transformers.append(('numerical', num_pipeline, numerical_features))
-                    
-                    if results:
-                        self._track_numerical_preprocessing(
-                            num_pipeline, X[numerical_features], y, results
-                        )
-            
-            # Add categorical pipeline if there are categorical features
-            if len(categorical_features) > 0:
-                if cat_pipeline := self._create_categorical_pipeline(model_name):
-                    transformers.append(('categorical', cat_pipeline, categorical_features))
-                    
-                    if results:
-                        self._track_categorical_preprocessing(
-                            cat_pipeline, X[categorical_features], results
-                        )
-            
-            # Create and fit ColumnTransformer
-            self.preprocessor = ColumnTransformer(
-                transformers=transformers,
-                remainder='passthrough'  # Keep any columns not explicitly transformed
-            )
-            
-            # Fit and transform the data
-            transformed = self.preprocessor.fit_transform(X, y)
-            
-            # Get model-specific config for additional preprocessing steps
-            model_config = self._get_model_config(model_name)
-            
-            # Apply feature selection if configured
-            if hasattr(model_config, 'feature_selection') and model_config.feature_selection:
-                transformed = self._apply_feature_selection(
-                    transformed, y, model_config.feature_selection, results
-                )
-            
-            # Apply feature engineering if configured
-            if hasattr(model_config, 'feature_engineering') and model_config.feature_engineering:
-                transformed = self._apply_feature_engineering(
-                    transformed, model_config.feature_engineering, results
-                )
-            
-            # Generate feature names for the transformed data
-            feature_names = self._get_feature_names(X, self.preprocessor)
-            
-            # Update results with final feature names if tracking
-            if results:
-                results.preprocessing_info.final_features = feature_names
-            
-            # Convert to DataFrame with proper feature names
-            transformed_df = pd.DataFrame(transformed, columns=feature_names, index=X.index)
-            
-            structured_log(logger, logging.INFO, "Preprocessing completed",
-                        output_shape=transformed_df.shape,
-                        n_features=len(feature_names))
-            
-            preproc_results.final_shape = X_transformed.shape
-            return X_transformed, preproc_results
-            
-        except Exception as e:
-            raise PreprocessingError("Error in preprocessing pipeline",
-                                error_message=str(e),
-                                input_shape=X.shape)
 
     def _get_feature_names(self, X: pd.DataFrame, column_transformer: ColumnTransformer) -> List[str]:
         """
@@ -237,42 +280,6 @@ class ModularPreprocessor:
         
         return feature_names        
                 
-    @log_performance
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """
-        Transform new data using the fitted preprocessor.
-        
-        Args:
-            X: Input features DataFrame
-            
-        Returns:
-            Transformed DataFrame with preprocessed features
-        """
-        structured_log(logger, logging.INFO, "Starting transform of new data",
-                    input_shape=X.shape)
-        
-        try:
-            if not hasattr(self, 'preprocessor'):
-                raise PreprocessingError("Preprocessor has not been fitted. Call fit_transform first.")
-            
-            # Transform the data using the fitted preprocessor
-            transformed = self.preprocessor.transform(X)
-            
-            # Get feature names
-            feature_names = self._get_feature_names(X, self.preprocessor)
-            
-            # Convert to DataFrame with proper feature names
-            transformed_df = pd.DataFrame(transformed, columns=feature_names, index=X.index)
-            
-            structured_log(logger, logging.INFO, "Transform completed",
-                        output_shape=transformed_df.shape)
-            
-            return transformed_df
-            
-        except Exception as e:
-            raise PreprocessingError("Error in transform pipeline",
-                                error_message=str(e),
-                                input_shape=X.shape)
 
     @log_performance
     def _apply_feature_selection(self, X: np.ndarray, y: np.ndarray,
@@ -535,35 +542,38 @@ class ModularPreprocessor:
         else:
             return int(sum(comb(n_features + i - 1, i) for i in range(1, degree + 1)))    
 
-    def _track_numerical_preprocessing(self, pipeline, X, y, results):
+    def _track_numerical_preprocessing(self, pipeline: Pipeline, X: pd.DataFrame, 
+                                     results: PreprocessingResults) -> None:
         """Track numerical preprocessing steps."""
         for name, transformer in pipeline.steps:
             statistics = {}
             if hasattr(transformer, 'mean_'):
-                statistics['mean'] = transformer.mean_
+                statistics['mean'] = transformer.mean_.tolist()
             if hasattr(transformer, 'scale_'):
-                statistics['scale'] = transformer.scale_
+                statistics['scale'] = transformer.scale_.tolist()
                 
-            results.add_preprocessing_step(
+            step = PreprocessingStep(
                 name=name,
-                step_type='numerical',
+                type='numerical',
                 columns=X.columns.tolist(),
                 parameters=transformer.get_params(),
                 statistics=statistics
             )
+            results.steps.append(step)
     
-    def _track_categorical_preprocessing(self, pipeline, X, results):
+    def _track_categorical_preprocessing(self, pipeline: Pipeline, X: pd.DataFrame, 
+                                       results: PreprocessingResults) -> None:
         """Track categorical preprocessing steps."""
         for name, transformer in pipeline.steps:
             statistics = {}
             if hasattr(transformer, 'categories_'):
-                statistics['categories'] = transformer.categories_
+                statistics['categories'] = [cat.tolist() for cat in transformer.categories_]
                 
-            results.add_preprocessing_step(
+            step = PreprocessingStep(
                 name=name,
-                step_type='categorical',
+                type='categorical',
                 columns=X.columns.tolist(),
                 parameters=transformer.get_params(),
                 statistics=statistics
             )
-            
+            results.steps.append(step)

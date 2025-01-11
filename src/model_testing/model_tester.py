@@ -16,7 +16,7 @@ from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import ModelTestingError
 from .abstract_model_testing import AbstractModelTester
 from ..data_access.data_access import AbstractDataAccess
-from .data_classes import ModelTrainingResults, ClassificationMetrics
+from .data_classes import ModelTrainingResults, ClassificationMetrics, PreprocessingResults
 from .modular_preprocessor import ModularPreprocessor
 import lightgbm as lgb
 
@@ -66,7 +66,7 @@ class ModelTester(AbstractModelTester):
                                   error_message=str(e))
 
     @log_performance
-    def prepare_data(self, df: pd.DataFrame, model_name: str = None, is_training: bool = True) -> Tuple[pd.DataFrame, pd.Series]:
+    def prepare_data(self, df: pd.DataFrame, model_name: str = None, is_training: bool = True, preprocessing_results: PreprocessingResults = None) -> Tuple[pd.DataFrame, pd.Series]:
         """
         Prepare the data for model training or validation with preprocessing.
 
@@ -85,20 +85,18 @@ class ModelTester(AbstractModelTester):
             target = self.config.home_team_prefix + self.config.target_column
             y = df[target]
             X = df.drop(columns=[target])
-                
-            
-            preprocessing_steps = ModelTrainingResults(X.shape)
-            
+
             # Store original column names
             original_columns = X.columns.tolist()
+
             
             # Apply preprocessing with tracking
             if is_training:
-                X, preprocessing_steps = self.preprocessor.fit_transform(
+                X, preprocessing_results = self.preprocessor.fit_transform(
                     X,
                     y=y,
                     model_name=model_name,
-                    results=preprocessing_steps
+                    preprocessing_results=preprocessing_results
                 )
             else:
                 X = self.preprocessor.transform(
@@ -112,12 +110,16 @@ class ModelTester(AbstractModelTester):
             else:
                 X = pd.DataFrame(X, columns=original_columns)
 
-            X = self._optimize_data_types(X)
+            if is_training:
+                structured_log(logger, logging.INFO, "Preprocessing results",
+                            preprocessing_steps=preprocessing_results.steps)
+
+            #X = self._optimize_data_types(X)
 
             
             structured_log(logger, logging.INFO, "Data preparation completed",
                          output_shape=X.shape)
-            return X, y, preprocessing_steps
+            return X, y, preprocessing_results
         
         except Exception as e:
             raise ModelTestingError("Error in data preparation",
@@ -125,14 +127,14 @@ class ModelTester(AbstractModelTester):
                                   dataframe_shape=df.shape)
 
     @log_performance
-    def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict) -> ModelTrainingResults:
+    def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict, full_results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Perform Out-of-Fold (OOF) cross-validation with preprocessing tracking.
         """
         structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
                       input_shape=X.shape)
         try:
-            full_results = ModelTrainingResults(X.shape)
+            
             full_results.predictions = np.zeros(len(y))
             full_results.shap_values = np.zeros((len(y), X.shape[1]))
             if self.config.calculate_shap_interactions:
@@ -158,7 +160,8 @@ class ModelTester(AbstractModelTester):
                 oof_results = self._train_model(
                     X_train, y_train,
                     X_val, y_val,
-                    model_name, model_params
+                    model_name, model_params,
+                    fold_results
                 )
 
                 full_results.model = oof_results.model
@@ -216,18 +219,17 @@ class ModelTester(AbstractModelTester):
     @log_performance
     def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, 
                                      X_val: pd.DataFrame, y_val: pd.Series, 
-                                     model_name: str, model_params: Dict) -> ModelTrainingResults:
+                                     model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Perform model training and validation on a separate validation set.
         """
         try:
-            # Create results object
-            results = ModelTrainingResults(X.shape)
             
             results = self._train_model(
                 X, y,
                 X_val, y_val,
-                model_name, model_params
+                model_name, model_params,
+                results
             )
             
             return results
@@ -256,37 +258,56 @@ class ModelTester(AbstractModelTester):
         metrics.recall = recall_score(y_true, y_pred)
         metrics.f1 = f1_score(y_true, y_pred)
         metrics.auc = roc_auc_score(y_true, y_prob)
-        metrics.optimal_threshold = optimal_threshold
+        metrics.optimal_threshold = float(optimal_threshold)
         
         structured_log(logger, logging.INFO, "Classification metrics calculated",
-                      optimal_threshold=optimal_threshold,
-                      accuracy=metrics.accuracy,
-                      auc=metrics.auc)
+                      optimal_threshold=float(optimal_threshold),
+                      accuracy=float(metrics.accuracy),
+                      auc=float(metrics.auc))
         
         return metrics
 
     @log_performance
     def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, 
-                     model_name: str, model_params: Dict) -> ModelTrainingResults:
+                     model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """Train a model on the given data."""
         structured_log(logger, logging.INFO, f"{model_name} - Starting model training",
                       input_shape=X.shape)
         try:
             
-            print(X.columns)
+            # Debug column alignment
+            structured_log(logger, logging.DEBUG, "Column comparison",
+                        train_columns=X.columns.tolist(),
+                        val_columns=X_val.columns.tolist())
+
+            # Instead of using column indexing, ensure columns match using merge/join
+            missing_cols = set(X.columns) - set(X_val.columns)
+            extra_cols = set(X_val.columns) - set(X.columns)
             
-            results = ModelTrainingResults(X.shape)
+            if missing_cols or extra_cols:
+                structured_log(logger, logging.WARNING, "Column mismatch detected",
+                            missing_columns=list(missing_cols),
+                            extra_columns=list(extra_cols))
+                
+            inf_cols = X.columns[np.isinf(X).any()].tolist()
+            structured_log(logger, logging.WARNING, "X Columns with inf values",
+                        columns=inf_cols)
+            inf_cols = X_val.columns[np.isinf(X_val).any()].tolist()
+            structured_log(logger, logging.WARNING, "X_val Columns with inf values",
+                        columns=inf_cols)
             
+            results.model_name = model_name
+            results.model_params = model_params           
             results.feature_names = X.columns.tolist()
             results.update_feature_data(X_val, y_val)
             
             match model_name:
                 case "XGBoost":
-                    results = self._train_XGBoost(X, y, X_val, y_val, model_params)
+                    results = self._train_XGBoost(X, y, X_val, y_val, model_params, results)
                 case "LGBM":
-                    results = self._train_LGBM(X, y, X_val, y_val, model_params)
+                    results = self._train_LGBM(X, y, X_val, y_val, model_params, results)
                 case _:
-                    results = self._train_sklearn_model(X, y, X_val, y_val, model_name, model_params)
+                    results = self._train_sklearn_model(X, y, X_val, y_val, model_name, model_params, results)
             
             if results.predictions is None:
                 raise ModelTestingError("Model training completed but predictions are None")
@@ -304,7 +325,7 @@ class ModelTester(AbstractModelTester):
 
         
     @log_performance
-    def _train_sklearn_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict) -> ModelTrainingResults:
+    def _train_sklearn_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Train a scikit-learn model.
 
@@ -315,6 +336,7 @@ class ModelTester(AbstractModelTester):
             y_val (pd.Series): Validation target series.
             model_name (str): Name of the sklearn model (from tree or ensemble modules).
             model_params (Dict): Model hyperparameters.
+            
 
         Returns:
             ModelTrainingResults: Object containing model, predictions, and various model analysis results.
@@ -323,7 +345,6 @@ class ModelTester(AbstractModelTester):
             ModelTestingError: If there's an error during model training.
             ValueError: If the model name is not supported.
         """
-        results = ModelTrainingResults(X_train.shape)
 
         # Ensure X_val has the same columns in the same order as X_train
         X_val = X_val[X_train.columns]
@@ -379,7 +400,7 @@ class ModelTester(AbstractModelTester):
                                      dataframe_shape=X_train.shape)
         
     @log_performance
-    def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict) -> ModelTrainingResults:
+    def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Train an XGBoost model with the enhanced ModelTrainingResults.
         Returns:
@@ -389,34 +410,7 @@ class ModelTester(AbstractModelTester):
                     input_shape=X_train.shape)
         
         try:
-            # Initialize results
-            results = ModelTrainingResults(X_train.shape)
-            results.model_name = "XGBoost"
-            results.model_params = model_params
-            results.feature_names = X_train.columns.tolist()
-            results.update_feature_data(X_val, y_val)
-
-            # Debug column alignment
-            structured_log(logger, logging.DEBUG, "Column comparison",
-                        train_columns=X_train.columns.tolist(),
-                        val_columns=X_val.columns.tolist())
-
-            # Instead of using column indexing, ensure columns match using merge/join
-            missing_cols = set(X_train.columns) - set(X_val.columns)
-            extra_cols = set(X_val.columns) - set(X_train.columns)
-            
-            if missing_cols or extra_cols:
-                structured_log(logger, logging.WARNING, "Column mismatch detected",
-                            missing_columns=list(missing_cols),
-                            extra_columns=list(extra_cols))
-                
-                # Add missing columns with zeros
-                for col in missing_cols:
-                    X_val[col] = 0
-                    
-                # Remove extra columns
-                X_val = X_val[X_train.columns]
-
+ 
             # Create DMatrix objects
             dtrain = xgb.DMatrix(
                 X_train, 
@@ -512,7 +506,7 @@ class ModelTester(AbstractModelTester):
             )
         
     @log_performance
-    def _train_LGBM(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict) -> ModelTrainingResults:
+    def _train_LGBM(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Train a LightGBM model with the enhanced ModelTrainingResults.
         Returns:
@@ -522,15 +516,7 @@ class ModelTester(AbstractModelTester):
                     input_shape=X_train.shape)
         
         try:
-            # Initialize results
-            results = ModelTrainingResults(X_train.shape)
-            results.model_name = "LightGBM"
-            results.model_params = model_params
-            results.feature_names = X_train.columns.tolist()
-            results.update_feature_data(X_val, y_val)
 
-            # Ensure X_val has the same columns
-            X_val = X_val[X_train.columns]
             
             train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
             val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
