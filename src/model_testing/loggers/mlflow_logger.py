@@ -127,9 +127,15 @@ class MLFlowLogger(AbstractExperimentLogger):
         if results.model is None:
             raise ValueError("Cannot log experiment: model object is None")
 
-        with mlflow.start_run():
-            mlflow.set_experiment(self.config.experiment_name)
+        # Set experiment before starting the run
+        mlflow.set_experiment(self.config.experiment_name)
+        
+        # Create a unique run name based on evaluation type
+        run_name = f"{results.model_name}_{results.evaluation_type}"
+        
+        with mlflow.start_run(run_name=run_name):
             mlflow.set_tag("description", self.config.experiment_description)
+            mlflow.set_tag("run_type", results.evaluation_type)  # Add run type tag
             
             # Log model parameters
             mlflow.log_params(results.model_params)
