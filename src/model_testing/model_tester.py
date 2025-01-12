@@ -630,14 +630,16 @@ class ModelTester(AbstractModelTester):
                     input_shape=X_train.shape)
         
         try:
-
+            # Filter out non-LightGBM parameters
+            lgb_params = {k: v for k, v in model_params.items() 
+                         if k not in ['cross_validation_type', 'n_splits']}
             
             train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
             val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
             
-            # Train the model
+            # Use filtered parameters
             model = lgb.train(
-                model_params,
+                lgb_params,  # Use filtered parameters here
                 train_data,
                 num_boost_round=self.config.LGBM.num_boost_round,
                 valid_sets=[train_data, val_data],

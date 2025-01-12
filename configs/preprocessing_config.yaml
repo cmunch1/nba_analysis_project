@@ -76,7 +76,7 @@ preprocessing:
         scaling: null  
         handling_missing: null
       categorical:
-        encoding: label
+        encoding: ordinal
         handling_missing: null
     
     NeuralNetwork:
