@@ -39,8 +39,8 @@ experiment_description: "NBA Predictor"
 
 # models
 models:
-  - XGBoost
-  # - LGBM
+  #- XGBoost
+  - LGBM
 
 # XGBoost settings
 enable_categorical: false
