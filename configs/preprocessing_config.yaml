@@ -7,10 +7,14 @@
 # - robust: RobustScaler
 # - null: No scaling
 
-# Handling Missing Values Options:
+# Handling Missing - numerical Values Options:
 # - mean: Replace missing values with the mean of the feature
 # - median: Replace missing values with the median of the feature
 # - mode: Replace missing values with the mode of the feature
+# - null: Leave missing values as they are
+
+# Handling Missing - categorical Values Options:
+# - constant: Replace missing values with a constant value
 # - null: Leave missing values as they are
 
 # Handling Outliers Options:
@@ -18,26 +22,13 @@
 # - clip: Clip outliers
 # - null: Leave outliers as they are
 
-# Binning Options:
-# - null: No binning
-# - n_bins: Number of bins to create
-
 # Categorical Encoding Options:
-# - onehot: One-hot encoding
-# - label: Label encoding
+# - ordinal: Ordinal encoding
 # - target: Target encoding
 # - frequency: Frequency encoding
 # - null: Leave categorical variables as they are
 
-# Feature Selection Options:
-# - variance: Select features with high variance
-# - mutual_info: Select features based on mutual information
-# - null: Leave all features as they are
 
-# Feature Engineering Options:
-# - interactions: Create interaction terms between features
-# - polynomials: Create polynomial features (degree=2)
-# - null: Leave features as they are
 
 preprocessing:
   default:
@@ -45,15 +36,12 @@ preprocessing:
       scaling: standard
       handling_missing: mean
       handling_outliers: null
-      binning: null
-      n_bins: null
+
     categorical:
-      encoding: onehot
       handling_missing: constant
       max_categories: null
       min_frequency: null
-    feature_selection: null
-    feature_engineering: null
+
 
   # Model-specific preprocessing settings
   model_specific:
@@ -63,25 +51,24 @@ preprocessing:
         handling_missing: mean
         handling_outliers: winsorize
       categorical:
-        encoding: onehot
         handling_missing: constant
-      feature_selection: variance
+
 
     RandomForest:
       numerical:
-        scaling: standard
+        scaling: null
         handling_missing: mean
         handling_outliers: null
       categorical:
-        encoding: onehot
-        handling_missing: constant
+        encoding: ordinal
+        handling_missing: null
     
     XGBoost:
       numerical:
         scaling: null  
         handling_missing: null
       categorical:
-        encoding: label
+        encoding: ordinal
         handling_missing: null
 
     LGBM:
@@ -98,8 +85,5 @@ preprocessing:
         handling_missing: mean
         handling_outliers: clip
       categorical:
-        encoding: onehot
+        encoding: null
         handling_missing: constant
-        max_categories: 10
-      feature_engineering: 
-        - interactions

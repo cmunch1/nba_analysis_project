@@ -1,3 +1,13 @@
+#sort columns
+sort_columns:
+  - season
+  - season_progress
+
+# sort order: ascending = true, descending = false
+sort_order:
+  - true
+  - true
+
 # model testing options
 perform_oof_cross_validation: true
 perform_validation_set_testing: true
@@ -5,16 +15,18 @@ save_oof_predictions: true # save the predictions for the out of fold cross vali
 save_validation_predictions: true # save the predictions for the validation set to a csv file
 log_experiment: true
 
+# primary id for the dataframe - not used for modeling, but useful for analyzing predictions
+primary_id_column: game_id
+
 # these columns are not useful for modeling - just informational text that is already encoded elsewhere
 # they will be dropped from the dataframe right before modeling
 non_useful_columns: 
-  - team    # already encoded in team_id
-  - match_up  # already encoded with team_ids
+  #-
 
-# these are already integers, but are not a series that starts with 0, which is required for some models
-# these will be label encoded
+# indicates which columns are categorical so they can be encoded and identified by the model
 categorical_features:
-  - team_id
+  - h_team_id
+  - v_team_id
  
 # random state for cross validation and model training
 random_state: 42
@@ -50,8 +62,8 @@ max_shap_interaction_memory_gb: 256.0
 calculate_shap_interactions: false
 
 # cross validation type
-#cross_validation_type: TimeSeriesSplit
-cross_validation_type: StratifiedKFold
+cross_validation_type: TimeSeriesSplit
+#cross_validation_type: StratifiedKFold
 
 # number of cross validation splits
 n_splits: 5

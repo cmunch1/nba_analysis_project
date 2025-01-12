@@ -1,4 +1,5 @@
 import time
+import numpy as np
 import logging
 import uuid
 import json
@@ -51,11 +52,14 @@ def get_error_logger():
     return error_logger
 
 def structured_log(logger, level, message, **kwargs):
-    """
-    Helper function to create structured logs with additional context.
-    """
-    log_data = {
-        'message': message,
-        **kwargs
-    }
+    # Convert all NumPy data types to native Python types
+    def convert_to_serializable(obj):
+        if isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return obj
+
+    log_data = {key: convert_to_serializable(value) for key, value in kwargs.items()}
+    log_data['message'] = message
     logger.log(level, json.dumps(log_data))
