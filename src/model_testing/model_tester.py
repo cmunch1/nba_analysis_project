@@ -79,17 +79,34 @@ class ModelTester(AbstractModelTester):
             Tuple[pd.DataFrame, pd.Series]: Tuple containing the feature dataframe and the target series.
         """
         structured_log(logger, logging.INFO, "Starting data preparation",
-                      input_shape=df.shape,
-                      is_training=is_training)
+                    input_shape=df.shape,
+                    is_training=is_training)
+        
+        primary_ids = None
+
         try:
+
+            # sort chronologically in case TimeSeriesSplit is used for cross-validation
+            df = df.sort_values(by=self.config.sort_columns, ascending=self.config.sort_order)
+
             target = self.config.home_team_prefix + self.config.target_column
             y = df[target]
             X = df.drop(columns=[target])
 
+            if self.config.primary_id_column:
+                primary_ids = X[self.config.primary_id_column]
+                X = X.drop(columns=[self.config.primary_id_column])
+
+            if self.config.non_useful_columns:
+                X = X.drop(columns=self.config.non_useful_columns)
+
             # Store original column names
             original_columns = X.columns.tolist()
 
-            
+            # explicitly convert categorical features to category type
+            for col in self.config.categorical_features:
+                X[col] = X[col].astype('category')
+
             # Apply preprocessing with tracking
             if is_training:
                 X, preprocessing_results = self.preprocessor.fit_transform(
@@ -99,9 +116,7 @@ class ModelTester(AbstractModelTester):
                     preprocessing_results=preprocessing_results
                 )
             else:
-                X = self.preprocessor.transform(
-                    X,
-                )
+                X = self.preprocessor.transform(X)
             
             # Ensure column names are preserved after preprocessing
             if isinstance(X, pd.DataFrame):
@@ -111,31 +126,44 @@ class ModelTester(AbstractModelTester):
                 X = pd.DataFrame(X, columns=original_columns)
 
             if is_training:
+                # Convert preprocessing results to serializable format before logging
+                steps_summary = [
+                    {
+                        'name': step.name,
+                        'type': step.type,
+                        'n_columns': len(step.columns)
+                    }
+                    for step in preprocessing_results.steps
+                ]
+                
                 structured_log(logger, logging.INFO, "Preprocessing results",
-                            preprocessing_steps=preprocessing_results.steps)
+                            preprocessing_summary=preprocessing_results.summarize(),
+                            steps_overview=steps_summary)
 
-            #X = self._optimize_data_types(X)
-
+            X = self._optimize_data_types(X)
             
             structured_log(logger, logging.INFO, "Data preparation completed",
-                         output_shape=X.shape)
-            return X, y, preprocessing_results
+                        output_shape=X.shape)
+            return X, y, preprocessing_results, primary_ids
         
         except Exception as e:
             raise ModelTestingError("Error in data preparation",
-                                  error_message=str(e),
-                                  dataframe_shape=df.shape)
-
+                                error_message=str(e),
+                                dataframe_shape=df.shape)
     @log_performance
     def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict, full_results: ModelTrainingResults) -> ModelTrainingResults:
         """
-        Perform Out-of-Fold (OOF) cross-validation with preprocessing tracking.
+        Perform Out-of-Fold (OOF) cross-validation with tracking of each fold.
+
+        Note that TimeSeriesSplit can cause NaNs in the predictions, which have to be dealt with 
+        in the calculate_classification_evaluation_metrics method and in the chart_functions.py file.
+        
+
         """
         structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
-                      input_shape=X.shape)
+                    input_shape=X.shape)
         try:
-            
-            full_results.predictions = np.zeros(len(y))
+            full_results.predictions = np.full(len(y), np.nan)  # Initialize with NaN to detect overlaps
             full_results.shap_values = np.zeros((len(y), X.shape[1]))
             if self.config.calculate_shap_interactions:
                 full_results.shap_interaction_values = np.zeros((len(y), X.shape[1], X.shape[1]))
@@ -149,10 +177,37 @@ class ModelTester(AbstractModelTester):
 
             feature_importance_accumulator = np.zeros(X.shape[1])
             n_folds_with_importance = 0
+            
+            # Store fold boundaries for time series
+            fold_boundaries = []
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y), 1):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+                # Log time series specific information
+                if self.config.cross_validation_type == "TimeSeriesSplit":
+                    train_start = X.index[train_idx[0]]
+                    train_end = X.index[train_idx[-1]]
+                    val_start = X.index[val_idx[0]]
+                    val_end = X.index[val_idx[-1]]
+                    
+                    fold_boundaries.append({
+                        'fold': fold,
+                        'train_period': (train_start, train_end),
+                        'val_period': (val_start, val_end)
+                    })
+                    
+                    structured_log(logger, logging.INFO, f"Fold {fold} time periods",
+                                train_period_start=train_start,
+                                train_period_end=train_end,
+                                val_period_start=val_start,
+                                val_period_end=val_end)
+
+                # Check for overlapping validation indices
+                if np.any(~np.isnan(full_results.predictions[val_idx])):
+                    structured_log(logger, logging.WARNING,
+                                f"Fold {fold} - Validation indices overlap with previous folds")
 
                 # Create fold-specific results object
                 fold_results = ModelTrainingResults(X_train.shape)
@@ -202,9 +257,48 @@ class ModelTester(AbstractModelTester):
             if n_folds_with_importance > 0:
                 full_results.feature_importance_scores = feature_importance_accumulator / n_folds_with_importance
 
-            overall_accuracy = accuracy_score(y, (full_results.predictions >= 0.5).astype(int))
-            overall_auc = roc_auc_score(y, full_results.predictions)
-            
+            # Add diagnostics for TimeSeriesSplit
+            if self.config.cross_validation_type == "TimeSeriesSplit":
+                split_diagnostics = self._debug_time_series_split(X, y, self.config.n_splits)
+                structured_log(logger, logging.INFO, "TimeSeriesSplit diagnostics",
+                            unused_samples=split_diagnostics['unused_count'],
+                            unused_percentage=split_diagnostics['unused_percentage'],
+                            multiple_predictions=split_diagnostics['multiple_predictions_count'])
+                
+                # Store diagnostics in results
+                full_results.split_diagnostics = split_diagnostics
+                
+            # Analyze predictions
+            pred_diagnostics = self._analyze_predictions(full_results.predictions, y)
+            structured_log(logger, logging.INFO, "Prediction diagnostics",
+                        **pred_diagnostics)
+                
+            # Handle NaN predictions
+            nan_mask = np.isnan(full_results.predictions)
+            if np.any(nan_mask):
+                structured_log(logger, logging.WARNING,
+                            "Some predictions are missing (NaN values present)",
+                            nan_count=np.sum(nan_mask))
+                
+                # Filter out NaN values for metric calculation
+                valid_indices = ~nan_mask
+                if np.sum(valid_indices) > 0:
+                    y_valid = y[valid_indices]
+                    predictions_valid = full_results.predictions[valid_indices]
+                    
+                    overall_accuracy = accuracy_score(y_valid, (predictions_valid >= 0.5).astype(int))
+                    overall_auc = roc_auc_score(y_valid, predictions_valid)
+                else:
+                    structured_log(logger, logging.ERROR,
+                                "No valid predictions available for metric calculation")
+                    overall_accuracy = overall_auc = np.nan
+            else:
+                overall_accuracy = accuracy_score(y, (full_results.predictions >= 0.5).astype(int))
+                overall_auc = roc_auc_score(y, full_results.predictions)
+
+            # Store fold boundaries in results for time series
+            if self.config.cross_validation_type == "TimeSeriesSplit":
+                full_results.fold_boundaries = fold_boundaries
 
             structured_log(logger, logging.INFO, "OOF cross-validation completed",
                         overall_accuracy=overall_accuracy, overall_auc=overall_auc)
@@ -213,13 +307,15 @@ class ModelTester(AbstractModelTester):
 
         except Exception as e:
             raise ModelTestingError("Error in OOF cross-validation",
-                                  error_message=str(e),
-                                  dataframe_shape=X.shape)
+                                error_message=str(e),
+                                dataframe_shape=X.shape)
+        
 
+    
     @log_performance
     def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, 
-                                     X_val: pd.DataFrame, y_val: pd.Series, 
-                                     model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
+                                    X_val: pd.DataFrame, y_val: pd.Series, 
+                                    model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Perform model training and validation on a separate validation set.
         """
@@ -236,34 +332,52 @@ class ModelTester(AbstractModelTester):
             
         except Exception as e:
             raise ModelTestingError("Error in validation set testing",
-                                  error_message=str(e),
-                                  dataframe_shape=X.shape)
+                                error_message=str(e),
+                                dataframe_shape=X.shape)
 
     @log_performance
-    def calculate_classification_evaluation_metrics(self, y_true, y_prob) -> ClassificationMetrics:
+    def calculate_classification_evaluation_metrics(self, y_true, y_prob, metrics: ClassificationMetrics) -> ClassificationMetrics:
         """Calculate classification metrics using probability scores and optimal threshold."""
-        metrics = ClassificationMetrics()
+        
+        # Filter out NaN values - TimeSeriesSplit can cause this
+        mask = ~np.isnan(y_prob)
+        y_true_valid = y_true[mask]
+        y_prob_valid = y_prob[mask]
+        
+        if len(y_true_valid) == 0:
+            raise ValueError("No valid predictions available after filtering NaN values")
+        
+        structured_log(logger, logging.INFO, "Calculating metrics after filtering NaNs",
+                      original_samples=len(y_true),
+                      valid_samples=len(y_true_valid),
+                      nan_percentage=100 * (1 - len(y_true_valid)/len(y_true)))
         
         # Find optimal threshold using ROC curve
-        fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+        fpr, tpr, thresholds = roc_curve(y_true_valid, y_prob_valid)
         optimal_idx = np.argmax(tpr - fpr)
         optimal_threshold = thresholds[optimal_idx]
         
         # Convert probabilities to predictions using optimal threshold
-        y_pred = (y_prob >= optimal_threshold).astype(int)
+        y_pred = (y_prob_valid >= optimal_threshold).astype(int)
         
         # Calculate metrics
-        metrics.accuracy = accuracy_score(y_true, y_pred)
-        metrics.precision = precision_score(y_true, y_pred)
-        metrics.recall = recall_score(y_true, y_pred)
-        metrics.f1 = f1_score(y_true, y_pred)
-        metrics.auc = roc_auc_score(y_true, y_prob)
+        metrics.accuracy = accuracy_score(y_true_valid, y_pred)
+        metrics.precision = precision_score(y_true_valid, y_pred)
+        metrics.recall = recall_score(y_true_valid, y_pred)
+        metrics.f1 = f1_score(y_true_valid, y_pred)
+        metrics.auc = roc_auc_score(y_true_valid, y_prob_valid)
         metrics.optimal_threshold = float(optimal_threshold)
+        
+        # Add information about NaN handling
+        metrics.valid_samples = len(y_true_valid)
+        metrics.total_samples = len(y_true)
+        metrics.nan_percentage = 100 * (1 - len(y_true_valid)/len(y_true))
         
         structured_log(logger, logging.INFO, "Classification metrics calculated",
                       optimal_threshold=float(optimal_threshold),
                       accuracy=float(metrics.accuracy),
-                      auc=float(metrics.auc))
+                      auc=float(metrics.auc),
+                      nan_percentage=metrics.nan_percentage)
         
         return metrics
 
@@ -645,3 +759,63 @@ class ModelTester(AbstractModelTester):
                                      error_message=str(e),
                                      dataframe_shape=df.shape)
 
+    def _debug_time_series_split(self, X, y, n_splits=5):
+        """
+        Debug function to analyze TimeSeriesSplit behavior and identify prediction gaps.
+        """
+        from sklearn.model_selection import TimeSeriesSplit
+        import numpy as np
+        
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+        
+        # Create an array to track which indices are used in validation
+        coverage = np.zeros(len(X))
+        fold_details = []
+        
+        for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
+            coverage[val_idx] += 1
+            
+            fold_details.append({
+                'fold': fold,
+                'train_size': len(train_idx),
+                'val_size': len(val_idx),
+                'train_start': train_idx[0],
+                'train_end': train_idx[-1],
+                'val_start': val_idx[0],
+                'val_end': val_idx[-1]
+            })
+        
+        # Analyze coverage
+        unused_indices = np.where(coverage == 0)[0]
+        multiple_used = np.where(coverage > 1)[0]
+        
+        results = {
+            'total_samples': len(X),
+            'unused_count': len(unused_indices),
+            'unused_indices': unused_indices,
+            'unused_percentage': (len(unused_indices) / len(X)) * 100,
+            'multiple_predictions_count': len(multiple_used),
+            'fold_details': fold_details
+        }
+        
+        return results
+
+    # Helper function to analyze model predictions
+    def _analyze_predictions(self, predictions, y):
+        """
+        Analyze prediction patterns and their relationship with the target variable.
+        """
+        nan_mask = np.isnan(predictions)
+        results = {
+            'total_samples': len(predictions),
+            'nan_count': np.sum(nan_mask),
+            'nan_percentage': (np.sum(nan_mask) / len(predictions)) * 100,
+        }
+        
+        if np.any(~nan_mask):  # If there are any non-NaN predictions
+            results.update({
+                'non_nan_mean': np.mean(predictions[~nan_mask]),
+                'non_nan_std': np.std(predictions[~nan_mask]),
+            })
+        
+        return results

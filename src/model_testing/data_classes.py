@@ -9,7 +9,7 @@ Contains:
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Any, Dict, List, Set
+from typing import Optional, Any, Dict, List, Set, Tuple
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
@@ -24,6 +24,7 @@ class ClassificationMetrics:
     f1: float = 0.0
     auc: float = 0.0
     optimal_threshold: float = 0.0
+
 
 
 @dataclass
@@ -42,10 +43,24 @@ class PreprocessingStep:
             'name': self.name,
             'type': self.type,
             'columns': self.columns,
-            'parameters': self.parameters,
-            'statistics': self.statistics,
+            'parameters': self._convert_to_serializable(self.parameters),
+            'statistics': self._convert_to_serializable(self.statistics),
             'output_features': self.output_features
         }
+
+    def _convert_to_serializable(self, obj: Any) -> Any:
+        """Convert numpy arrays and other non-serializable objects to serializable formats"""
+        if isinstance(obj, (np.ndarray, np.generic)):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {k: self._convert_to_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_to_serializable(item) for item in obj]
+        elif isinstance(obj, (pd.Series, pd.DataFrame)):
+            return obj.to_dict()
+        elif hasattr(obj, 'to_dict'):
+            return obj.to_dict()
+        return obj
 
 
 @dataclass
@@ -55,8 +70,9 @@ class PreprocessingResults:
     original_features: List[str] = field(default_factory=list)
     final_features: List[str] = field(default_factory=list)
     dropped_features: Set[str] = field(default_factory=set)
-    engineered_features: Dict[str, List[str]] = field(default_factory=dict)  # Maps new features to source features
-    feature_transformations: Dict[str, List[str]] = field(default_factory=dict)  # Maps original to transformed features
+    engineered_features: Dict[str, List[str]] = field(default_factory=dict)
+    feature_transformations: Dict[str, List[str]] = field(default_factory=dict)
+    final_shape: Optional[Tuple[int, int]] = None
 
     def add_step(self, step: PreprocessingStep) -> None:
         """Add a preprocessing step and update feature tracking"""
@@ -88,7 +104,8 @@ class PreprocessingResults:
             'n_preprocessing_steps': len(self.steps),
             'preprocessing_steps': [f"{step.type}:{step.name}" for step in self.steps],
             'dropped_features': list(self.dropped_features),
-            'engineered_features': self.engineered_features
+            'engineered_features': self.engineered_features,
+            'final_shape': self.final_shape
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -97,9 +114,10 @@ class PreprocessingResults:
             'steps': [step.to_dict() for step in self.steps],
             'original_features': self.original_features,
             'final_features': self.final_features,
-            'dropped_features': list(self.dropped_features),
+            'dropped_features': list(self.dropped_features),  # Convert set to list for JSON serialization
             'engineered_features': self.engineered_features,
-            'feature_transformations': self.feature_transformations
+            'feature_transformations': self.feature_transformations,
+            'final_shape': self.final_shape
         }
 
     def to_json(self) -> str:

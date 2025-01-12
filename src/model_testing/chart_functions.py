@@ -133,7 +133,26 @@ class ChartFunctions:
         structured_log(logger, logging.INFO, "Creating confusion matrix")
         try:
             from sklearn.metrics import confusion_matrix
-            cm = confusion_matrix(y_true, y_pred)
+            
+            # Filter out NaN values
+            mask = ~np.isnan(y_pred)
+            y_true_clean = y_true[mask]
+            y_pred_clean = y_pred[mask]
+            
+            # Log NaN filtering results
+            nan_count = np.sum(~mask)
+            if nan_count > 0:
+                structured_log(logger, logging.WARNING, 
+                             "Filtered NaN values from predictions",
+                             total_samples=len(y_pred),
+                             nan_count=nan_count,
+                             remaining_samples=len(y_pred_clean))
+            
+            # Check if we have enough samples after filtering
+            if len(y_pred_clean) < 2:
+                raise ValueError("Insufficient non-NaN samples for confusion matrix calculation")
+            
+            cm = confusion_matrix(y_true_clean, y_pred_clean)
             
             fig, ax = plt.subplots(figsize=(10, 8))
             sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
@@ -141,13 +160,15 @@ class ChartFunctions:
             ax.set_ylabel('True labels')
             ax.set_title('Confusion Matrix')
             
-            structured_log(logger, logging.INFO, "Confusion matrix created successfully")
+            structured_log(logger, logging.INFO, "Confusion matrix created successfully",
+                          nan_filtered=nan_count)
             return fig
         except Exception as e:
             raise ChartCreationError("Error creating confusion matrix",
                                      error_message=str(e),
                                      y_true_shape=y_true.shape,
-                                     y_pred_shape=y_pred.shape)
+                                     y_pred_shape=y_pred.shape,
+                                     nan_count=np.sum(np.isnan(y_pred)))
 
     @log_performance
     def create_roc_curve(self, y_true: np.ndarray, y_score: np.ndarray) -> plt.Figure:
@@ -164,7 +185,26 @@ class ChartFunctions:
         structured_log(logger, logging.INFO, "Creating ROC curve")
         try:
             from sklearn.metrics import roc_curve, auc
-            fpr, tpr, _ = roc_curve(y_true, y_score)
+            
+            # Filter out NaN values
+            mask = ~np.isnan(y_score)
+            y_true_clean = y_true[mask]
+            y_score_clean = y_score[mask]
+            
+            # Log NaN filtering results
+            nan_count = np.sum(~mask)
+            if nan_count > 0:
+                structured_log(logger, logging.WARNING, 
+                             "Filtered NaN values from predictions",
+                             total_samples=len(y_score),
+                             nan_count=nan_count,
+                             remaining_samples=len(y_score_clean))
+            
+            # Check if we have enough samples after filtering
+            if len(y_score_clean) < 2:
+                raise ValueError("Insufficient non-NaN samples for ROC curve calculation")
+            
+            fpr, tpr, _ = roc_curve(y_true_clean, y_score_clean)
             roc_auc = auc(fpr, tpr)
             
             fig, ax = plt.subplots(figsize=(10, 8))
@@ -177,13 +217,15 @@ class ChartFunctions:
             ax.set_title('Receiver Operating Characteristic (ROC) Curve')
             ax.legend(loc="lower right")
             
-            structured_log(logger, logging.INFO, "ROC curve created successfully")
+            structured_log(logger, logging.INFO, "ROC curve created successfully",
+                          auc_score=roc_auc)
             return fig
         except Exception as e:
             raise ChartCreationError("Error creating ROC curve",
-                                     error_message=str(e),
-                                     y_true_shape=y_true.shape,
-                                     y_score_shape=y_score.shape)
+                                   error_message=str(e),
+                                   y_true_shape=y_true.shape,
+                                   y_score_shape=y_score.shape,
+                                   nan_count=np.sum(np.isnan(y_score)))
 
     @log_performance
     def create_learning_curve(self, model: Any, X: np.ndarray, y: np.ndarray) -> plt.Figure:

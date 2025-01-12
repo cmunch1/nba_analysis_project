@@ -50,6 +50,8 @@ def main() -> None:
             
             for model_name in config.models:
 
+                primary_ids_oof = None
+                primary_ids_val = None
                 oof_metrics = ClassificationMetrics()
                 val_metrics = ClassificationMetrics()
                 oof_training_results = ModelTrainingResults(training_dataframe.shape)
@@ -58,11 +60,11 @@ def main() -> None:
                 val_preprocessing_results = PreprocessingResults()
                 
                 # prepare the data for the model, including preprocessing steps saved in the results dataclass
-                X, y, oof_preprocessing_results = model_tester.prepare_data(training_dataframe.copy(), 
+                X, y, oof_preprocessing_results, primary_ids_oof = model_tester.prepare_data(training_dataframe.copy(), 
                                                                             model_name, 
                                                                             is_training=True, 
                                                                             preprocessing_results=oof_preprocessing_results)
-                X_val, y_val, val_preprocessing_results = model_tester.prepare_data(validation_dataframe.copy(), 
+                X_val, y_val, val_preprocessing_results, primary_ids_val = model_tester.prepare_data(validation_dataframe.copy(), 
                                                                                     model_name, 
                                                                                     is_training=False, 
                                                                                     preprocessing_results=val_preprocessing_results)
@@ -73,6 +75,7 @@ def main() -> None:
                     oof_training_results = process_model_evaluation(
                         model_tester, data_access, experiment_logger, logger,
                         model_name, model_params, X, y,
+                        primary_ids=primary_ids_oof,
                         config=config,
                         preprocessing_results=oof_preprocessing_results,
                         training_results=oof_training_results,
@@ -85,7 +88,10 @@ def main() -> None:
                 if config.perform_validation_set_testing:
                     val_training_results = process_model_evaluation(
                         model_tester, data_access, experiment_logger, logger,
-                        model_name, model_params, X, y, X_val, y_val,
+                        model_name, model_params, X, y,
+                        X_eval=X_val, 
+                        y_eval=y_val,
+                        primary_ids=primary_ids_val,
                         config=config,
                         preprocessing_results=val_preprocessing_results,
                         training_results=val_training_results,
@@ -114,6 +120,7 @@ def process_model_evaluation(
     y,
     X_eval=None,  # None for OOF, validation data for val testing
     y_eval=None,
+    primary_ids=None,  # Add this parameter
     config=None,
     preprocessing_results=None,
     training_results=None,
@@ -143,12 +150,15 @@ def process_model_evaluation(
     training_results.evaluation_type = "validation" if not is_oof else "oof"
     training_results.model_name = model_name
     training_results.model_params = model_params
+    if is_oof:
+        training_results.model_params["cross_validation_type"]= config.cross_validation_type
+        training_results.model_params["n_splits"]= config.n_splits
     
     # Update feature data
     training_results.update_feature_data(eval_data, eval_y)
     
     # Calculate and update metrics
-    metrics = model_tester.calculate_classification_evaluation_metrics(eval_y, training_results.predictions)
+    metrics = model_tester.calculate_classification_evaluation_metrics(eval_y, training_results.predictions, metrics)
     training_results.metrics = metrics
     
     # Update predictions with optimal threshold from metrics
@@ -160,12 +170,15 @@ def process_model_evaluation(
         
         predictions_df = training_results.feature_data.copy()
         predictions_df['target'] = training_results.target_data
+        if primary_ids is not None:
+            predictions_df.insert(0, config.primary_id_column, primary_ids)
         predictions_df[f'{"oof" if is_oof else "val"}_predictions'] = training_results.probability_predictions
+
         
         structured_log(logger, logging.INFO, f"Saving {'OOF' if is_oof else 'validation'} predictions")
         data_access.save_dataframes(
             [predictions_df], 
-            [f"{experiment_name}_{'oof' if is_oof else 'val'}_predictions.csv"]
+            [f"{model_name}_{'oof' if is_oof else 'val'}_predictions.csv"]
         )
 
     # Add preprocessing results to the results dataclass

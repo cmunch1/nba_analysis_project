@@ -1,16 +1,40 @@
+"""
+This module contains the ModularPreprocessor class, which is used to preprocess data using a modular approach.
+It allows for the creation of preprocessing pipelines for different models and the tracking of preprocessing steps.
+
+I have decided to not use a lot of the functionality of the preprocessor as originally conceived.
+
+I have made the philosophical decision to put all functionality that changes the number of columns in the data 
+in the feature engineering module.
+
+The focus here will be simple transformations that do not change the number of columns that can be easily
+implemented at "runtime" - this is to allow for easy iteration through a lot of tests without having to
+do any work on the data files in-between. E.g. I can script a series of runs that test with StandardScaler, 
+then run a test with MinMaxScaler, then run a test with RobustScaler, etc.
+
+Also, in production, I can use a binary object to store the preprocessor and load it in when needed.
+
+"""
+
+
+
+
+
+
+
+
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, LabelEncoder, OrdinalEncoder, MaxAbsScaler
 from sklearn.impute import SimpleImputer
-from sklearn.feature_selection import VarianceThreshold, mutual_info_classif
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from typing import List, Dict, Optional, Tuple
 import logging
 from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import PreprocessingError
-from .data_classes import PreprocessingResults
+from .data_classes import PreprocessingResults, PreprocessingStep
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +92,7 @@ class ModularPreprocessor:
                     transformers.append(('numerical', num_pipeline, numerical_features))
                     
                     self._track_numerical_preprocessing(
-                        num_pipeline, X[numerical_features], y, preproc_results
+                        num_pipeline, X[numerical_features], y, preprocessing_results
                     )
             
             # Add categorical pipeline if there are categorical features
@@ -77,7 +101,7 @@ class ModularPreprocessor:
                     transformers.append(('categorical', cat_pipeline, categorical_features))
                     
                     self._track_categorical_preprocessing(
-                        cat_pipeline, X[categorical_features], preproc_results
+                        cat_pipeline, X[categorical_features], preprocessing_results
                     )
             
             # Create and fit ColumnTransformer
@@ -91,19 +115,7 @@ class ModularPreprocessor:
             
             # Get model-specific config for additional preprocessing steps
             model_config = self._get_model_config(model_name)
-            
-            # Apply feature selection if configured
-            if hasattr(model_config, 'feature_selection') and model_config.feature_selection:
-                transformed = self._apply_feature_selection(
-                    transformed, y, model_config.feature_selection, preprocessing_results
-                )
-            
-            # Apply feature engineering if configured
-            if hasattr(model_config, 'feature_engineering') and model_config.feature_engineering:
-                transformed = self._apply_feature_engineering(
-                    transformed, model_config.feature_engineering, preprocessing_results
-                )
-            
+                   
             # Generate feature names for the transformed data
             feature_names = self._get_feature_names(X, self.preprocessor)
             
@@ -118,6 +130,9 @@ class ModularPreprocessor:
                         n_features=len(feature_names))
             
             preprocessing_results.final_shape = transformed_df.shape
+            
+            structured_log(logger, logging.INFO, "Preprocessing results",
+                          results=preprocessing_results.to_dict())
             
             return transformed_df, preprocessing_results
             
@@ -198,13 +213,9 @@ class ModularPreprocessor:
                     steps.append(('scaler', MinMaxScaler()))
                 elif model_config.numerical.scaling == "robust":
                     steps.append(('scaler', RobustScaler()))
+                elif model_config.numerical.scaling == "maxabs":
+                    steps.append(('scaler', MaxAbsScaler()))
                 
-        if hasattr(model_config.numerical, 'binning'):
-            if model_config.numerical.binning:  # Only add if not None/empty
-                steps.append(('binner', BinningTransformer(
-                    method=model_config.numerical.binning,
-                    n_bins=model_config.numerical.n_bins
-                )))
             
         return Pipeline(steps) if steps else None
         
@@ -214,24 +225,19 @@ class ModularPreprocessor:
         steps = []
         
         if hasattr(model_config.categorical, 'handling_missing'):
-            if model_config.categorical.handling_missing:  # Only add if not None/empty
+            if model_config.categorical.handling_missing == "constant":
                 steps.append(('imputer', SimpleImputer(
-                    strategy=model_config.categorical.handling_missing,
+                    strategy='constant',
                     fill_value='missing'
                 )))
             
         if hasattr(model_config.categorical, 'encoding'):
-            if model_config.categorical.encoding:  # Only add if not None/empty
-                if model_config.categorical.encoding == "onehot":
-                    max_categories = (model_config.categorical.max_categories 
-                                    if hasattr(model_config.categorical, 'max_categories') 
-                                    else None)
-                    steps.append(('encoder', OneHotEncoder(
-                        handle_unknown='ignore',
-                        max_categories=max_categories
+            if model_config.categorical.encoding:
+                if model_config.categorical.encoding == "ordinal":
+                    steps.append(('encoder', OrdinalEncoder(
+                        handle_unknown='use_encoded_value', 
+                        unknown_value=-1
                     )))
-                elif model_config.categorical.encoding == "label":
-                    steps.append(('encoder', LabelEncoder()))
                 elif model_config.categorical.encoding == "target":
                     steps.append(('encoder', TargetEncoder()))
                 elif model_config.categorical.encoding == "frequency":
@@ -241,7 +247,9 @@ class ModularPreprocessor:
                     steps.append(('encoder', FrequencyEncoder(
                         min_frequency=min_frequency
                     )))
-            
+                elif model_config.categorical.encoding == "label":
+                    steps.append(('encoder', LabelEncoder()))
+        
         return Pipeline(steps) if steps else None
     
 
@@ -280,268 +288,7 @@ class ModularPreprocessor:
         
         return feature_names        
                 
-
-    @log_performance
-    def _apply_feature_selection(self, X: np.ndarray, y: np.ndarray,
-                            method: str, results: Optional['ModelTrainingResults'] = None) -> np.ndarray:
-        """
-        Apply feature selection based on specified method.
-        
-        Args:
-            X: Input feature array
-            y: Target array
-            method: Feature selection method ('variance', 'mutual_info', or others)
-            results: Optional ModelTrainingResults for tracking
-            
-        Returns:
-            Array with selected features
-        """
-        structured_log(logger, logging.INFO, "Applying feature selection",
-                    method=method,
-                    input_shape=X.shape)
-        
-        try:
-            if method == "variance":
-                selector = VarianceThreshold(threshold=0.01)  # You might want to make threshold configurable
-                transformed = selector.fit_transform(X, y)
-                
-                if results:
-                    results.add_preprocessing_step(
-                        name='variance_threshold',
-                        step_type='feature_selection',
-                        columns=list(range(X.shape[1])),
-                        parameters={'threshold': 0.01},
-                        statistics={
-                            'variances': selector.variances_.tolist(),
-                            'selected_features': selector.get_support().tolist()
-                        }
-                    )
-                    
-            elif method == "mutual_info":
-                # Select top k features based on mutual information
-                k = min(50, X.shape[1])  # You might want to make k configurable
-                selector = SelectKBest(score_func=mutual_info_classif, k=k)
-                transformed = selector.fit_transform(X, y)
-                
-                if results:
-                    results.add_preprocessing_step(
-                        name='mutual_info',
-                        step_type='feature_selection',
-                        columns=list(range(X.shape[1])),
-                        parameters={'k': k},
-                        statistics={
-                            'scores': selector.scores_.tolist(),
-                            'selected_features': selector.get_support().tolist()
-                        }
-                    )
-                    
-            else:
-                raise ValueError(f"Unsupported feature selection method: {method}")
-            
-            structured_log(logger, logging.INFO, "Feature selection completed",
-                        original_features=X.shape[1],
-                        selected_features=transformed.shape[1])
-            
-            return transformed
-            
-        except Exception as e:
-            raise PreprocessingError("Error in feature selection",
-                                error_message=str(e),
-                                method=method,
-                                input_shape=X.shape)
-
-    @log_performance
-    def _apply_feature_engineering(self, X: np.ndarray,
-                                methods: List[str],
-                                results: Optional['ModelTrainingResults'] = None) -> np.ndarray:
-        """
-        Apply feature engineering methods to the data.
-        
-        Args:
-            X: Input feature array
-            methods: List of feature engineering methods to apply
-            results: Optional ModelTrainingResults for tracking
-            
-        Returns:
-            Array with engineered features added
-        """
-        structured_log(logger, logging.INFO, "Starting feature engineering",
-                    methods=methods,
-                    input_shape=X.shape)
-        
-        try:
-            transformed = X
-            
-            for method in methods:
-                if method == "interactions":
-                    transformed = self._create_interactions(transformed)
-                    if results:
-                        results.add_preprocessing_step(
-                            name='interactions',
-                            step_type='feature_engineering',
-                            columns=list(range(X.shape[1])),
-                            parameters={'method': 'interactions'},
-                            statistics={
-                                'n_original_features': X.shape[1],
-                                'n_interaction_features': transformed.shape[1] - X.shape[1]
-                            }
-                        )
-                        
-                elif method == "polynomials":
-                    transformed = self._create_polynomials(transformed)
-                    if results:
-                        results.add_preprocessing_step(
-                            name='polynomials',
-                            step_type='feature_engineering',
-                            columns=list(range(X.shape[1])),
-                            parameters={'method': 'polynomials', 'degree': 2},
-                            statistics={
-                                'n_original_features': X.shape[1],
-                                'n_polynomial_features': transformed.shape[1] - X.shape[1]
-                            }
-                        )
-                else:
-                    raise ValueError(f"Unsupported feature engineering method: {method}")
-            
-            structured_log(logger, logging.INFO, "Feature engineering completed",
-                        original_shape=X.shape,
-                        final_shape=transformed.shape)
-            
-            return transformed
-            
-        except Exception as e:
-            raise PreprocessingError("Error in feature engineering",
-                                error_message=str(e),
-                                methods=methods,
-                                input_shape=X.shape)
-    
-    def _create_interactions(self, X: np.ndarray) -> np.ndarray:
-        """Create interaction terms between features"""
-        from itertools import combinations
-        n_features = X.shape[1]
-        interactions = []
-        for i, j in combinations(range(n_features), 2):
-            interactions.append(X[:, i] * X[:, j])
-        return np.column_stack([X] + interactions)
-    
-    def _create_polynomials(self, X: np.ndarray, degree: int = 2, 
-                        interaction_only: bool = False, 
-                        include_bias: bool = False) -> np.ndarray:
-        """
-        Create polynomial features from the input data.
-        
-        Args:
-            X: Input feature array of shape (n_samples, n_features)
-            degree: Maximum degree of polynomial features (default: 2)
-            interaction_only: If True, only interaction features are produced, 
-                            no individual features in higher degrees (default: False)
-            include_bias: If True, include a bias (constant) column (default: False)
-            
-        Returns:
-            Array containing original and polynomial features
-            
-        Example:
-            For input features [a, b] with degree=2, generates:
-            [a, b, a², ab, b²] (or [a, b, ab] if interaction_only=True)
-        """
-        structured_log(logger, logging.INFO, "Creating polynomial features",
-                    input_shape=X.shape,
-                    degree=degree,
-                    interaction_only=interaction_only)
-        
-        try:
-            # Input validation
-            if not isinstance(X, np.ndarray):
-                X = np.asarray(X)
-            
-            if X.ndim != 2:
-                raise ValueError(f"Expected 2D array, got {X.ndim}D array instead")
-            
-            if degree < 1:
-                raise ValueError(f"Degree must be >= 1, got {degree}")
-                
-            n_samples, n_features = X.shape
-            
-            # Early return if degree is 1 and no bias term is needed
-            if degree == 1 and not include_bias:
-                return X
-                
-            # Calculate expected number of features for logging
-            if interaction_only:
-                from scipy.special import comb
-                n_output_features = sum(comb(n_features, i) for i in range(1, degree + 1))
-            else:
-                from itertools import combinations_with_replacement
-                n_output_features = sum(comb(n_features + i - 1, i) 
-                                    for i in range(1, degree + 1))
-            
-            if include_bias:
-                n_output_features += 1
-                
-            # Check if output size is reasonable
-            output_size_bytes = n_output_features * n_samples * X.dtype.itemsize
-            if output_size_bytes > 1e9:  # 1GB warning threshold
-                structured_log(logger, logging.WARNING, 
-                            "Large polynomial feature matrix expected",
-                            expected_size_gb=output_size_bytes/1e9,
-                            n_output_features=n_output_features)
-                
-            # Create polynomial features
-            from sklearn.preprocessing import PolynomialFeatures
-            poly = PolynomialFeatures(
-                degree=degree,
-                interaction_only=interaction_only,
-                include_bias=include_bias
-            )
-            
-            transformed = poly.fit_transform(X)
-            
-            # Log transformation results
-            structured_log(logger, logging.INFO, 
-                        "Polynomial features created",
-                        input_shape=X.shape,
-                        output_shape=transformed.shape,
-                        n_new_features=transformed.shape[1] - X.shape[1])
-            
-            # Store feature names if available
-            if hasattr(self, '_current_results') and self._current_results is not None:
-                if hasattr(poly, 'get_feature_names_out'):
-                    feature_names = poly.get_feature_names_out()
-                else:
-                    feature_names = poly.get_feature_names()
-                    
-                self._current_results.preprocessing_info.engineered_features.update({
-                    'polynomials': feature_names.tolist()
-                })
-            
-            return transformed
-            
-        except Exception as e:
-            raise PreprocessingError("Error creating polynomial features",
-                                error_message=str(e),
-                                input_shape=X.shape,
-                                degree=degree,
-                                interaction_only=interaction_only)
-
-    def _estimate_poly_feature_count(self, n_features: int, degree: int, 
-                                interaction_only: bool = False) -> int:
-        """
-        Estimate the number of polynomial features that will be generated.
-        
-        Args:
-            n_features: Number of input features
-            degree: Maximum polynomial degree
-            interaction_only: If True, only interaction terms are counted
-            
-        Returns:
-            Expected number of features after polynomial transformation
-        """
-        if interaction_only:
-            from scipy.special import comb
-            return int(sum(comb(n_features, i) for i in range(1, degree + 1)))
-        else:
-            return int(sum(comb(n_features + i - 1, i) for i in range(1, degree + 1)))    
-
+ 
     def _track_numerical_preprocessing(self, pipeline: Pipeline, X: pd.DataFrame, 
                                      results: PreprocessingResults) -> None:
         """Track numerical preprocessing steps."""
@@ -552,11 +299,19 @@ class ModularPreprocessor:
             if hasattr(transformer, 'scale_'):
                 statistics['scale'] = transformer.scale_.tolist()
                 
+            # Convert parameters to JSON-serializable format
+            params = {}
+            for key, value in transformer.get_params().items():
+                if isinstance(value, type):
+                    params[key] = str(value)
+                else:
+                    params[key] = value
+                    
             step = PreprocessingStep(
                 name=name,
                 type='numerical',
                 columns=X.columns.tolist(),
-                parameters=transformer.get_params(),
+                parameters=params,  # Use the converted parameters
                 statistics=statistics
             )
             results.steps.append(step)
@@ -569,11 +324,19 @@ class ModularPreprocessor:
             if hasattr(transformer, 'categories_'):
                 statistics['categories'] = [cat.tolist() for cat in transformer.categories_]
                 
+            # Convert parameters to JSON-serializable format
+            params = {}
+            for key, value in transformer.get_params().items():
+                if isinstance(value, type):
+                    params[key] = str(value)
+                else:
+                    params[key] = value
+                    
             step = PreprocessingStep(
                 name=name,
                 type='categorical',
                 columns=X.columns.tolist(),
-                parameters=transformer.get_params(),
+                parameters=params,  # Use the converted parameters
                 statistics=statistics
             )
             results.steps.append(step)
