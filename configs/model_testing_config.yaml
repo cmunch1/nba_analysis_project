@@ -8,6 +8,14 @@ sort_order:
   - true
   - true
 
+# perform hyperparameter optimization
+perform_hyperparameter_optimization: true
+
+# optimizer
+optimizer:
+  - Optuna
+
+
 # model testing options
 perform_oof_cross_validation: true
 perform_validation_set_testing: true

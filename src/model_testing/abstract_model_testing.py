@@ -32,11 +32,6 @@ class AbstractModelTester(ABC):
         """
         pass
 
-class Preprocessor:    
-
-    @abstractmethod
-    def fit_transform(self, X: np.ndarray, numerical_features: List[str], categorical_features: List[str]) -> np.ndarray:
-        pass
 
 class AbstractExperimentLogger(ABC):
     @abstractmethod
@@ -51,4 +46,41 @@ class AbstractExperimentLogger(ABC):
 
     @abstractmethod
     def log_model(self, model: object, model_name: str, model_params: dict):
+        pass
+
+class AbstractHyperparameterOptimizer(ABC):
+    """Abstract base class for hyperparameter optimizers."""
+    
+    @abstractmethod
+    def __init__(self, config: AbstractConfig):
+        pass
+    
+    @abstractmethod
+    def optimize(self, 
+                objective_func: Optional[Callable] = None,
+                param_space: Dict[str, Any] = None,
+                n_trials: int = 100,
+                direction: str = "maximize",
+                sklearn_model = None,
+                X = None,
+                y = None,
+                cv: int = 5,
+                scoring: str = 'accuracy') -> Dict[str, Any]:
+        """
+        Optimize hyperparameters using the specified objective function.
+        
+        Args:
+            objective_func: Function that takes a trial/params and returns a metric
+            param_space: Dictionary defining the parameter search space
+            n_trials: Number of optimization trials
+            direction: Direction of optimization ("minimize" or "maximize")
+            
+        Returns:
+            Dictionary containing best parameters and optimization results
+        """
+        pass
+    
+    @abstractmethod
+    def get_best_params(self) -> Dict[str, Any]:
+        """Return the best parameters found during optimization."""
         pass
