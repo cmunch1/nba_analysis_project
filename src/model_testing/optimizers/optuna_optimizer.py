@@ -10,6 +10,8 @@ import lightgbm as lgb
 from ...config.config import AbstractConfig
 from ...logging.logging_utils import log_performance, structured_log
 from ...error_handling.custom_exceptions import OptimizationError
+from ...model_testing.hyperparameter_manager import HyperparameterManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +22,11 @@ class OptunaOptimizer:
     """
     
     @log_performance
-    def __init__(self, config: AbstractConfig):
+    def __init__(self, config: AbstractConfig, hyperparameter_manager: HyperparameterManager):
         self.config = config
         self.study = None
         self.best_params = None
+        self.param_manager = hyperparameter_manager
         structured_log(logger, logging.INFO, "OptunaOptimizer initialized")
     
     def _create_study(self, direction: str) -> None:
@@ -102,13 +105,17 @@ class OptunaOptimizer:
             )
             
             self.best_params = self.study.best_params
+
+            self.param_manager.update_best_params(
+                model_name=model_type,
+                new_params=self.best_params,
+                metrics={self.study.best_params['eval_metric']: self.study.best_value},
+                experiment_id="Optuna",
+                run_id = None,
+                description="Optuna optimization"
+            )
             
-            return {
-                "best_params": self.best_params,
-                "best_value": self.study.best_value,
-                "n_trials": len(self.study.trials),
-                "study": self.study
-            }
+            return self.study
             
         except Exception as e:
             raise OptimizationError("Error during optimization",
@@ -118,26 +125,33 @@ class OptunaOptimizer:
     def _optimize_xgboost(self, X, y, param_space, n_trials, cv, cv_type, scoring):
         """Optimize XGBoost model hyperparameters using config settings."""
         def objective(trial):
+            # Extract static parameters from param_space
             params = {
-                'objective': 'binary:logistic',
-                'eval_metric': 'auc',
-                'verbosity': 0,
-                'tree_method': self.config.XGB.tree_method if hasattr(self.config.XGB, 'tree_method') else 'hist',
-                'device': self.config.XGB.device if hasattr(self.config.XGB, 'device') else 'cpu'
+                'random_state': param_space.get('random_state', self.config.XGB.random_state),
+                'objective': param_space.get('objective', self.config.XGB.objective),
+                'eval_metric': param_space.get('eval_metric', self.config.XGB.eval_metric),
+                'verbosity': param_space.get('verbosity', self.config.XGB.verbosity),
+                'tree_method': param_space.get('tree_method', self.config.XGB.tree_method),
+                'device': param_space.get('device', self.config.XGB.device)
             }
             
-            # Get parameters from param_space
+            # Get dynamic parameters from param_space
             for param_name, param_config in param_space.items():
-                if param_config["type"] == "categorical":
-                    params[param_name] = trial.suggest_categorical(
-                        param_name, param_config["values"])
-                elif param_config["type"] == "int":
-                    params[param_name] = trial.suggest_int(
-                        param_name, param_config["low"], param_config["high"])
-                elif param_config["type"] == "float":
-                    params[param_name] = trial.suggest_float(
-                        param_name, param_config["low"], param_config["high"],
-                        log=param_config.get("log", False))
+                # Skip static parameters
+                if param_name in params:
+                    continue
+                
+                if isinstance(param_config, dict) and "type" in param_config:
+                    if param_config["type"] == "categorical":
+                        params[param_name] = trial.suggest_categorical(
+                            param_name, param_config["values"])
+                    elif param_config["type"] == "int":
+                        params[param_name] = trial.suggest_int(
+                            param_name, param_config["low"], param_config["high"])
+                    elif param_config["type"] == "float":
+                        params[param_name] = trial.suggest_float(
+                            param_name, param_config["low"], param_config["high"],
+                            log=param_config.get("log", False))
             
             scores = []
             
@@ -192,11 +206,8 @@ class OptunaOptimizer:
         # Train final model with best parameters
         best_params = {
             **self.best_params,
-            'objective': 'binary:logistic',
-            'eval_metric': 'auc',
-            'verbosity': 0,
-            'tree_method': self.config.XGB.tree_method if hasattr(self.config.XGB, 'tree_method') else 'hist',
-            'device': self.config.XGB.device if hasattr(self.config.XGB, 'device') else 'cpu'
+            **{k: param_space[k] for k in ['objective', 'eval_metric', 'verbosity', 'tree_method', 'device']
+               if k in param_space}
         }
         
         dtrain = xgb.DMatrix(X, label=y, enable_categorical=self.config.enable_categorical)
@@ -206,11 +217,9 @@ class OptunaOptimizer:
             num_boost_round=self.config.XGB.num_boost_round
         )
         
+
         return {
-            "best_params": self.best_params,
-            "best_value": self.study.best_value,
             "best_model": best_model,
-            "n_trials": len(self.study.trials),
             "study": self.study
         }
     
@@ -218,24 +227,31 @@ class OptunaOptimizer:
     def _optimize_lightgbm(self, X, y, param_space, n_trials, cv, cv_type, scoring):
         """Optimize LightGBM model hyperparameters using config settings."""
         def objective(trial):
+            # Extract static parameters from param_space
             params = {
-                'objective': 'binary',
-                'metric': 'auc',
-                'verbosity': -1
+                'random_state': param_space.get('random_state', self.config.LGBM.random_state),
+                'objective': param_space.get('objective', self.config.LGBM.objective),
+                'metric': param_space.get('metric', self.config.LGBM.metric),
+                'verbosity': param_space.get('verbosity', self.config.LGBM.verbosity)
             }
             
-            # Get parameters from param_space
+            # Get dynamic parameters from param_space
             for param_name, param_config in param_space.items():
-                if param_config["type"] == "categorical":
-                    params[param_name] = trial.suggest_categorical(
-                        param_name, param_config["values"])
-                elif param_config["type"] == "int":
-                    params[param_name] = trial.suggest_int(
-                        param_name, param_config["low"], param_config["high"])
-                elif param_config["type"] == "float":
-                    params[param_name] = trial.suggest_float(
-                        param_name, param_config["low"], param_config["high"],
-                        log=param_config.get("log", False))
+                # Skip static parameters
+                if param_name in params:
+                    continue
+                
+                if isinstance(param_config, dict) and "type" in param_config:
+                    if param_config["type"] == "categorical":
+                        params[param_name] = trial.suggest_categorical(
+                            param_name, param_config["values"])
+                    elif param_config["type"] == "int":
+                        params[param_name] = trial.suggest_int(
+                            param_name, param_config["low"], param_config["high"])
+                    elif param_config["type"] == "float":
+                        params[param_name] = trial.suggest_float(
+                            param_name, param_config["low"], param_config["high"],
+                            log=param_config.get("log", False))
             
             scores = []
             
@@ -293,9 +309,8 @@ class OptunaOptimizer:
         # Train final model with best parameters
         best_params = {
             **self.best_params,
-            'objective': 'binary',
-            'metric': 'auc',
-            'verbosity': -1
+            **{k: param_space[k] for k in ['objective', 'metric', 'verbosity']
+               if k in param_space}
         }
         
         train_data = lgb.Dataset(X, label=y, categorical_feature=self.config.categorical_features)
@@ -306,10 +321,7 @@ class OptunaOptimizer:
         )
         
         return {
-            "best_params": self.best_params,
-            "best_value": self.study.best_value,
             "best_model": best_model,
-            "n_trials": len(self.study.trials),
             "study": self.study
         }
 

@@ -25,12 +25,20 @@ class AbstractModelTester(ABC):
     def calculate_classification_evaluation_metrics(self, y_true: pd.Series, y_pred: np.ndarray) -> Dict[str, float]:
         pass
 
+class AbstractHyperparameterManager(ABC):
     @abstractmethod
-    def get_model_params(self, model_name: str) -> Tuple[Any, Dict]:
-        """
-        Abstract method to get the current model parameters.
-        """
+    def get_current_params(self, model_name: str) -> Dict[str, Any]:
+        pass    
+    
+    @abstractmethod
+    def save_current_params(self, model_name: str, params: Dict[str, Any]) -> None:
         pass
+    
+    @abstractmethod
+    def update_current_params(self, model_name: str, params: Dict[str, Any]) -> None:
+        pass
+    
+
 
 
 class AbstractExperimentLogger(ABC):
@@ -54,26 +62,25 @@ class AbstractHyperparameterOptimizer(ABC):
     @abstractmethod
     def __init__(self, config: AbstractConfig):
         pass
-    
+      
     @abstractmethod
     def optimize(self, 
                 objective_func: Optional[Callable] = None,
                 param_space: Dict[str, Any] = None,
-                n_trials: int = 100,
-                direction: str = "maximize",
-                sklearn_model = None,
                 X = None,
                 y = None,
-                cv: int = 5,
-                scoring: str = 'accuracy') -> Dict[str, Any]:
+                model_type: str = None,
+                cv: int = None) -> Dict[str, Any]:
         """
         Optimize hyperparameters using the specified objective function.
         
         Args:
-            objective_func: Function that takes a trial/params and returns a metric
-            param_space: Dictionary defining the parameter search space
-            n_trials: Number of optimization trials
-            direction: Direction of optimization ("minimize" or "maximize")
+            objective_func: Optional custom objective function
+            param_space: Dictionary defining parameter search space
+            X: Training features
+            y: Training labels
+            model_type: Type of model to optimize
+            cv: Number of cross-validation folds
             
         Returns:
             Dictionary containing best parameters and optimization results

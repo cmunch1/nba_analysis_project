@@ -10,6 +10,15 @@ optuna:
 
 # XGBoost parameter space
 xgb_param_space:
+  # Static parameters as simple key-value pairs
+  random_state: 42
+  objective: 'binary:logistic'
+  eval_metric: 'auc'
+  verbosity: 0
+  tree_method: 'hist'
+  device: 'cuda'
+  
+  # Dynamic parameters with suggestion syntax
   num_round: !suggest_int
     name: num_round
     low: 2
@@ -57,6 +66,13 @@ xgb_param_space:
 
 # LightGBM parameter space
 lgbm_param_space:
+  # Static parameters as simple key-value pairs
+  random_state: 42
+  objective: 'binary'
+  metric: 'binary_logloss'
+  verbosity: -1
+  
+  # Dynamic parameters with suggestion syntax
   num_leaves: !suggest_int
     name: num_leaves
     low: 2
