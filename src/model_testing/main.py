@@ -31,6 +31,8 @@ def main() -> None:
     data_validator = container.data_validator()
     model_tester = container.model_tester()
     experiment_logger = container.experiment_logger()
+    optimizer = container.optimizer()
+    
     
     try:
         error_logger = setup_logging(config, LOG_FILE)
@@ -70,6 +72,10 @@ def main() -> None:
                                                                                     preprocessing_results=val_preprocessing_results)
                 
                 model_params = model_tester.get_model_params(model_name)
+
+                if config.perform_hyperparameter_optimization:
+                    optimizer_model, study = optimizer.optimize(model_name, model_params, X, y)
+                    model_params = study.best_trial.params
                 
                 if config.perform_oof_cross_validation:
                     oof_training_results = process_model_evaluation(

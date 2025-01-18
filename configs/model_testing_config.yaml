@@ -1,4 +1,4 @@
-#sort columns
+#sort columns - ensures that the columns are in the correct order - important for TimeSeriesSplit cross validation
 sort_columns:
   - season
   - season_progress
@@ -7,6 +7,18 @@ sort_columns:
 sort_order:
   - true
   - true
+
+# hyperparameters path (${PROJECT_ROOT} is the root directory of the project and is parsed from the environment variable in config.py)
+current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
+
+# hyperparameters storage directory
+hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
+
+
+# perform preprocessing 
+# this is ideally done in the feature engineering module, especially for production
+# but having this option here this gives the flexibility to possibly iterate faster during testing.
+perform_preprocessing: true
 
 # perform hyperparameter optimization
 perform_hyperparameter_optimization: true

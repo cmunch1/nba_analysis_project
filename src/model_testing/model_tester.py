@@ -19,19 +19,22 @@ from ..data_access.data_access import AbstractDataAccess
 from .data_classes import ModelTrainingResults, ClassificationMetrics, PreprocessingResults
 from .modular_preprocessor import ModularPreprocessor
 import lightgbm as lgb
+from .hyperparameter_manager import HyperparameterManager
 
 logger = logging.getLogger(__name__)
 
 class ModelTester(AbstractModelTester):
     @log_performance
-    def __init__(self, config: AbstractConfig):
+    def __init__(self, config: AbstractConfig, hyperparameter_manager: HyperparameterManager):
         """
         Initialize the ModelTester class.
 
         Args:
             config (AbstractConfig): Configuration object containing model testing parameters.
+            hyperparameter_manager (HyperparameterManager): Manager for model hyperparameters.
         """
         self.config = config
+        self.hyperparameter_manager = hyperparameter_manager
         self.preprocessor = ModularPreprocessor(config)
         structured_log(logger, logging.INFO, "ModelTester initialized",
                       config_type=type(config).__name__)
@@ -50,17 +53,7 @@ class ModelTester(AbstractModelTester):
             ModelTestingError: If there's an error retrieving the hyperparameters.
         """
         try:
-            if not hasattr(self.config, 'model_hyperparameters') or not hasattr(self.config.model_hyperparameters, model_name):
-                raise ValueError(f"Hyperparameters for {model_name} not found in config")
-
-            hyperparameters_list = getattr(self.config.model_hyperparameters, model_name)
-            current_best = next((config['params'] for config in hyperparameters_list if config['name'] == 'current_best'), None)
-            
-            if current_best is None:
-                raise ValueError(f"'current_best' configuration not found for {model_name}")
-
-            structured_log(logger, logging.INFO, f"Loaded 'current_best' hyperparameters for {model_name}")
-            return current_best
+            return self.hyperparameter_manager.get_current_params(model_name)
         except Exception as e:
             raise ModelTestingError(f"Error getting hyperparameters for {model_name}",
                                   error_message=str(e))
@@ -100,45 +93,46 @@ class ModelTester(AbstractModelTester):
             if self.config.non_useful_columns:
                 X = X.drop(columns=self.config.non_useful_columns)
 
-            # Store original column names
-            original_columns = X.columns.tolist()
+            if self.config.perform_preprocessing:
+                # Store original column names
+                original_columns = X.columns.tolist()
 
-            # explicitly convert categorical features to category type
-            for col in self.config.categorical_features:
-                X[col] = X[col].astype('category')
+                # explicitly convert categorical features to category type
+                for col in self.config.categorical_features:
+                    X[col] = X[col].astype('category')
 
-            # Apply preprocessing with tracking
-            if is_training:
-                X, preprocessing_results = self.preprocessor.fit_transform(
-                    X,
-                    y=y,
-                    model_name=model_name,
-                    preprocessing_results=preprocessing_results
-                )
-            else:
-                X = self.preprocessor.transform(X)
-            
-            # Ensure column names are preserved after preprocessing
-            if isinstance(X, pd.DataFrame):
-                if len(X.columns) == len(original_columns):
-                    X.columns = original_columns
-            else:
-                X = pd.DataFrame(X, columns=original_columns)
-
-            if is_training:
-                # Convert preprocessing results to serializable format before logging
-                steps_summary = [
-                    {
-                        'name': step.name,
-                        'type': step.type,
-                        'n_columns': len(step.columns)
-                    }
-                    for step in preprocessing_results.steps
-                ]
+                # Apply preprocessing with tracking
+                if is_training:
+                    X, preprocessing_results = self.preprocessor.fit_transform(
+                        X,
+                        y=y,
+                        model_name=model_name,
+                        preprocessing_results=preprocessing_results
+                    )
+                else:
+                    X = self.preprocessor.transform(X)
                 
-                structured_log(logger, logging.INFO, "Preprocessing results",
-                            preprocessing_summary=preprocessing_results.summarize(),
-                            steps_overview=steps_summary)
+                # Ensure column names are preserved after preprocessing
+                if isinstance(X, pd.DataFrame):
+                    if len(X.columns) == len(original_columns):
+                        X.columns = original_columns
+                else:
+                    X = pd.DataFrame(X, columns=original_columns)
+
+                if is_training:
+                    # Convert preprocessing results to serializable format before logging
+                    steps_summary = [
+                        {
+                            'name': step.name,
+                            'type': step.type,
+                            'n_columns': len(step.columns)
+                        }
+                        for step in preprocessing_results.steps
+                    ]
+                    
+                    structured_log(logger, logging.INFO, "Preprocessing results",
+                                preprocessing_summary=preprocessing_results.summarize(),
+                                steps_overview=steps_summary)
 
             X = self._optimize_data_types(X)
             
@@ -436,7 +430,6 @@ class ModelTester(AbstractModelTester):
                                   error_message=str(e),
                                   model_name=model_name,
                                   dataframe_shape=X.shape)
-
         
     @log_performance
     def _train_sklearn_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
