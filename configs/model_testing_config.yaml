@@ -8,20 +8,25 @@ sort_order:
   - true
   - true
 
+# perform preprocessing 
+# this is ideally done in the feature engineering module, especially for production
+# but having this option here this gives the flexibility to possibly iterate faster during testing.
+perform_preprocessing: true
+
 # hyperparameters path (${PROJECT_ROOT} is the root directory of the project and is parsed from the environment variable in config.py)
 current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
 
 # hyperparameters storage directory
 hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
 
+# true = use baseline hyperparameters, false = use current best hyperparameters
+use_baseline_hyperparameters: true
 
-# perform preprocessing 
-# this is ideally done in the feature engineering module, especially for production
-# but having this option here this gives the flexibility to possibly iterate faster during testing.
-perform_preprocessing: true
-
-# perform hyperparameter optimization
-perform_hyperparameter_optimization: true
+# perform hyperparameter optimization 
+# if true, the optimizer will tune the hyperparameters and 
+# choose the best set of hyperparameters from the hyperparameter_history directory
+# will ignore the use_baseline_hyperparameters setting
+perform_hyperparameter_optimization: false
 
 # optimizer
 optimizer:
@@ -31,7 +36,7 @@ optimizer:
 # model testing options
 perform_oof_cross_validation: true
 perform_validation_set_testing: true
-save_oof_predictions: true # save the predictions for the out of fold cross validation to a csv file
+save_oof_predictions: false # save the predictions for the out of fold cross validation to a csv file
 save_validation_predictions: true # save the predictions for the validation set to a csv file
 log_experiment: true
 
@@ -59,8 +64,8 @@ experiment_description: "NBA Predictor"
 
 # models
 models:
-  #- XGBoost
-  - LGBM
+  - XGBoost
+  #- LGBM
 
 # XGBoost settings
 enable_categorical: false
@@ -87,10 +92,6 @@ cross_validation_type: TimeSeriesSplit
 
 # number of cross validation splits
 n_splits: 5
-
-# hyperparameters 
-use_best_params: true
-tune_hyperparameters: false
 
 # chart options
 feature_importance_chart: true

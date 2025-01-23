@@ -5,8 +5,11 @@ from typing import Dict, Any, Optional, List
 import mlflow
 import logging
 from dataclasses import dataclass, asdict
+from src.logging.logging_utils import structured_log
 from .abstract_model_testing import AbstractHyperparameterManager
 from ..config.config import AbstractConfig
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class HyperparameterSet:
@@ -36,6 +39,7 @@ class HyperparameterManager(AbstractHyperparameterManager):
         self.config_path = config.current_hyperparameters
         self.storage_dir = config.hyperparameter_history_dir
         self.logger = logging.getLogger(__name__)
+        self.config = config
         
         # Create storage directory if it doesn't exist
         os.makedirs(self.storage_dir, exist_ok=True)
@@ -45,6 +49,9 @@ class HyperparameterManager(AbstractHyperparameterManager):
         
     def _load_json(self, path: str) -> Dict:
         """Load JSON configuration file."""
+
+        structured_log(self.logger, logging.INFO, "Loading Hyperparameter JSON configuration file",
+                      config_path=path)
         try:
             with open(path, 'r') as f:
                 return json.load(f)
@@ -58,20 +65,30 @@ class HyperparameterManager(AbstractHyperparameterManager):
             
     def get_current_params(self, model_name: str) -> Dict[str, Any]:
         """Get current best hyperparameters for a model."""
-        model_params = self.current_params.get('model_hyperparameters', {}).get(model_name, [])
-        current_best = next((config['params'] for config in model_params 
-                           if config['name'] == 'current_best'), None)
-        if current_best is None:
-            raise ValueError(f"No current_best parameters found for {model_name}")
-        return current_best
+        structured_log(self.logger, logging.INFO, "Getting current best hyperparameters for a model",
+                      model_name=model_name)
         
-    def update_best_params(self, 
-                          model_name: str, 
-                          new_params: Dict[str, Any],
-                          metrics: Dict[str, float],
-                          experiment_id: str,
-                          run_id: str,
-                          description: Optional[str] = None) -> None:
+        if self.config.use_baseline_hyperparameters:
+            param_name = 'baseline'
+        else:
+            param_name = 'current_best'
+        
+        try:
+            self.current_params = self._load_json(self.config_path)
+            model_params = self.current_params.get('model_hyperparameters', {}).get(model_name, [])
+            current_best = next((config['params'] for config in model_params 
+                               if config['name'] == param_name), None)
+            if current_best is None:
+                raise ValueError(f"No current_best parameters found for {model_name}")
+            return current_best
+        except Exception as e:
+            structured_log(self.logger, logging.ERROR, "Error getting current best hyperparameters",
+                          error=str(e))
+            raise e
+        
+    def update_best_params(self, model_name: str, new_params: Dict[str, Any],
+                          metrics: Dict[str, float], experiment_id: str,
+                          run_id: Optional[str] = None, description: Optional[str] = None) -> None:
         """
         Update the best hyperparameters for a model if the new parameters perform better.
         
@@ -83,6 +100,16 @@ class HyperparameterManager(AbstractHyperparameterManager):
             run_id: MLflow run ID
             description: Optional description of the parameter set
         """
+        structured_log(self.logger, logging.INFO, 
+                      "Updating best parameters",
+                      model_name=model_name,
+                      metrics=metrics,
+                      run_id=run_id)
+        
+        # Generate run_id if none provided
+        if run_id is None:
+            run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
         # Create new hyperparameter set
         new_set = HyperparameterSet(
             name=f"{model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -94,12 +121,32 @@ class HyperparameterManager(AbstractHyperparameterManager):
             description=description
         )
         
-        # Save to history
-        self._save_to_history(model_name, new_set)
+        # Save to history with logging
+        try:
+            self._save_to_history(model_name, new_set)
+            structured_log(self.logger, logging.INFO, 
+                          "Saved parameters to history",
+                          model_name=model_name)
+        except Exception as e:
+            structured_log(self.logger, logging.ERROR, 
+                          "Failed to save parameters to history",
+                          model_name=model_name,
+                          error=str(e))
+            raise
         
         # Update current best if necessary
-        if self._is_better_than_current(model_name, metrics):
-            self._update_current_best(model_name, new_set)
+        try:
+            if self._is_better_than_current(model_name, metrics):
+                self._update_current_best(model_name, new_set)
+                structured_log(self.logger, logging.INFO, 
+                             "Updated current best parameters",
+                             model_name=model_name)
+        except Exception as e:
+            structured_log(self.logger, logging.ERROR, 
+                          "Failed to update current best parameters",
+                          model_name=model_name,
+                          error=str(e))
+            raise
             
     def _is_better_than_current(self, model_name: str, new_metrics: Dict[str, float]) -> bool:
         """

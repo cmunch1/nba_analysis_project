@@ -23,7 +23,7 @@ class DIContainer(containers.DeclarativeContainer):
         logger_type=LoggerType.MLFLOW, 
         config=config
     )
-    optimizer_factory = providers.Factory(
+    optimizer = providers.Factory(
         OptimizerFactory.create_optimizer, 
         optimizer_type=OptimizerType.OPTUNA, 
         config=config,

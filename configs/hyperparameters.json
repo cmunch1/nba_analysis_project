@@ -19,11 +19,45 @@
           "random_state": 42,
           "eval_metric": "auc"
         }
+      },
+      {
+        "name": "baseline",
+        "params": {
+          "tree_method": "hist",
+          "device": "cuda",
+          "max_depth": 4,
+          "learning_rate": 0.05,
+          "subsample": 0.8,
+          "colsample_bytree": 0.8,
+          "min_child_weight": 2,
+          "gamma": 0.1,
+          "reg_alpha": 0.1,
+          "reg_lambda": 1,
+          "scale_pos_weight": 1,
+          "objective": "binary:logistic",
+          "random_state": 42,
+          "eval_metric": "auc"
+        }
       }
     ],
     "LGBM": [
       {
         "name": "current_best",
+        "params": {
+          "max_depth": 4,
+          "learning_rate": 0.05,
+          "subsample": 0.8,
+          "colsample_bytree": 0.8,
+          "min_child_weight": 2,
+          "reg_alpha": 0.1,
+          "reg_lambda": 1,
+          "random_state": 42,
+          "objective": "binary",
+          "metric": "binary_logloss"
+        }
+      },
+      {
+        "name": "baseline",
         "params": {
           "max_depth": 4,
           "learning_rate": 0.05,

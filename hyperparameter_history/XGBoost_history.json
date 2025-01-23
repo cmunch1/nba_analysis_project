@@ -1,0 +1,50 @@
+[
+  {
+    "name": "XGBoost_20250119_094948",
+    "params": {
+      "num_round": 663,
+      "learning_rate": 0.07849272487020681,
+      "max_bin": 982,
+      "max_depth": 4,
+      "alpha": 9.91920679770022,
+      "gamma": 1.4804738010064488e-16,
+      "reg_lambda": 8.424999621586371,
+      "colsample_bytree": 2.6060463512548487e-06,
+      "subsample": 0.9767850821394005,
+      "min_child_weight": 4.227345244585894,
+      "scale_pos_weight": 5
+    },
+    "performance_metrics": {
+      "auc": 0.6708664608571381
+    },
+    "creation_date": "2025-01-19T09:49:48.128443",
+    "experiment_id": "Optuna",
+    "run_id": "optuna_20250119_094948",
+    "model_version": null,
+    "description": "Optuna optimization"
+  },
+  {
+    "name": "XGBoost_20250120_081621",
+    "params": {
+      "num_round": 663,
+      "learning_rate": 0.07849272487020681,
+      "max_bin": 982,
+      "max_depth": 4,
+      "alpha": 9.91920679770022,
+      "gamma": 1.4804738010064488e-16,
+      "reg_lambda": 8.424999621586371,
+      "colsample_bytree": 2.6060463512548487e-06,
+      "subsample": 0.9767850821394005,
+      "min_child_weight": 4.227345244585894,
+      "scale_pos_weight": 5
+    },
+    "performance_metrics": {
+      "auc": 0.6708664608571381
+    },
+    "creation_date": "2025-01-20T08:16:21.097964",
+    "experiment_id": "Optuna",
+    "run_id": "optuna_20250120_081621",
+    "model_version": null,
+    "description": "Optuna optimization"
+  }
+]
