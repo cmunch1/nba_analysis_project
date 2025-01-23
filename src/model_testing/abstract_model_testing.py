@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from typing import Tuple, Any, Dict, Union, List
+from typing import Tuple, Any, Dict, Union, List, Optional, Callable
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -31,11 +31,7 @@ class AbstractHyperparameterManager(ABC):
         pass    
     
     @abstractmethod
-    def save_current_params(self, model_name: str, params: Dict[str, Any]) -> None:
-        pass
-    
-    @abstractmethod
-    def update_current_params(self, model_name: str, params: Dict[str, Any]) -> None:
+    def update_best_params(self, model_name: str, new_params: Dict[str, Any], metrics: Dict[str, float], experiment_id: str, run_id: str, description: Optional[str] = None) -> None:
         pass
     
 

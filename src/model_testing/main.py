@@ -71,12 +71,20 @@ def main() -> None:
                                                                                     is_training=False, 
                                                                                     preprocessing_results=val_preprocessing_results)
                 
-                model_params = model_tester.get_model_params(model_name)
+                
 
                 if config.perform_hyperparameter_optimization:
-                    optimizer_model, study = optimizer.optimize(model_name, model_params, X, y)
-                    model_params = study.best_trial.params
-                
+                    best_params = optimizer.optimize(
+                        model_type=model_name,
+                        X=X,
+                        y=y
+                    )
+                    model_params = best_params
+
+                else:
+                    model_params = model_tester.get_model_params(model_name)    
+
+
                 if config.perform_oof_cross_validation:
                     oof_training_results = process_model_evaluation(
                         model_tester, data_access, experiment_logger, logger,

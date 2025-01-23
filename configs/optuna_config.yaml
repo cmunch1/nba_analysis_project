@@ -1,107 +1,45 @@
 # Optuna optimization settings
 optuna:
-  n_trials: 100
-  scoring: 'auc'  # Supported metrics: 'accuracy', 'auc', 'f1'
-  direction: 'maximize'
+  n_trials: 20
+  scoring: auc
+  direction: maximize
   pruner: 'median'  # Available: 'median', 'hyperband', 'threshold'
   n_startup_trials: 10
   n_warmup_steps: 5
   interval_steps: 1
 
 # XGBoost parameter space
-xgb_param_space:
-  # Static parameters as simple key-value pairs
-  random_state: 42
-  objective: 'binary:logistic'
-  eval_metric: 'auc'
-  verbosity: 0
-  tree_method: 'hist'
-  device: 'cuda'
-  
-  # Dynamic parameters with suggestion syntax
-  num_round: !suggest_int
-    name: num_round
-    low: 2
-    high: 1000
-  learning_rate: !suggest_float
-    name: learning_rate
-    low: 1.0e-3
-    high: 1.0
-  max_bin: !suggest_int
-    name: max_bin
-    low: 2
-    high: 1000
-  max_depth: !suggest_int
-    name: max_depth
-    low: 1
-    high: 8
-  alpha: !suggest_float
-    name: alpha
-    low: 1.0e-16
-    high: 12.0
-  gamma: !suggest_float
-    name: gamma
-    low: 1.0e-16
-    high: 12.0
-  reg_lambda: !suggest_float
-    name: reg_lambda
-    low: 1.0e-16
-    high: 12.0
-  colsample_bytree: !suggest_float
-    name: colsample_bytree
-    low: 1.0e-16
-    high: 1.0
-  subsample: !suggest_float
-    name: subsample
-    low: 1.0e-16
-    high: 1.0
-  min_child_weight: !suggest_float
-    name: min_child_weight
-    low: 1.0e-16
-    high: 12.0
-  scale_pos_weight: !suggest_int
-    name: scale_pos_weight
-    low: 1
-    high: 15
+xgboost:
+  static_params:
+    verbosity: 0
+    random_state: 42
+    objective: binary:logistic
+    eval_metric: auc
+    tree_method: hist
+
+  dynamic_params:
+    num_round: [2, 1000, int]
+    learning_rate: [1.0e-3, 1.0, float, true]  # true for log scale
+    max_bin: [2, 1000, int]
+    max_depth: [1, 8, int]
+    alpha: [1.0e-16, 12, float, true]
+    gamma: [1.0e-16, 12, float, true]
+    reg_lambda: [1.0e-16, 12, float, true]
+    colsample_bytree: [1.0e-16, 1.0, float, true]
+    subsample: [1.0e-16, 1.0, float, true]
+    min_child_weight: [1.0e-16, 12, float, true]
+    scale_pos_weight: [1, 15, int]
 
 # LightGBM parameter space
-lgbm_param_space:
-  # Static parameters as simple key-value pairs
-  random_state: 42
-  objective: 'binary'
-  metric: 'binary_logloss'
-  verbosity: -1
-  
-  # Dynamic parameters with suggestion syntax
-  num_leaves: !suggest_int
-    name: num_leaves
-    low: 2
-    high: 256
-  learning_rate: !suggest_float
-    name: learning_rate
-    low: 1.0e-3
-    high: 1.0
-  max_depth: !suggest_int
-    name: max_depth
-    low: 1
-    high: 8
-  min_child_samples: !suggest_int
-    name: min_child_samples
-    low: 1
-    high: 100
-  subsample: !suggest_float
-    name: subsample
-    low: 0.1
-    high: 1.0
-  colsample_bytree: !suggest_float
-    name: colsample_bytree
-    low: 0.1
-    high: 1.0
-  reg_alpha: !suggest_float
-    name: reg_alpha
-    low: 1.0e-16
-    high: 12.0
-  reg_lambda: !suggest_float
-    name: reg_lambda
-    low: 1.0e-16
-    high: 12.0
+lightgbm:
+  static_params:
+    objective: binary
+    metric: auc
+    verbosity: -1
+
+  dynamic_params:
+    num_leaves: [2, 256, int]
+    learning_rate: [1.0e-3, 1.0, float, true]
+    feature_fraction: [0.1, 1.0, float]
+    bagging_fraction: [0.1, 1.0, float]
+    min_child_samples: [1, 100, int]

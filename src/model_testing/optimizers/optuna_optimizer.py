@@ -10,7 +10,9 @@ import lightgbm as lgb
 from ...config.config import AbstractConfig
 from ...logging.logging_utils import log_performance, structured_log
 from ...error_handling.custom_exceptions import OptimizationError
-from ...model_testing.hyperparameter_manager import HyperparameterManager
+from ..abstract_model_testing import AbstractHyperparameterManager
+from datetime import datetime
+from types import SimpleNamespace
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ class OptunaOptimizer:
     """
     
     @log_performance
-    def __init__(self, config: AbstractConfig, hyperparameter_manager: HyperparameterManager):
+    def __init__(self, config: AbstractConfig, hyperparameter_manager: AbstractHyperparameterManager):
         self.config = config
         self.study = None
         self.best_params = None
@@ -40,126 +42,115 @@ class OptunaOptimizer:
             raise OptimizationError("Failed to create Optuna study", 
                                   error_message=str(e))
     
+    def _namespace_to_dict(self, namespace):
+        """Recursively convert SimpleNamespace to dict"""
+        if isinstance(namespace, SimpleNamespace):
+            return {k: self._namespace_to_dict(v) for k, v in vars(namespace).items()}
+        elif isinstance(namespace, (list, tuple)):
+            return type(namespace)(self._namespace_to_dict(x) for x in namespace)
+        elif isinstance(namespace, dict):
+            return {k: self._namespace_to_dict(v) for k, v in namespace.items()}
+        return namespace
+
     @log_performance
     def optimize(self, 
                 objective_func: Optional[Callable] = None,
-                param_space: Dict[str, Any] = None,
                 X = None,
                 y = None,
                 model_type: str = None,
-                cv: int = None) -> Dict[str, Any]:
+                n_splits: int = None) -> Dict[str, Any]:
         """
         Optimize hyperparameters using Optuna and model_testing_config settings.
         """
+        # Get parameter space from config based on model type and convert to dict
+        param_space = None
+        if model_type:
+            if model_type.lower() == "xgboost":
+                param_space = self._namespace_to_dict(self.config.xgb_param_space)
+            elif model_type.lower() == "lgbm":
+                param_space = self._namespace_to_dict(self.config.lgbm_param_space)
+            else:
+                raise ValueError(f"Unsupported model type: {model_type}")
+
+        if model_type is None and objective_func is None:
+            raise ValueError("Either model_type or objective_func must be provided")
+            
+        if model_type is None and objective_func is not None:
+            model_type = "custom_objective"  # Default name for custom objectives
+
         # Get optimization settings from config
         n_trials = self.config.optuna.n_trials
         scoring = self.config.optuna.scoring
         direction = self.config.optuna.direction
+        n_splits = n_splits or self.config.n_splits
+        cv_type = self.config.cross_validation_type
 
         structured_log(logger, logging.INFO, 
-                      "Starting optimization",
-                      model_type=model_type,
-                      n_trials=n_trials,
-                      scoring=scoring,
-                      direction=direction)
+                    "Starting optimization",
+                    model_type=model_type,
+                    n_trials=n_trials,
+                    scoring=scoring,
+                    direction=direction)
         
         try:
             self._create_study(direction)
             
-            # Use cross-validation settings from config
-            cv = cv or self.config.n_splits
-            cv_type = self.config.cross_validation_type
-
-            if model_type is not None:
-                if model_type.lower() == "xgboost":
-                    return self._optimize_xgboost(X, y, param_space, n_trials, cv, cv_type, scoring)
-                elif model_type.lower() == "lgbm":
-                    return self._optimize_lightgbm(X, y, param_space, n_trials, cv, cv_type, scoring)
-                else:
-                    raise ValueError(f"Unsupported model type: {model_type}")
-            
-            if objective_func is None:
-                raise ValueError("Either model_type or objective_func must be provided")
-            
-            # Use custom objective function with provided param space
-            def objective(trial: Trial) -> float:
-                params = {}
-                for param_name, param_config in param_space.items():
-                    if param_config["type"] == "categorical":
-                        params[param_name] = trial.suggest_categorical(
-                            param_name, param_config["values"])
-                    elif param_config["type"] == "int":
-                        params[param_name] = trial.suggest_int(
-                            param_name, param_config["low"], param_config["high"])
-                    elif param_config["type"] == "float":
-                        params[param_name] = trial.suggest_float(
-                            param_name, param_config["low"], param_config["high"],
-                            log=param_config.get("log", False))
+            result = None
+            if model_type.lower() == "xgboost":
+                self.study = self._optimize_xgboost(X, y, param_space, n_trials, n_splits, cv_type, scoring)
+            elif model_type.lower() == "lgbm":
+                self.study = self._optimize_lightgbm(X, y, param_space, n_trials, n_splits, cv_type, scoring)
+            else:
+                raise ValueError(f"Unsupported model type: {model_type}")
+ 
                 
-                return objective_func(params)
-            
-            self.study.optimize(
-                objective,
-                n_trials=n_trials,
-                callbacks=[self._optimization_callback]
-            )
-            
-            self.best_params = self.study.best_params
 
+            run_id = f"optuna_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            # Merge static parameters with best parameters from study
+            final_best_params = param_space.get('static_params', {}).copy()
+            final_best_params.update(self.study.best_params)
+            
+            structured_log(logger, logging.INFO, 
+                        "Optimization complete, updating best parameters",
+                        model_type=model_type,
+                        best_value=self.study.best_value,
+                        run_id=run_id)
+            
             self.param_manager.update_best_params(
                 model_name=model_type,
-                new_params=self.best_params,
-                metrics={self.study.best_params['eval_metric']: self.study.best_value},
+                new_params=final_best_params,  # Using merged parameters
+                metrics={scoring: self.study.best_value},
                 experiment_id="Optuna",
-                run_id = None,
+                run_id=run_id,
                 description="Optuna optimization"
             )
             
-            return self.study
-            
+            return final_best_params  # Return merged parameters
+        
         except Exception as e:
             raise OptimizationError("Error during optimization",
-                                  error_message=str(e))
+                                error_message=str(e))
     
     @log_performance
-    def _optimize_xgboost(self, X, y, param_space, n_trials, cv, cv_type, scoring):
+    def _optimize_xgboost(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
         """Optimize XGBoost model hyperparameters using config settings."""
         def objective(trial):
-            # Extract static parameters from param_space
-            params = {
-                'random_state': param_space.get('random_state', self.config.XGB.random_state),
-                'objective': param_space.get('objective', self.config.XGB.objective),
-                'eval_metric': param_space.get('eval_metric', self.config.XGB.eval_metric),
-                'verbosity': param_space.get('verbosity', self.config.XGB.verbosity),
-                'tree_method': param_space.get('tree_method', self.config.XGB.tree_method),
-                'device': param_space.get('device', self.config.XGB.device)
-            }
+            # Process parameters using the new method
+            params = self._process_parameters(trial, param_space)
             
-            # Get dynamic parameters from param_space
-            for param_name, param_config in param_space.items():
-                # Skip static parameters
-                if param_name in params:
-                    continue
-                
-                if isinstance(param_config, dict) and "type" in param_config:
-                    if param_config["type"] == "categorical":
-                        params[param_name] = trial.suggest_categorical(
-                            param_name, param_config["values"])
-                    elif param_config["type"] == "int":
-                        params[param_name] = trial.suggest_int(
-                            param_name, param_config["low"], param_config["high"])
-                    elif param_config["type"] == "float":
-                        params[param_name] = trial.suggest_float(
-                            param_name, param_config["low"], param_config["high"],
-                            log=param_config.get("log", False))
-            
+            structured_log(logger, logging.INFO, 
+                          "Final parameters for trial", 
+                          trial_number=trial.number, 
+                          params=params)
+
             scores = []
             
             # Use appropriate cross-validation strategy from config
             if cv_type == "TimeSeriesSplit":
-                kf = TimeSeriesSplit(n_splits=cv)
+                kf = TimeSeriesSplit(n_splits=n_splits)
             else:  # Default to StratifiedKFold
-                kf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=self.config.random_state)
+                kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.config.random_state)
             
             for train_idx, val_idx in kf.split(X, y):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
@@ -174,7 +165,7 @@ class OptunaOptimizer:
                 model = xgb.train(
                     params,
                     dtrain,
-                    num_boost_round=self.config.XGB.num_boost_round,
+                    num_boost_round=params.get('num_round', self.config.XGB.num_boost_round),
                     evals=[(dval, 'val')],
                     early_stopping_rounds=self.config.XGB.early_stopping_rounds,
                     verbose_eval=False
@@ -200,66 +191,28 @@ class OptunaOptimizer:
             n_trials=n_trials,
             callbacks=[self._optimization_callback]
         )
-        
-        self.best_params = self.study.best_params
-        
-        # Train final model with best parameters
-        best_params = {
-            **self.best_params,
-            **{k: param_space[k] for k in ['objective', 'eval_metric', 'verbosity', 'tree_method', 'device']
-               if k in param_space}
-        }
-        
-        dtrain = xgb.DMatrix(X, label=y, enable_categorical=self.config.enable_categorical)
-        best_model = xgb.train(
-            best_params,
-            dtrain,
-            num_boost_round=self.config.XGB.num_boost_round
-        )
-        
-
-        return {
-            "best_model": best_model,
-            "study": self.study
-        }
+               
+        return self.study
     
     @log_performance
-    def _optimize_lightgbm(self, X, y, param_space, n_trials, cv, cv_type, scoring):
+    def _optimize_lightgbm(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
         """Optimize LightGBM model hyperparameters using config settings."""
         def objective(trial):
-            # Extract static parameters from param_space
-            params = {
-                'random_state': param_space.get('random_state', self.config.LGBM.random_state),
-                'objective': param_space.get('objective', self.config.LGBM.objective),
-                'metric': param_space.get('metric', self.config.LGBM.metric),
-                'verbosity': param_space.get('verbosity', self.config.LGBM.verbosity)
-            }
+            # Process parameters using the new method
+            params = self._process_parameters(trial, param_space)
             
-            # Get dynamic parameters from param_space
-            for param_name, param_config in param_space.items():
-                # Skip static parameters
-                if param_name in params:
-                    continue
-                
-                if isinstance(param_config, dict) and "type" in param_config:
-                    if param_config["type"] == "categorical":
-                        params[param_name] = trial.suggest_categorical(
-                            param_name, param_config["values"])
-                    elif param_config["type"] == "int":
-                        params[param_name] = trial.suggest_int(
-                            param_name, param_config["low"], param_config["high"])
-                    elif param_config["type"] == "float":
-                        params[param_name] = trial.suggest_float(
-                            param_name, param_config["low"], param_config["high"],
-                            log=param_config.get("log", False))
-            
+            structured_log(logger, logging.INFO, 
+                          "Final parameters for trial", 
+                          trial_number=trial.number, 
+                          params=params)
+
             scores = []
             
             # Use appropriate cross-validation strategy from config
             if cv_type == "TimeSeriesSplit":
-                kf = TimeSeriesSplit(n_splits=cv)
+                kf = TimeSeriesSplit(n_splits=n_splits)
             else:  # Default to StratifiedKFold
-                kf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=self.config.random_state)
+                kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.config.random_state)
             
             for train_idx, val_idx in kf.split(X, y):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
@@ -275,7 +228,7 @@ class OptunaOptimizer:
                 model = lgb.train(
                     params,
                     train_data,
-                    num_boost_round=self.config.LGBM.num_boost_round,
+                    num_boost_round=params.get('num_round', self.config.LGBM.num_boost_round),
                     valid_sets=[val_data],
                     callbacks=[
                         lgb.early_stopping(self.config.LGBM.early_stopping),
@@ -304,26 +257,7 @@ class OptunaOptimizer:
             callbacks=[self._optimization_callback]
         )
         
-        self.best_params = self.study.best_params
-        
-        # Train final model with best parameters
-        best_params = {
-            **self.best_params,
-            **{k: param_space[k] for k in ['objective', 'metric', 'verbosity']
-               if k in param_space}
-        }
-        
-        train_data = lgb.Dataset(X, label=y, categorical_feature=self.config.categorical_features)
-        best_model = lgb.train(
-            best_params,
-            train_data,
-            num_boost_round=self.config.LGBM.num_boost_round
-        )
-        
-        return {
-            "best_model": best_model,
-            "study": self.study
-        }
+        return self.study
 
     def _optimization_callback(self, study: optuna.Study, trial: optuna.Trial) -> None:
         """Callback to log optimization progress."""
@@ -338,3 +272,49 @@ class OptunaOptimizer:
         if self.best_params is None:
             raise OptimizationError("No optimization has been performed yet")
         return self.best_params
+
+    def _process_parameters(self, trial, param_space: dict) -> dict:
+        """
+        Process both static and dynamic parameters from parameter space.
+        
+        Args:
+            trial: Optuna trial object
+            param_space: Dictionary containing parameters configuration
+                Format matches config YAML structure with static_params and dynamic_params
+        Returns:
+            dict: Combined parameters dictionary for model training
+        """
+        # Start with static parameters if they exist
+        params = param_space.get('static_params', {}).copy()
+        
+        # Process dynamic parameters
+        dynamic_params = param_space.get('dynamic_params', {})
+        for param_name, config in dynamic_params.items():
+            try:
+                if not isinstance(config, list):
+                    params[param_name] = config
+                    continue
+                
+                # Config format: [low, high, type, log(optional)]
+                param_type = config[2]
+                if param_type == "int":
+                    params[param_name] = trial.suggest_int(param_name, config[0], config[1])
+                elif param_type == "float":
+                    log = config[3] if len(config) > 3 else False
+                    params[param_name] = trial.suggest_float(param_name, config[0], config[1], log=log)
+                elif param_type == "categorical":
+                    params[param_name] = trial.suggest_categorical(param_name, config[0])
+                
+                structured_log(logger, logging.DEBUG,
+                             "Processed parameter",
+                             param_name=param_name,
+                             value=params[param_name],
+                             param_type=param_type)
+                    
+            except Exception as e:
+                raise OptimizationError(
+                    f"Error processing parameter {param_name}",
+                    error_message=f"Config: {config}. Error: {str(e)}"
+                )
+        
+        return params
