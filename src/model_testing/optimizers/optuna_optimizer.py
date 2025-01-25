@@ -300,7 +300,10 @@ class OptunaOptimizer:
                     params[param_name] = trial.suggest_int(param_name, config[0], config[1])
                 elif param_type == "float":
                     log = config[3] if len(config) > 3 else False
-                    params[param_name] = trial.suggest_float(param_name, config[0], config[1], log=log)
+                    # Convert string values to float if necessary
+                    low = float(config[0])
+                    high = float(config[1])
+                    params[param_name] = trial.suggest_float(param_name, low, high, log=log)
                 elif param_type == "categorical":
                     params[param_name] = trial.suggest_categorical(param_name, config[0])
                 
