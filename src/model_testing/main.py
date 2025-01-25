@@ -163,7 +163,7 @@ def process_model_evaluation(
     training_results.is_validation = not is_oof
     training_results.evaluation_type = "validation" if not is_oof else "oof"
     training_results.model_name = model_name
-    training_results.model_params = model_params
+    training_results.model_params['hyperparameters'] = model_params
     if is_oof:
         training_results.model_params["cross_validation_type"]= config.cross_validation_type
         training_results.model_params["n_splits"]= config.n_splits
