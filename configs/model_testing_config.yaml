@@ -23,7 +23,7 @@ hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
 use_baseline_hyperparameters: false
 
 # perform hyperparameter optimization 
-perform_hyperparameter_optimization: true
+perform_hyperparameter_optimization: false
 always_use_new_hyperparameters: false # false = use the best hyperparameters from the hyperparameter_history directory
 
 # optimizer
@@ -60,7 +60,7 @@ experiment_description: "NBA Predictor"
 
 # models
 models:
-  #- XGBoost
+  - XGBoost
   - LGBM
 
 # XGBoost settings
@@ -76,7 +76,7 @@ XGB:
 LGBM:
   num_boost_round: 10000
   early_stopping: 100
-  log_evaluation: 20
+  log_evaluation: 100
 
 # SHAP settings
 max_shap_interaction_memory_gb: 256.0
