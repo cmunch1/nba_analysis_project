@@ -139,6 +139,14 @@ class MLFlowLogger(AbstractExperimentLogger):
             
             # Log model parameters
             mlflow.log_params(results.model_params)
+
+            # log additional parameters
+            mlflow.log_params({
+                "num_boost_round": results.num_boost_round,
+                "early_stopping": results.early_stopping,
+                "enable_categorical": results.enable_categorical,
+                "categorical_features": results.categorical_features
+            })
             
             # Log classification metrics
             if results.metrics:

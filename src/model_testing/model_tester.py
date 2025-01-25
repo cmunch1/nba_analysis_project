@@ -134,7 +134,7 @@ class ModelTester(AbstractModelTester):
                                 preprocessing_summary=preprocessing_results.summarize(),
                                 steps_overview=steps_summary)
 
-            X = self._optimize_data_types(X)
+            X = self._reduce_memory_footprint(X)
             
             structured_log(logger, logging.INFO, "Data preparation completed",
                         output_shape=X.shape)
@@ -212,6 +212,15 @@ class ModelTester(AbstractModelTester):
                     model_name, model_params,
                     fold_results
                 )
+
+                # Copy all relevant parameters from the first fold's results
+                if fold == 1:
+                    full_results.num_boost_round = oof_results.num_boost_round
+                    full_results.early_stopping = oof_results.early_stopping
+                    full_results.enable_categorical = oof_results.enable_categorical
+                    full_results.categorical_features = oof_results.categorical_features
+                    full_results.model_name = oof_results.model_name
+            
 
                 full_results.model = oof_results.model
                 full_results.predictions[val_idx] = oof_results.predictions
@@ -547,7 +556,7 @@ class ModelTester(AbstractModelTester):
             results.predictions = model.predict(dval) 
             results.num_boost_round = self.config.XGB.num_boost_round      
             results.early_stopping = self.config.XGB.early_stopping_rounds
-            results.enable_categorical = self.config.enable_categorical
+            results.enable_categorical = self.config.XGB.enable_categorical
             results.categorical_features = self.config.categorical_features
             
             structured_log(logger, logging.INFO, "Generated predictions", 
@@ -716,9 +725,8 @@ class ModelTester(AbstractModelTester):
             )
         
     @log_performance
-    def _optimize_data_types(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _reduce_memory_footprint(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Optimize data types of the dataframe and convert date field to proper date type.
         The primarily reduces the bitsize of ints and floats to reduce memory usage and improve performance.
 
         Args:
@@ -728,7 +736,7 @@ class ModelTester(AbstractModelTester):
         Returns:
             pd.DataFrame: Dataframe with optimized data types.
         """
-        structured_log(logger, logging.INFO, "Starting data type optimization",
+        structured_log(logger, logging.INFO, "Starting memory footprint reduction",
                        input_shape=df.shape, input_memory=df.memory_usage().sum() / 1e6)
         try:
 
@@ -751,11 +759,11 @@ class ModelTester(AbstractModelTester):
                 else:
                     df[col] = df[col].astype(np.float16)
 
-            structured_log(logger, logging.INFO, "Data type optimization completed",
+            structured_log(logger, logging.INFO, "Memory footprint reduction completed",
                            output_shape=df.shape, output_memory=df.memory_usage().sum() / 1e6)
             return df
         except Exception as e:
-            raise ModelTestingError("Error in data type optimization",
+            raise ModelTestingError("Error in memory footprint reduction",
                                      error_message=str(e),
                                      dataframe_shape=df.shape)
 

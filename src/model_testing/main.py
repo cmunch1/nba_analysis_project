@@ -62,14 +62,16 @@ def main() -> None:
                 val_preprocessing_results = PreprocessingResults()
                 
                 # prepare the data for the model, including preprocessing steps saved in the results dataclass
-                X, y, oof_preprocessing_results, primary_ids_oof = model_tester.prepare_data(training_dataframe.copy(), 
-                                                                            model_name, 
-                                                                            is_training=True, 
-                                                                            preprocessing_results=oof_preprocessing_results)
-                X_val, y_val, val_preprocessing_results, primary_ids_val = model_tester.prepare_data(validation_dataframe.copy(), 
-                                                                                    model_name, 
-                                                                                    is_training=False, 
-                                                                                    preprocessing_results=val_preprocessing_results)
+                if config.perform_oof_cross_validation or config.perform_hyperparameter_optimization:
+                    X, y, oof_preprocessing_results, primary_ids_oof = model_tester.prepare_data(training_dataframe.copy(), 
+                                                                                model_name, 
+                                                                                is_training=True, 
+                                                                                preprocessing_results=oof_preprocessing_results)
+                if config.perform_validation_set_testing:
+                    X_val, y_val, val_preprocessing_results, primary_ids_val = model_tester.prepare_data(validation_dataframe.copy(), 
+                                                                                        model_name, 
+                                                                                        is_training=False, 
+                                                                                        preprocessing_results=val_preprocessing_results)
                 
                 
 
@@ -163,10 +165,18 @@ def process_model_evaluation(
     training_results.is_validation = not is_oof
     training_results.evaluation_type = "validation" if not is_oof else "oof"
     training_results.model_name = model_name
-    training_results.model_params['hyperparameters'] = model_params
+    
+    # Preserve existing params and add hyperparameters
+    if not hasattr(training_results.model_params, 'hyperparameters'):
+        training_results.model_params = {
+            'hyperparameters': model_params
+        }
+    else:
+        training_results.model_params['hyperparameters'] = model_params
+
     if is_oof:
-        training_results.model_params["cross_validation_type"]= config.cross_validation_type
-        training_results.model_params["n_splits"]= config.n_splits
+        training_results.model_params["cross_validation_type"] = config.cross_validation_type
+        training_results.model_params["n_splits"] = config.n_splits
     
     # Update feature data
     training_results.update_feature_data(eval_data, eval_y)

@@ -16,10 +16,14 @@ class HyperparameterSet:
     """Represents a single set of hyperparameters with metadata"""
     name: str
     params: Dict[str, Any]
+    num_boost_round: int
     performance_metrics: Dict[str, float]
     creation_date: str
     experiment_id: str
     run_id: str
+    early_stopping: int
+    enable_categorical: bool
+    categorical_features: List[str]
     model_version: Optional[str] = None
     description: Optional[str] = None
     
@@ -111,6 +115,18 @@ class HyperparameterManager(AbstractHyperparameterManager):
         # Generate run_id if none provided
         if run_id is None:
             run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        if model_name == "xgboost":
+            num_boost_round = self.config.XGB.num_boost_round   
+            early_stopping = self.config.XGB.early_stopping_rounds
+            enable_categorical = self.config.XGB.enable_categorical
+            categorical_features = self.config.XGB.categorical_features
+        elif model_name == "lgbm":
+            num_boost_round = self.config.LGBM.num_boost_round
+            early_stopping = self.config.LGBM.early_stopping
+            categorical_features = self.config.LGBM.categorical_features
+        else:
+            raise ValueError(f"Unsupported model type: {model_name}")
         
         # Create new hyperparameter set
         new_set = HyperparameterSet(
@@ -120,7 +136,11 @@ class HyperparameterManager(AbstractHyperparameterManager):
             creation_date=datetime.now().isoformat(),
             experiment_id=experiment_id,
             run_id=run_id,
-            description=description
+            description=description,
+            num_boost_round=num_boost_round,
+            early_stopping=early_stopping,
+            enable_categorical=enable_categorical,
+            categorical_features=categorical_features
         )
         
         # Save to history with logging
@@ -179,7 +199,15 @@ class HyperparameterManager(AbstractHyperparameterManager):
     def _update_current_best(self, model_name: str, param_set: HyperparameterSet) -> None:
         """Update current best by finding best performing params from history."""
         history = self._load_history(model_name)
-        eval_metric = self._get_eval_metric(param_set.params)
+        
+        # Get the evaluation metric from the last entry's performance metrics
+        if history:
+            # Use the first metric found in performance_metrics from the last history entry
+            eval_metric = next(iter(history[-1].performance_metrics.keys()))
+        else:
+            # Fallback to getting it from params if history is empty
+            eval_metric = self._get_eval_metric(param_set.params)
+        
         best_set = max(history, key=lambda x: x.performance_metrics.get(eval_metric, 0))
         
         if 'model_hyperparameters' not in self.current_params:
@@ -194,7 +222,11 @@ class HyperparameterManager(AbstractHyperparameterManager):
             'metrics': best_set.performance_metrics,
             'updated_at': best_set.creation_date,
             'experiment_id': best_set.experiment_id,
-            'run_id': best_set.run_id
+            'run_id': best_set.run_id,
+            'num_boost_round': best_set.num_boost_round,
+            'early_stopping': best_set.early_stopping,
+            'enable_categorical': best_set.enable_categorical,
+            'categorical_features': best_set.categorical_features
         }
         
         model_params = self.current_params['model_hyperparameters'][model_name]
