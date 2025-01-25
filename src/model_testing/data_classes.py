@@ -138,6 +138,10 @@ class ModelTrainingResults:
         self.model: Optional[Any] = None
         self.model_name: str = ""
         self.model_params: Dict = {}
+        self.num_boost_round: int = 0
+        self.early_stopping: int = 0
+        self.enable_categorical: bool = False
+        self.categorical_features: List[str] = []
         self.metrics: Optional[ClassificationMetrics] = None
         
         # Data fields

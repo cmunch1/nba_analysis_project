@@ -19,14 +19,12 @@ current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
 # hyperparameters storage directory
 hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
 
-# true = use baseline hyperparameters, false = use current best hyperparameters
-use_baseline_hyperparameters: true
+# true = use baseline hyperparameters, false = use current best hyperparameters in config/hyperparameters.json
+use_baseline_hyperparameters: false
 
 # perform hyperparameter optimization 
-# if true, the optimizer will tune the hyperparameters and 
-# choose the best set of hyperparameters from the hyperparameter_history directory
-# will ignore the use_baseline_hyperparameters setting
-perform_hyperparameter_optimization: false
+perform_hyperparameter_optimization: true
+always_use_new_hyperparameters: false # false = use the best hyperparameters from the hyperparameter_history directory
 
 # optimizer
 optimizer:
@@ -56,10 +54,8 @@ categorical_features:
 # random state for cross validation and model training
 random_state: 42
 
-# set to "Default" to use a timestamp for the experiment name
+# settings for experiment logging
 experiment_name: "NBA Predictor"
-
-# set to "Default" to use a timestamp for the experiment description
 experiment_description: "NBA Predictor"
 
 # models
@@ -70,16 +66,16 @@ models:
 # XGBoost settings
 enable_categorical: false
 XGB:
-  num_boost_round: 100
-  early_stopping_rounds: 10
-  verbose_eval: 20
+  num_boost_round: 10000
+  early_stopping_rounds: 100
+  verbose_eval: 100
   enable_categorical: false
   use_label_encoder: false
 
 # LGBM settings
 LGBM:
-  num_boost_round: 100
-  early_stopping: 10
+  num_boost_round: 10000
+  early_stopping: 100
   log_evaluation: 20
 
 # SHAP settings

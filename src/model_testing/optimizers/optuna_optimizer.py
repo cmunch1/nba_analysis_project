@@ -72,11 +72,6 @@ class OptunaOptimizer:
             else:
                 raise ValueError(f"Unsupported model type: {model_type}")
 
-        if model_type is None and objective_func is None:
-            raise ValueError("Either model_type or objective_func must be provided")
-            
-        if model_type is None and objective_func is not None:
-            model_type = "custom_objective"  # Default name for custom objectives
 
         # Get optimization settings from config
         n_trials = self.config.optuna.n_trials
@@ -117,6 +112,7 @@ class OptunaOptimizer:
                         best_value=self.study.best_value,
                         run_id=run_id)
             
+            # Create a HyperparameterSet instance for the new parameters
             self.param_manager.update_best_params(
                 model_name=model_type,
                 new_params=final_best_params,  # Using merged parameters
@@ -126,7 +122,10 @@ class OptunaOptimizer:
                 description="Optuna optimization"
             )
             
-            return final_best_params  # Return merged parameters
+            if self.config.always_use_new_hyperparameters:
+                return final_best_params
+            else:
+                return self.param_manager.get_current_params(model_name=model_type)
         
         except Exception as e:
             raise OptimizationError("Error during optimization",
@@ -165,7 +164,7 @@ class OptunaOptimizer:
                 model = xgb.train(
                     params,
                     dtrain,
-                    num_boost_round=params.get('num_round', self.config.XGB.num_boost_round),
+                    num_boost_round=self.config.XGB.num_boost_round,
                     evals=[(dval, 'val')],
                     early_stopping_rounds=self.config.XGB.early_stopping_rounds,
                     verbose_eval=False
@@ -228,7 +227,7 @@ class OptunaOptimizer:
                 model = lgb.train(
                     params,
                     train_data,
-                    num_boost_round=params.get('num_round', self.config.LGBM.num_boost_round),
+                    num_boost_round=self.config.LGBM.num_boost_round,
                     valid_sets=[val_data],
                     callbacks=[
                         lgb.early_stopping(self.config.LGBM.early_stopping),

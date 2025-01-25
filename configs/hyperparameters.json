@@ -2,7 +2,7 @@
   "model_hyperparameters": {
     "XGBoost": [
       {
-        "name": "current_best",
+        "name": "baseline",
         "params": {
           "tree_method": "hist",
           "device": "cuda",
@@ -21,42 +21,35 @@
         }
       },
       {
-        "name": "baseline",
+        "name": "current_best",
         "params": {
-          "tree_method": "hist",
+          "verbosity": 0,
           "device": "cuda",
-          "max_depth": 4,
-          "learning_rate": 0.05,
-          "subsample": 0.8,
-          "colsample_bytree": 0.8,
-          "min_child_weight": 2,
-          "gamma": 0.1,
-          "reg_alpha": 0.1,
-          "reg_lambda": 1,
-          "scale_pos_weight": 1,
-          "objective": "binary:logistic",
           "random_state": 42,
-          "eval_metric": "auc"
-        }
+          "objective": "binary:logistic",
+          "eval_metric": "auc",
+          "tree_method": "hist",
+          "learning_rate": 0.037124482404928064,
+          "max_bin": 4,
+          "max_depth": 2,
+          "alpha": 3.0829380113581784e-16,
+          "gamma": 4.99830499788145e-16,
+          "reg_lambda": 1.0907394982247978e-15,
+          "colsample_bytree": 0.023535972700349475,
+          "subsample": 0.19457233136366145,
+          "min_child_weight": 0.00961119814918481,
+          "scale_pos_weight": 12
+        },
+        "metrics": {
+          "auc": 0.7036024196712182
+        },
+        "updated_at": "2025-01-24T10:45:36.990084",
+        "experiment_id": "Optuna",
+        "run_id": "optuna_20250124_104536"
       }
     ],
     "LGBM": [
       {
-        "name": "current_best",
-        "params": {
-          "max_depth": 4,
-          "learning_rate": 0.05,
-          "subsample": 0.8,
-          "colsample_bytree": 0.8,
-          "min_child_weight": 2,
-          "reg_alpha": 0.1,
-          "reg_lambda": 1,
-          "random_state": 42,
-          "objective": "binary",
-          "metric": "binary_logloss"
-        }
-      },
-      {
         "name": "baseline",
         "params": {
           "max_depth": 4,
@@ -69,6 +62,61 @@
           "random_state": 42,
           "objective": "binary",
           "metric": "binary_logloss"
+        }
+      }
+    ],
+    "CatBoost": [
+      {
+        "name": "baseline",
+        "params": {
+          "max_depth": 4,
+          "learning_rate": 0.05,
+          "subsample": 0.8,
+          "colsample_bylevel": 0.8,
+          "min_child_weight": 2,
+          "reg_lambda": 1,
+          "random_state": 42,
+          "eval_metric": "AUC",
+          "objective": "Logloss"
+        }
+      }
+    ],
+    "HistGradientBoosting": [
+      {
+        "name": "baseline",
+        "params": {
+          "max_depth": 4,
+          "learning_rate": 0.05,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 20,
+          "random_state": 42,
+          "scoring": "roc_auc",
+          "loss": "log_loss"
+        }
+      }
+    ],
+    "RandomForest": [
+      {
+        "name": "baseline",
+        "params": {
+          "max_depth": 4,
+          "min_samples_split": 2,
+          "min_samples_leaf": 1,
+          "n_estimators": 100,
+          "random_state": 42,
+          "criterion": "gini"
+        }
+      }
+    ],
+    "LogisticRegression": [
+      {
+        "name": "baseline",
+        "params": {
+          "C": 1.0,
+          "penalty": "l2",
+          "max_iter": 100,
+          "random_state": 42,
+          "solver": "lbfgs"
         }
       }
     ]

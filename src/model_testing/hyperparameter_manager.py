@@ -60,29 +60,31 @@ class HyperparameterManager(AbstractHyperparameterManager):
             
     def _save_json(self, data: Dict, path: str) -> None:
         """Save configuration to JSON file."""
+        structured_log(self.logger, logging.INFO, "Saving JSON configuration file",
+                    config_path=path,
+                    data=data)  
         with open(path, 'w') as f:
             json.dump(data, f, indent=2)
+        structured_log(self.logger, logging.INFO, "Successfully saved JSON configuration")
             
-    def get_current_params(self, model_name: str) -> Dict[str, Any]:
+    def get_current_params(self, model_name: str, param_name: str = 'current_best') -> Dict[str, Any]:
         """Get current best hyperparameters for a model."""
         structured_log(self.logger, logging.INFO, "Getting current best hyperparameters for a model",
                       model_name=model_name)
         
-        if self.config.use_baseline_hyperparameters:
+        if self.config.use_baseline_hyperparameters and self.config.perform_hyperparameter_optimization == False:
             param_name = 'baseline'
-        else:
-            param_name = 'current_best'
         
         try:
             self.current_params = self._load_json(self.config_path)
             model_params = self.current_params.get('model_hyperparameters', {}).get(model_name, [])
-            current_best = next((config['params'] for config in model_params 
+            current_params = next((config['params'] for config in model_params 
                                if config['name'] == param_name), None)
-            if current_best is None:
-                raise ValueError(f"No current_best parameters found for {model_name}")
-            return current_best
+            if current_params is None:
+                raise ValueError(f"No {param_name} parameters found for {model_name}")
+            return current_params
         except Exception as e:
-            structured_log(self.logger, logging.ERROR, "Error getting current best hyperparameters",
+            structured_log(self.logger, logging.ERROR, f"Error getting {param_name} hyperparameters",
                           error=str(e))
             raise e
         
@@ -132,15 +134,14 @@ class HyperparameterManager(AbstractHyperparameterManager):
                           "Failed to save parameters to history",
                           model_name=model_name,
                           error=str(e))
-            raise
+            raise 
         
         # Update current best if necessary
-        try:
-            if self._is_better_than_current(model_name, metrics):
-                self._update_current_best(model_name, new_set)
-                structured_log(self.logger, logging.INFO, 
-                             "Updated current best parameters",
-                             model_name=model_name)
+        try:    
+            self._update_current_best(model_name, new_set)
+            structured_log(self.logger, logging.INFO, 
+                            "Updated current best parameters",
+                            model_name=model_name)
         except Exception as e:
             structured_log(self.logger, logging.ERROR, 
                           "Failed to update current best parameters",
@@ -148,42 +149,57 @@ class HyperparameterManager(AbstractHyperparameterManager):
                           error=str(e))
             raise
             
-    def _is_better_than_current(self, model_name: str, new_metrics: Dict[str, float]) -> bool:
+    def _get_eval_metric(self, params: Dict[str, Any]) -> str:
         """
-        Compare new metrics with current best metrics.
-        Currently uses AUC as the primary metric for comparison.
+        Extract the evaluation metric from model parameters.
+        Handles different metric parameter names for various ML frameworks:
+        - XGBoost: 'eval_metric'
+        - LightGBM: 'metric'
+        - CatBoost: 'eval_metric'
+        - Sklearn: 'scoring'
+        Falls back to 'auc' if no metric is specified.
         """
-        try:
-            history = self._load_history(model_name)
-            if not history:
-                return True
-                
-            current_best = max(history, key=lambda x: x.performance_metrics.get('auc', 0))
-            return new_metrics.get('auc', 0) > current_best.performance_metrics.get('auc', 0)
-        except Exception:
-            return True
+        # Check different framework metric parameter names
+        eval_metric = (
+            params.get('eval_metric') or      # XGBoost, CatBoost
+            params.get('metric') or           # LightGBM
+            params.get('scoring') or          # Sklearn
+            'auc'                            # Default fallback
+        )
+        
+        # Handle cases where metric might be in a list or dict
+        if isinstance(eval_metric, (list, tuple)):
+            eval_metric = eval_metric[0]  # Use first metric if multiple are specified
+        elif isinstance(eval_metric, dict):
+            eval_metric = next(iter(eval_metric.values()))  # Take first metric from dict
+            
+        return eval_metric
+
             
     def _update_current_best(self, model_name: str, param_set: HyperparameterSet) -> None:
-        """Update the current best parameters in the JSON file."""
+        """Update current best by finding best performing params from history."""
+        history = self._load_history(model_name)
+        eval_metric = self._get_eval_metric(param_set.params)
+        best_set = max(history, key=lambda x: x.performance_metrics.get(eval_metric, 0))
+        
         if 'model_hyperparameters' not in self.current_params:
             self.current_params['model_hyperparameters'] = {}
             
         if model_name not in self.current_params['model_hyperparameters']:
             self.current_params['model_hyperparameters'][model_name] = []
             
-        # Update or add current_best
-        model_params = self.current_params['model_hyperparameters'][model_name]
-        current_best_idx = next((i for i, config in enumerate(model_params) 
-                               if config['name'] == 'current_best'), None)
-                               
         new_config = {
             'name': 'current_best',
-            'params': param_set.params,
-            'metrics': param_set.performance_metrics,
-            'updated_at': param_set.creation_date,
-            'experiment_id': param_set.experiment_id,
-            'run_id': param_set.run_id
+            'params': best_set.params,
+            'metrics': best_set.performance_metrics,
+            'updated_at': best_set.creation_date,
+            'experiment_id': best_set.experiment_id,
+            'run_id': best_set.run_id
         }
+        
+        model_params = self.current_params['model_hyperparameters'][model_name]
+        current_best_idx = next((i for i, config in enumerate(model_params) 
+                            if config['name'] == 'current_best'), None)
         
         if current_best_idx is not None:
             model_params[current_best_idx] = new_config
@@ -231,16 +247,3 @@ class HyperparameterManager(AbstractHyperparameterManager):
                      key=lambda x: x.performance_metrics.get(metric, 0),
                      reverse=True)[:n_best]
                      
-    def export_to_mlflow(self, model_name: str) -> None:
-        """Export hyperparameter history to MLflow."""
-        history = self._load_history(model_name)
-        
-        for param_set in history:
-            with mlflow.start_run(run_id=param_set.run_id):
-                mlflow.log_params(param_set.params)
-                mlflow.log_metrics(param_set.performance_metrics)
-                mlflow.set_tags({
-                    'model_name': model_name,
-                    'parameter_set_name': param_set.name,
-                    'creation_date': param_set.creation_date
-                })

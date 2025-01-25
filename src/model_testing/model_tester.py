@@ -544,7 +544,11 @@ class ModelTester(AbstractModelTester):
 
             # Store model and generate predictions
             results.model = model
-            results.predictions = model.predict(dval)
+            results.predictions = model.predict(dval) 
+            results.num_boost_round = self.config.XGB.num_boost_round      
+            results.early_stopping = self.config.XGB.early_stopping_rounds
+            results.enable_categorical = self.config.enable_categorical
+            results.categorical_features = self.config.categorical_features
             
             structured_log(logger, logging.INFO, "Generated predictions", 
                         predictions_shape=results.predictions.shape,
@@ -623,16 +627,13 @@ class ModelTester(AbstractModelTester):
                     input_shape=X_train.shape)
         
         try:
-            # Filter out non-LightGBM parameters
-            lgb_params = {k: v for k, v in model_params.items() 
-                         if k not in ['cross_validation_type', 'n_splits']}
             
             train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
             val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
             
             # Use filtered parameters
             model = lgb.train(
-                lgb_params,  # Use filtered parameters here
+                model_params,  
                 train_data,
                 num_boost_round=self.config.LGBM.num_boost_round,
                 valid_sets=[train_data, val_data],
@@ -646,7 +647,11 @@ class ModelTester(AbstractModelTester):
             # Store model and generate predictions
             results.model = model
             results.predictions = model.predict(X_val)
+            results.num_boost_round = self.config.LGBM.num_boost_round
+            results.early_stopping = self.config.LGBM.early_stopping
+            results.categorical_features = self.config.categorical_features
             
+
             structured_log(logger, logging.INFO, "Generated predictions", 
                         predictions_shape=results.predictions.shape,
                         predictions_mean=float(np.mean(results.predictions)))
