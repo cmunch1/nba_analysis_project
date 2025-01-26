@@ -25,8 +25,9 @@ class MLflowChartLogger:
     """Helper class for generating and logging charts to MLflow."""
     
     @log_performance
-    def __init__(self):
+    def __init__(self, config: AbstractConfig):
         """Initialize the MLflow chart logger with ChartFunctions."""
+        self.config = config
         self.chart_functions = ChartFunctions()
         structured_log(logger, logging.INFO, "MLflowChartLogger initialized")
 
@@ -44,55 +45,104 @@ class MLflowChartLogger:
             # Create temporary directory for saving charts
             with tempfile.TemporaryDirectory() as temp_dir:
                 # Feature Importance Chart
-                if chart_data["feature_importance"] is not None:
-                    fig = self.chart_functions.create_feature_importance_chart(
-                        feature_importance=chart_data["feature_importance"],
-                        feature_names=chart_data["feature_names"]
-                    )
-                    self._save_and_log_figure(fig, f"{chart_data['prefix']}feature_importance", temp_dir)
+                if self.config.chart_options.feature_importance_chart:
+                    try:    
+                        if chart_data["feature_importance"] is not None:
+                            fig = self.chart_functions.create_feature_importance_chart(
+                                feature_importance=chart_data["feature_importance"],
+                                feature_names=chart_data["feature_names"]
+                            )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}feature_importance", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                     "Failed to create feature importance chart",
+                                     error=str(e))
 
                 # Confusion Matrix
-                if chart_data["y_true"] is not None and chart_data["y_pred"] is not None:
-                    fig = self.chart_functions.create_confusion_matrix(
-                        y_true=chart_data["y_true"],
-                        y_pred=chart_data["y_pred"]
-                    )
-                    self._save_and_log_figure(fig, f"{chart_data['prefix']}confusion_matrix", temp_dir)
+                if self.config.chart_options.confusion_matrix:
+                    try:
+                        if chart_data["y_true"] is not None and chart_data["y_pred"] is not None:
+                            fig = self.chart_functions.create_confusion_matrix(
+                                y_true=chart_data["y_true"],
+                                y_pred=chart_data["y_pred"]
+                            )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}confusion_matrix", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                     "Failed to create confusion matrix",
+                                     error=str(e))
 
                 # ROC Curve
-                if chart_data["y_true"] is not None and chart_data["y_prob"] is not None:
-                    fig = self.chart_functions.create_roc_curve(
-                        y_true=chart_data["y_true"],
-                        y_score=chart_data["y_prob"]
-                    )
-                    self._save_and_log_figure(fig, f"{chart_data['prefix']}roc_curve", temp_dir)
+                if self.config.chart_options.roc_curve:
+                    try:
+                        if chart_data["y_true"] is not None and chart_data["y_prob"] is not None:
+                            fig = self.chart_functions.create_roc_curve(
+                                y_true=chart_data["y_true"],
+                                y_score=chart_data["y_prob"]
+                                )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}roc_curve", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                     "Failed to create ROC curve",
+                                     error=str(e))
 
                 # SHAP Summary Plot
-                try:
-                    if chart_data["model"] is not None and chart_data["X"] is not None:
-                        fig = self.chart_functions.create_shap_summary_plot(
-                            model=chart_data["model"],
-                            X=chart_data["X"]
-                        )
-                        self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_summary", temp_dir)
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create SHAP summary plot",
-                                 error=str(e))
+                if self.config.chart_options.shap_summary_plot:
+                    try:
+                        if chart_data["model"] is not None and chart_data["X"] is not None:
+                            fig = self.chart_functions.create_shap_summary_plot(
+                                model=chart_data["model"],
+                                X=chart_data["X"]
+                            )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_summary", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                     "Failed to create SHAP summary plot",
+                                     error=str(e))
+
+                # SHAP Force Plot
+                if self.config.chart_options.shap_force_plot:
+                    try:
+                        if chart_data["model"] is not None and chart_data["X"] is not None:
+                            fig = self.chart_functions.create_shap_force_plot(
+                                model=chart_data["model"],
+                                X=chart_data["X"]
+                                )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_force", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                     "Failed to create SHAP force plot",
+                                     error=str(e))
+
+                # SHAP Dependence Plot
+                if self.config.chart_options.shap_dependence_plot:
+                    try:
+                        if chart_data["model"] is not None and chart_data["X"] is not None:
+                            fig = self.chart_functions.create_shap_dependence_plot(
+                                model=chart_data["model"],
+                                X=chart_data["X"]
+                            )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_dependence", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                     "Failed to create SHAP dependence plot",
+                                     error=str(e))
 
                 # Learning Curve
-                try:
-                    if all(v is not None for v in [chart_data["model"], chart_data["X"], chart_data["y_true"]]):
-                        fig = self.chart_functions.create_learning_curve(
-                            model=chart_data["model"],
-                            X=chart_data["X"].values,
-                            y=chart_data["y_true"]
-                        )
-                        self._save_and_log_figure(fig, f"{chart_data['prefix']}learning_curve", temp_dir)
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create learning curve",
-                                 error=str(e))
+                if self.config.chart_options.learning_curve:
+                    try:
+                        if all(v is not None for v in [chart_data["model"], chart_data["X"], chart_data["y_true"]]):
+                            fig = self.chart_functions.create_learning_curve(
+                                model=chart_data["model"],
+                                X=chart_data["X"].values,
+                                y=chart_data["y_true"]
+                                )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}learning_curve", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                     "Failed to create learning curve",
+                                     error=str(e))
+
 
                 structured_log(logger, logging.INFO, "All charts logged successfully")
 
