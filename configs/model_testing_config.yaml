@@ -90,8 +90,12 @@ cross_validation_type: TimeSeriesSplit
 n_splits: 5
 
 # chart options
-feature_importance_chart: true
-shap_summary_plot: true
-shap_force_plot: true
-shap_dependence_plot: true
+chart_options:
+  confusion_matrix: true
+  roc_curve: true
+  feature_importance_chart: true
+  shap_summary_plot: true
+  shap_force_plot: true
+  shap_dependence_plot: true
+  learning_curve: true
 
