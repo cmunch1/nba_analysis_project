@@ -175,6 +175,7 @@ class ModelTester(AbstractModelTester):
             # Store fold boundaries for time series
             fold_boundaries = []
 
+            
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y), 1):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
@@ -256,6 +257,15 @@ class ModelTester(AbstractModelTester):
                     fold_auc = roc_auc_score(y_val, oof_results.predictions)
                     structured_log(logger, logging.INFO, f"Fold {fold} completed",
                                 fold_accuracy=fold_accuracy, fold_auc=fold_auc)
+                    
+                if self.config.generate_learning_curve_data:
+                    full_results = self._generate_learning_curve_data(
+                        X_train, y_train,
+                        X_val, y_val,
+                        model_params,
+                        full_results,
+                        fold
+                    )
 
             if n_folds_with_importance > 0:
                 full_results.feature_importance_scores = feature_importance_accumulator / n_folds_with_importance
@@ -302,6 +312,18 @@ class ModelTester(AbstractModelTester):
             # Store fold boundaries in results for time series
             if self.config.cross_validation_type == "TimeSeriesSplit":
                 full_results.fold_boundaries = fold_boundaries
+
+            if self.config.generate_learning_curve_data:
+                full_results.aggregate_learning_curves()
+                
+                # Log the aggregated results
+                structured_log(logger, logging.INFO, "Learning curve aggregation completed",
+                            n_folds=len(full_results.learning_curve_data['train_scores']),
+                            final_train_sizes=full_results.learning_curve_data['aggregated']['train_sizes'].tolist(),
+                            final_train_scores_mean=full_results.learning_curve_data['aggregated']['train_scores_mean'].tolist(),
+                            final_val_scores_mean=full_results.learning_curve_data['aggregated']['val_scores_mean'].tolist())
+            
+
 
             structured_log(logger, logging.INFO, "OOF cross-validation completed",
                         overall_accuracy=overall_accuracy, overall_auc=overall_auc)
@@ -609,6 +631,9 @@ class ModelTester(AbstractModelTester):
                     actual_length=len(results.predictions)
                 )
             
+            if self.config.generate_learning_curve_data:
+                results = self._generate_learning_curve_data(X_train, y_train, X_val, y_val, model_params, results)
+            
             structured_log(logger, logging.INFO, "XGBoost training completed successfully",
                         predictions_shape=results.predictions.shape)
             
@@ -826,4 +851,258 @@ class ModelTester(AbstractModelTester):
                 'non_nan_std': np.std(predictions[~nan_mask]),
             })
         
+        return results
+    
+    def _generate_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params, results, fold: int) -> ModelTrainingResults:
+        """
+        Route learning curve data generation to the appropriate model-specific method.
+        
+        Args:
+            X_train: Training features
+            y_train: Training labels
+            X_val: Validation features
+            y_val: Validation labels
+            model_params: Model parameters
+            results: ModelTrainingResults object
+            fold: Current fold number
+            
+        Returns:
+            ModelTrainingResults: Updated results object with learning curve data
+            
+        Raises:
+            ModelTestingError: If there's an error generating the learning curve data
+        """
+        try:
+            structured_log(logger, logging.INFO, 
+                        "Starting learning curve generation",
+                        model_name=results.model_name,
+                        fold=fold)
+            
+            match results.model_name:
+                case "XGBoost":
+                    results = self._generate_XGB_learning_curve_data(
+                        X_train, y_train, X_val, y_val, model_params, results, fold
+                    )
+                case "LGBM":
+                    results = self._generate_LGBM_learning_curve_data(
+                        X_train, y_train, X_val, y_val, model_params, results, fold
+                    )
+                case _:
+                    results = self._generate_sklearn_learning_curve_data(
+                        X_train, y_train, X_val, y_val, model_params, results, fold
+                    )
+            
+            structured_log(logger, logging.INFO,
+                        "Learning curve generation completed",
+                        model_name=results.model_name,
+                        fold=fold)
+            
+            return results
+            
+        except Exception as e:
+            raise ModelTestingError(
+                "Error generating learning curve data",
+                error_message=str(e),
+                model_name=results.model_name,
+                fold=fold
+            )
+    
+    def _generate_XGB_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params, results, fold: int):
+        """
+        Generate learning curve data for a specific fold.
+        
+        Args:
+            X_train: Training features
+            y_train: Training labels
+            X_val: Validation features
+            y_val: Validation labels
+            model_params: Model parameters
+            results: ModelTrainingResults object
+            fold: Current fold number
+        """
+        train_sizes = np.linspace(self.config.learning_curve.min_size, 
+                                self.config.learning_curve.max_size,
+                                self.config.learning_curve.n_points)
+        
+        structured_log(logger, logging.INFO, 
+                    f"Generating learning curve data for fold {fold}",
+                    n_points=len(train_sizes))
+        
+        try:
+            for size in train_sizes:
+                n_samples = int(len(X_train) * size)
+                indices = np.random.choice(len(X_train), n_samples, replace=False)
+                X_subset = X_train.iloc[indices]
+                y_subset = y_train.iloc[indices]
+                
+                dtrain_subset = xgb.DMatrix(
+                    X_subset,
+                    label=y_subset,
+                    feature_names=X_subset.columns.tolist(),
+                    enable_categorical=self.config.enable_categorical
+                )
+                dval = xgb.DMatrix(
+                    X_val,
+                    label=y_val,
+                    feature_names=X_val.columns.tolist(),
+                    enable_categorical=self.config.enable_categorical
+                )
+                
+                subset_model = xgb.train(
+                    params=model_params,
+                    dtrain=dtrain_subset,
+                    num_boost_round=self.config.XGB.num_boost_round,
+                    early_stopping_rounds=self.config.XGB.early_stopping_rounds,
+                    evals=[(dtrain_subset, 'train'), (dval, 'eval')],
+                    verbose_eval=False
+                )
+                
+                train_pred = subset_model.predict(dtrain_subset)
+                val_pred = subset_model.predict(dval)
+                
+                train_score = accuracy_score(y_subset, (train_pred >= 0.5).astype(int))
+                val_score = accuracy_score(y_val, (val_pred >= 0.5).astype(int))
+                
+                results.add_learning_curve_point(
+                    train_size=n_samples,
+                    train_score=train_score,
+                    val_score=val_score,
+                    fold=fold
+                )
+                
+                structured_log(logger, logging.DEBUG, 
+                            f"Generated learning curve point for fold {fold}",
+                            n_samples=n_samples,
+                            train_score=train_score,
+                            val_score=val_score)
+        
+        except Exception as e:
+            structured_log(logger, logging.ERROR,
+                        f"Error generating learning curve for fold {fold}",
+                        error=str(e))
+            raise
+        
+        return results
+
+
+
+    def _generate_sklearn_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params, results, fold: int) -> ModelTrainingResults:
+        """
+        Generate learning curve data for sklearn models.
+        """
+        train_sizes = np.linspace(self.config.learning_curve.min_size, 
+                                self.config.learning_curve.max_size,
+                                self.config.learning_curve.n_points)
+        
+        structured_log(logger, logging.INFO, 
+                    f"Generating sklearn learning curve data for fold {fold}",
+                    n_points=len(train_sizes))
+        
+        try:
+            # Get the appropriate model class
+            if hasattr(tree, results.model_name):
+                model_class = getattr(tree, results.model_name)
+            elif hasattr(ensemble, results.model_name):
+                model_class = getattr(ensemble, results.model_name)
+            else:
+                raise ValueError(f"Unsupported model: {results.model_name}")
+            
+            for size in train_sizes:
+                n_samples = int(len(X_train) * size)
+                indices = np.random.choice(len(X_train), n_samples, replace=False)
+                X_subset = X_train.iloc[indices]
+                y_subset = y_train.iloc[indices]
+                
+                model = model_class(**model_params)
+                model.fit(X_subset, y_subset)
+                
+                train_pred = model.predict_proba(X_subset)[:, 1] if hasattr(model, 'predict_proba') else model.predict(X_subset)
+                val_pred = model.predict_proba(X_val)[:, 1] if hasattr(model, 'predict_proba') else model.predict(X_val)
+                
+                train_score = accuracy_score(y_subset, (train_pred >= 0.5).astype(int))
+                val_score = accuracy_score(y_val, (val_pred >= 0.5).astype(int))
+                
+                results.add_learning_curve_point(
+                    train_size=n_samples,
+                    train_score=train_score,
+                    val_score=val_score,
+                    fold=fold
+                )
+                
+                structured_log(logger, logging.DEBUG, 
+                            f"Generated learning curve point for fold {fold}",
+                            n_samples=n_samples,
+                            train_score=train_score,
+                            val_score=val_score)
+                
+        except Exception as e:
+            structured_log(logger, logging.ERROR,
+                        f"Error generating sklearn learning curve for fold {fold}",
+                        error=str(e))
+            raise
+            
+        return results
+
+    def _generate_LGBM_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params, results, fold: int) -> ModelTrainingResults:
+        """
+        Generate learning curve data for LightGBM models.
+        """
+        train_sizes = np.linspace(self.config.learning_curve.min_size, 
+                                self.config.learning_curve.max_size,
+                                self.config.learning_curve.n_points)
+        
+        structured_log(logger, logging.INFO, 
+                    f"Generating LGBM learning curve data for fold {fold}",
+                    n_points=len(train_sizes))
+        
+        try:
+            for size in train_sizes:
+                n_samples = int(len(X_train) * size)
+                indices = np.random.choice(len(X_train), n_samples, replace=False)
+                X_subset = X_train.iloc[indices]
+                y_subset = y_train.iloc[indices]
+                
+                train_data = lgb.Dataset(X_subset, label=y_subset, 
+                                       categorical_feature=self.config.categorical_features)
+                val_data = lgb.Dataset(X_val, label=y_val, 
+                                     categorical_feature=self.config.categorical_features,
+                                     reference=train_data)
+                
+                subset_model = lgb.train(
+                    model_params,
+                    train_data,
+                    num_boost_round=self.config.LGBM.num_boost_round,
+                    valid_sets=[train_data, val_data],
+                    valid_names=['train', 'valid'],
+                    callbacks=[
+                        lgb.early_stopping(self.config.LGBM.early_stopping),
+                        lgb.log_evaluation(False)
+                    ]
+                )
+                
+                train_pred = subset_model.predict(X_subset)
+                val_pred = subset_model.predict(X_val)
+                
+                train_score = accuracy_score(y_subset, (train_pred >= 0.5).astype(int))
+                val_score = accuracy_score(y_val, (val_pred >= 0.5).astype(int))
+                
+                results.add_learning_curve_point(
+                    train_size=n_samples,
+                    train_score=train_score,
+                    val_score=val_score,
+                    fold=fold
+                )
+                
+                structured_log(logger, logging.DEBUG, 
+                            f"Generated learning curve point for fold {fold}",
+                            n_samples=n_samples,
+                            train_score=train_score,
+                            val_score=val_score)
+        
+        except Exception as e:
+            structured_log(logger, logging.ERROR,
+                        f"Error generating LGBM learning curve for fold {fold}",
+                        error=str(e))
+            raise
+            
         return results

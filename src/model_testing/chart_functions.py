@@ -102,11 +102,13 @@ class ChartFunctions:
         try:
             # Calculate SHAP values
             explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(X.iloc[index])
+            # Convert Series to DataFrame if single row
+            X_sample = X.iloc[[index]] if isinstance(X.iloc[index], pd.Series) else X.iloc[index]
+            shap_values = explainer.shap_values(X_sample)
 
             # Create the plot
             fig, ax = plt.subplots(figsize=(16, 3))
-            shap.force_plot(explainer.expected_value, shap_values, X.iloc[index], matplotlib=True, show=False, ax=ax)
+            shap.force_plot(explainer.expected_value, shap_values, X_sample, matplotlib=True, show=False, ax=ax)
             plt.title(f"SHAP Force Plot for Observation {index}")
 
             structured_log(logger, logging.INFO, "SHAP force plot created successfully")
@@ -227,50 +229,59 @@ class ChartFunctions:
                                    y_score_shape=y_score.shape,
                                    nan_count=np.sum(np.isnan(y_score)))
 
+
     @log_performance
-    def create_learning_curve(self, model: Any, X: np.ndarray, y: np.ndarray) -> plt.Figure:
+    def create_learning_curve(self, results: ModelTrainingResults) -> plt.Figure:
         """
-        Create a learning curve to evaluate model performance with varying training set sizes.
-
+        Create a learning curve from stored training results.
+        
         Args:
-            model (Any): Scikit-learn compatible model object.
-            X (np.ndarray): Feature array.
-            y (np.ndarray): Target array.
-
+            results (ModelTrainingResults): Results object containing learning curve data
+            
         Returns:
-            plt.Figure: Matplotlib figure object containing the learning curve.
+            plt.Figure: Learning curve visualization
         """
-        structured_log(logger, logging.INFO, "Creating learning curve")
+        structured_log(logger, logging.INFO, "Creating learning curve from results")
         try:
-            from sklearn.model_selection import learning_curve
-            
-            train_sizes, train_scores, test_scores = learning_curve(
-                model, X, y, cv=5, n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 10))
-            
-            train_mean = np.mean(train_scores, axis=1)
-            train_std = np.std(train_scores, axis=1)
-            test_mean = np.mean(test_scores, axis=1)
-            test_std = np.std(test_scores, axis=1)
-            
             fig, ax = plt.subplots(figsize=(10, 8))
-            ax.plot(train_sizes, train_mean, label='Training score', color='blue', marker='o')
-            ax.fill_between(train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.15, color='blue')
-            ax.plot(train_sizes, test_mean, label='Cross-validation score', color='green', marker='s')
-            ax.fill_between(train_sizes, test_mean - test_std, test_mean + test_std, alpha=0.15, color='green')
-            ax.set_xlabel('Number of training examples')
+            
+            # Plot learning curve
+            ax.plot(results.learning_curve_data['train_sizes'], 
+                    results.learning_curve_data['train_scores'], 
+                    'o-', label='Training score')
+            ax.plot(results.learning_curve_data['train_sizes'], 
+                    results.learning_curve_data['val_scores'], 
+                    'o-', label='Validation score')
+            
+            # Add error bands if std data exists
+            if any(results.learning_curve_data['train_std']):
+                train_scores = np.array(results.learning_curve_data['train_scores'])
+                train_std = np.array(results.learning_curve_data['train_std'])
+                ax.fill_between(results.learning_curve_data['train_sizes'],
+                            train_scores - train_std,
+                            train_scores + train_std,
+                            alpha=0.1)
+            
+            if any(results.learning_curve_data['val_std']):
+                val_scores = np.array(results.learning_curve_data['val_scores'])
+                val_std = np.array(results.learning_curve_data['val_std'])
+                ax.fill_between(results.learning_curve_data['train_sizes'],
+                            val_scores - val_std,
+                            val_scores + val_std,
+                            alpha=0.1)
+            
+            ax.set_xlabel('Training examples')
             ax.set_ylabel('Score')
-            ax.set_title('Learning Curve')
-            ax.legend(loc='lower right')
+            ax.set_title(f'Learning Curve ({results.model_name})')
+            ax.legend(loc='best')
             
             structured_log(logger, logging.INFO, "Learning curve created successfully")
             return fig
+            
         except Exception as e:
             raise ChartCreationError("Error creating learning curve",
-                                     error_message=str(e),
-                                     model_type=type(model).__name__,
-                                     X_shape=X.shape,
-                                     y_shape=y.shape)
-
+                                error_message=str(e))
+    
     @log_performance
     def create_partial_dependence_plot(self, model: Any, X: pd.DataFrame, feature_names: List[str], target_names: List[str] = None) -> plt.Figure:
         """
@@ -322,12 +333,12 @@ class ChartFunctions:
                                      feature_names=feature_names)
 
     @log_performance
-    def create_shap_dependence_plot(self, shap_values: shap.Explanation, features: pd.DataFrame, feature_name: str, interaction_feature: str = None) -> plt.Figure:
+    def create_shap_dependence_plot(self, shap_values: np.ndarray, features: pd.DataFrame, feature_name: str, interaction_feature: str = None) -> plt.Figure:
         """
         Create a SHAP dependence plot for a specific feature.
 
         Args:
-            shap_values (shap.Explanation): SHAP values calculated for the model.
+            shap_values (np.ndarray): SHAP values calculated for the model.
             features (pd.DataFrame): Feature dataframe used for predictions.
             feature_name (str): Name of the main feature to plot.
             interaction_feature (str, optional): Name of the feature to use for coloring (to show interactions).
@@ -343,7 +354,8 @@ class ChartFunctions:
                 shap_values, 
                 features, 
                 interaction_index=interaction_feature,
-                ax=ax
+                ax=ax,
+                show=False
             )
             ax.set_title(f'SHAP Dependence Plot for {feature_name}')
             
@@ -354,6 +366,7 @@ class ChartFunctions:
                                      error_message=str(e),
                                      feature_name=feature_name,
                                      interaction_feature=interaction_feature)
+
 class ChartOrchestrator:
     @log_performance
     def __init__(self, config):

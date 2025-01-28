@@ -169,7 +169,7 @@ class MLflowChartLogger:
 class MLFlowLogger(AbstractExperimentLogger):
     def __init__(self, config: AbstractConfig):
         self.config = config
-        self._chart_logger = MLflowChartLogger()
+        self._chart_logger = MLflowChartLogger(self.config)
         structured_log(logger, logging.INFO, "MLFlowLogger initialized")
     
     def log_experiment(self, results: ModelTrainingResults):
