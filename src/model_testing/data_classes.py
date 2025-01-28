@@ -157,6 +157,70 @@ class ModelTrainingResults:
         # Preprocessing results
         self.preprocessing_results: Optional[PreprocessingResults] = None
 
+        self.learning_curve_data: Dict[str, Dict[int, List]] = {
+            'train_sizes': {},  # fold_num -> list of sizes
+            'train_scores': {}, # fold_num -> list of scores
+            'val_scores': {},   # fold_num -> list of scores
+            'aggregated': {     # Final aggregated results
+                'train_sizes': [],
+                'train_scores_mean': [],
+                'val_scores_mean': [],
+                'train_scores_std': [],
+                'val_scores_std': []
+            }
+        }
+
+    def add_learning_curve_point(self, 
+                            train_size: int,
+                            train_score: float,
+                            val_score: float,
+                            fold: int) -> None:
+        """Add a learning curve point for a specific fold."""
+        # Initialize lists for this fold if needed
+        for key in ['train_sizes', 'train_scores', 'val_scores']:
+            if fold not in self.learning_curve_data[key]:
+                self.learning_curve_data[key][fold] = []
+        
+        # Add the data points
+        self.learning_curve_data['train_sizes'][fold].append(train_size)
+        self.learning_curve_data['train_scores'][fold].append(train_score)
+        self.learning_curve_data['val_scores'][fold].append(val_score)
+
+    def aggregate_learning_curves(self) -> None:
+        """Aggregate learning curves across all folds."""
+        if not self.learning_curve_data['train_sizes']:
+            return
+
+        # Get unique train sizes (should be same across folds)
+        train_sizes = np.array(list(self.learning_curve_data['train_sizes'].values())[0])
+        
+        # Collect scores for each size across folds
+        train_scores = []
+        val_scores = []
+        
+        for size_idx in range(len(train_sizes)):
+            fold_train_scores = []
+            fold_val_scores = []
+            
+            for fold in self.learning_curve_data['train_scores'].keys():
+                fold_train_scores.append(self.learning_curve_data['train_scores'][fold][size_idx])
+                fold_val_scores.append(self.learning_curve_data['val_scores'][fold][size_idx])
+            
+            train_scores.append(fold_train_scores)
+            val_scores.append(fold_val_scores)
+        
+        # Convert to numpy arrays for easier computation
+        train_scores = np.array(train_scores)
+        val_scores = np.array(val_scores)
+        
+        # Calculate means and stds
+        self.learning_curve_data['aggregated']['train_sizes'] = train_sizes
+        self.learning_curve_data['aggregated']['train_scores_mean'] = np.mean(train_scores, axis=1)
+        self.learning_curve_data['aggregated']['val_scores_mean'] = np.mean(val_scores, axis=1)
+        self.learning_curve_data['aggregated']['train_scores_std'] = np.std(train_scores, axis=1)
+        self.learning_curve_data['aggregated']['val_scores_std'] = np.std(val_scores, axis=1)
+
+
     def update_feature_data(self, X: pd.DataFrame, y: pd.Series) -> None:
         """Update feature and target data"""
         self.feature_data = X

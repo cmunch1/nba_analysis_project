@@ -89,6 +89,14 @@ cross_validation_type: TimeSeriesSplit
 # number of cross validation splits
 n_splits: 5
 
+# learning curve settings
+generate_learning_curve_data: true # this will slow down the model training process
+learning_curve:
+  min_size: 0.1
+  max_size: 1.0
+  n_points: 10
+
+
 # chart options
 chart_options:
   confusion_matrix: true
