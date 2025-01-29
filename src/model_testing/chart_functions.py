@@ -55,38 +55,41 @@ class ChartFunctions:
                                      feature_names_length=len(feature_names))
 
     @log_performance
-    def create_shap_summary_plot(self, model: Any, X: pd.DataFrame) -> plt.Figure:
+    def create_shap_summary_plot(self, model: Any, X: pd.DataFrame, shap_values: Optional[np.ndarray] = None) -> plt.Figure:
         """
         Create a SHAP summary plot.
 
         Args:
             model (Any): Trained model object.
             X (pd.DataFrame): Feature dataframe.
+            shap_values (Optional[np.ndarray]): Pre-calculated SHAP values.
 
         Returns:
             plt.Figure: Matplotlib figure object containing the SHAP summary plot.
         """
         structured_log(logger, logging.INFO, "Creating SHAP summary plot", input_shape=X.shape)
         try:
-            # Calculate SHAP values
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(X)
+            # Use pre-calculated SHAP values if available
+            if shap_values is None:
+                explainer = shap.TreeExplainer(model)
+                shap_values = explainer.shap_values(X)
 
             # Create the plot
-            fig, ax = plt.subplots(figsize=(12, 8))
-            shap.summary_plot(shap_values, X, plot_type="bar", show=False)
+            fig = plt.figure(figsize=(12, 8))  # Store the figure object
+            values = shap_values[1] if isinstance(shap_values, list) else shap_values
+            shap.summary_plot(values, X, plot_type="bar", show=False)
             plt.title("SHAP Summary Plot")
 
             structured_log(logger, logging.INFO, "SHAP summary plot created successfully")
             return fig
         except Exception as e:
             raise ChartCreationError("Error creating SHAP summary plot",
-                                     error_message=str(e),
-                                     model_type=type(model).__name__,
-                                     dataframe_shape=X.shape)
+                                   error_message=str(e),
+                                   model_type=type(model).__name__,
+                                   dataframe_shape=X.shape)
 
     @log_performance
-    def create_shap_force_plot(self, model: Any, X: pd.DataFrame, index: int = 0) -> plt.Figure:
+    def create_shap_force_plot(self, model: Any, X: pd.DataFrame, index: int = 0, shap_values: Optional[np.ndarray] = None) -> plt.Figure:
         """
         Create a SHAP force plot for a single observation.
 
@@ -94,31 +97,44 @@ class ChartFunctions:
             model (Any): Trained model object.
             X (pd.DataFrame): Feature dataframe.
             index (int): Index of the observation to explain. Defaults to 0.
+            shap_values (Optional[np.ndarray]): Pre-calculated SHAP values.
 
         Returns:
             plt.Figure: Matplotlib figure object containing the SHAP force plot.
         """
         structured_log(logger, logging.INFO, "Creating SHAP force plot", input_shape=X.shape, index=index)
         try:
-            # Calculate SHAP values
-            explainer = shap.TreeExplainer(model)
-            # Convert Series to DataFrame if single row
+            # Use pre-calculated SHAP values if available
+            if shap_values is not None:
+                values = shap_values[index]
+                expected_value = values.sum() / 2  # For binary classification
+            else:
+                # Calculate SHAP values if not provided
+                explainer = shap.TreeExplainer(model)
+                X_sample = X.iloc[[index]]
+                shap_values = explainer.shap_values(X_sample)
+                values = shap_values[1] if isinstance(shap_values, list) else shap_values
+                expected_value = explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value
+
+            # Create figure and plot
+            plt.figure(figsize=(16, 3))
             X_sample = X.iloc[[index]] if isinstance(X.iloc[index], pd.Series) else X.iloc[index]
-            shap_values = explainer.shap_values(X_sample)
-
-            # Create the plot
-            fig, ax = plt.subplots(figsize=(16, 3))
-            shap.force_plot(explainer.expected_value, shap_values, X_sample, matplotlib=True, show=False, ax=ax)
+            shap.force_plot(
+                expected_value,
+                values,
+                X_sample,
+                matplotlib=True,
+                show=False
+            )
+            fig = plt.gcf()
             plt.title(f"SHAP Force Plot for Observation {index}")
-
-            structured_log(logger, logging.INFO, "SHAP force plot created successfully")
             return fig
         except Exception as e:
             raise ChartCreationError("Error creating SHAP force plot",
-                                     error_message=str(e),
-                                     model_type=type(model).__name__,
-                                     dataframe_shape=X.shape,
-                                     index=index)
+                                   error_message=str(e),
+                                   model_type=type(model).__name__,
+                                   dataframe_shape=X.shape,
+                                   index=index)
 
     @log_performance
     def create_confusion_matrix(self, y_true: np.ndarray, y_pred: np.ndarray) -> plt.Figure:
@@ -243,36 +259,44 @@ class ChartFunctions:
         """
         structured_log(logger, logging.INFO, "Creating learning curve from results")
         try:
+            # Verify learning curve data exists and is properly aggregated
+            if not hasattr(results, 'learning_curve_data') or not results.learning_curve_data:
+                raise ValueError("No learning curve data available in results")
+
+            # Access the aggregated data
+            aggregated_data = results.learning_curve_data.get('aggregated')
+            if not aggregated_data:
+                raise ValueError("No aggregated learning curve data available")
+
             fig, ax = plt.subplots(figsize=(10, 8))
             
-            # Plot learning curve
-            ax.plot(results.learning_curve_data['train_sizes'], 
-                    results.learning_curve_data['train_scores'], 
-                    'o-', label='Training score')
-            ax.plot(results.learning_curve_data['train_sizes'], 
-                    results.learning_curve_data['val_scores'], 
-                    'o-', label='Validation score')
-            
-            # Add error bands if std data exists
-            if any(results.learning_curve_data['train_std']):
-                train_scores = np.array(results.learning_curve_data['train_scores'])
-                train_std = np.array(results.learning_curve_data['train_std'])
-                ax.fill_between(results.learning_curve_data['train_sizes'],
-                            train_scores - train_std,
-                            train_scores + train_std,
-                            alpha=0.1)
-            
-            if any(results.learning_curve_data['val_std']):
-                val_scores = np.array(results.learning_curve_data['val_scores'])
-                val_std = np.array(results.learning_curve_data['val_std'])
-                ax.fill_between(results.learning_curve_data['train_sizes'],
-                            val_scores - val_std,
-                            val_scores + val_std,
-                            alpha=0.1)
-            
+            # Plot mean scores with error bands
+            train_sizes = aggregated_data['train_sizes']
+            train_scores_mean = aggregated_data['train_scores_mean']
+            train_scores_std = aggregated_data['train_scores_std']
+            val_scores_mean = aggregated_data['val_scores_mean']
+            val_scores_std = aggregated_data['val_scores_std']
+
+            # Plot training scores
+            ax.plot(train_sizes, train_scores_mean, 'o-', label='Training score',
+                    color='blue')
+            ax.fill_between(train_sizes, 
+                           train_scores_mean - train_scores_std,
+                           train_scores_mean + train_scores_std, 
+                           alpha=0.1, color='blue')
+
+            # Plot validation scores
+            ax.plot(train_sizes, val_scores_mean, 'o-', label='Cross-validation score',
+                    color='orange')
+            ax.fill_between(train_sizes, 
+                           val_scores_mean - val_scores_std,
+                           val_scores_mean + val_scores_std, 
+                           alpha=0.1, color='orange')
+
             ax.set_xlabel('Training examples')
             ax.set_ylabel('Score')
             ax.set_title(f'Learning Curve ({results.model_name})')
+            ax.grid(True)
             ax.legend(loc='best')
             
             structured_log(logger, logging.INFO, "Learning curve created successfully")
@@ -367,6 +391,88 @@ class ChartFunctions:
                                      feature_name=feature_name,
                                      interaction_feature=interaction_feature)
 
+    @log_performance
+    def create_shap_waterfall_plot(self, model: Any, X: pd.DataFrame, index: int = 0, shap_values: Optional[np.ndarray] = None) -> plt.Figure:
+        """
+        Create a SHAP waterfall plot for a single observation.
+
+        Args:
+            model (Any): Trained model object.
+            X (pd.DataFrame): Feature dataframe.
+            index (int): Index of the observation to explain. Defaults to 0.
+            shap_values (Optional[np.ndarray]): Pre-calculated SHAP values.
+
+        Returns:
+            plt.Figure: Matplotlib figure object containing the SHAP waterfall plot.
+        """
+        structured_log(logger, logging.INFO, "Creating SHAP waterfall plot", input_shape=X.shape, index=index)
+        try:
+            # Use pre-calculated SHAP values if available
+            if shap_values is not None:
+                values = shap_values[index]
+                expected_value = values.sum() / 2  # For binary classification
+            else:
+                # Calculate SHAP values if not provided
+                explainer = shap.TreeExplainer(model)
+                X_sample = X.iloc[[index]]
+                shap_values = explainer.shap_values(X_sample)
+                values = shap_values[1] if isinstance(shap_values, list) else shap_values
+                expected_value = explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value
+
+            # Create figure and plot
+            plt.figure(figsize=(10, 8))
+            shap.waterfall_plot(
+                shap.Explanation(
+                    values=values.reshape(-1),
+                    base_values=expected_value,
+                    data=X.iloc[index].values,
+                    feature_names=X.columns
+                ),
+                show=False
+            )
+            fig = plt.gcf()
+            plt.title(f"SHAP Waterfall Plot for Observation {index}")
+            return fig
+        except Exception as e:
+            raise ChartCreationError("Error creating SHAP waterfall plot",
+                                   error_message=str(e),
+                                   model_type=type(model).__name__,
+                                   dataframe_shape=X.shape,
+                                   index=index)
+
+    @log_performance
+    def create_shap_beeswarm_plot(self, model: Any, X: pd.DataFrame, shap_values: Optional[np.ndarray] = None) -> plt.Figure:
+        """
+        Create a SHAP beeswarm plot.
+
+        Args:
+            model (Any): Trained model object.
+            X (pd.DataFrame): Feature dataframe.
+            shap_values (Optional[np.ndarray]): Pre-calculated SHAP values.
+
+        Returns:
+            plt.Figure: Matplotlib figure object containing the SHAP beeswarm plot.
+        """
+        structured_log(logger, logging.INFO, "Creating SHAP beeswarm plot", input_shape=X.shape)
+        try:
+            # Use pre-calculated SHAP values if available
+            if shap_values is None:
+                explainer = shap.TreeExplainer(model)
+                shap_values = explainer.shap_values(X)
+
+            # Create figure and plot
+            plt.figure(figsize=(12, 8))
+            values = shap_values[1] if isinstance(shap_values, list) else shap_values
+            shap.summary_plot(values, X, plot_type="dot", show=False)
+            fig = plt.gcf()
+            plt.title("SHAP Beeswarm Plot")
+            return fig
+        except Exception as e:
+            raise ChartCreationError("Error creating SHAP beeswarm plot",
+                                   error_message=str(e),
+                                   model_type=type(model).__name__,
+                                   dataframe_shape=X.shape)
+
 class ChartOrchestrator:
     @log_performance
     def __init__(self, config):
@@ -426,9 +532,7 @@ class ChartOrchestrator:
             # Learning Curve
             if all(x is not None for x in [results.model, results.feature_data, results.target_data]):
                 charts['learning_curve'] = self.create_learning_curve(
-                    model=results.model,
-                    X=results.feature_data.values,
-                    y=results.target_data
+                    results=results
                 )
 
             structured_log(logger, logging.INFO, f"Created {len(charts)} charts successfully")
@@ -441,29 +545,13 @@ class ChartOrchestrator:
     @log_performance
     def generate_charts(
         self,
-        model: Any,
-        X: pd.DataFrame,
-        feature_names: List[str],
-        feature_importance: Optional[np.ndarray] = None,
-        y_true: Optional[np.ndarray] = None,
-        y_pred: Optional[np.ndarray] = None,
-        y_score: Optional[np.ndarray] = None,
-        shap_values: Optional[Any] = None,
-        target_names: Optional[List[str]] = None,
+        results: ModelTrainingResults
     ) -> Dict[str, plt.Figure]:
         """
-        Generate all configured charts.
+        Generate all configured charts based on ModelTrainingResults.
         
         Args:
-            model: Trained model object
-            X: Feature dataframe
-            feature_names: List of feature names
-            feature_importance: Array of feature importance scores
-            y_true: True labels for classification metrics
-            y_pred: Predicted labels
-            y_score: Predicted probabilities/scores
-            shap_values: Pre-calculated SHAP values (optional)
-            target_names: List of target names for multi-output models
+            results: ModelTrainingResults object containing all necessary data
             
         Returns:
             Dict[str, plt.Figure]: Dictionary mapping chart names to matplotlib figures
@@ -472,81 +560,133 @@ class ChartOrchestrator:
         charts = {}
 
         try:
+            chart_data = results.prepare_for_charting()
+
             # Feature Importance Chart
-            if getattr(self.config, 'feature_importance_chart', False) and feature_importance is not None:
-                structured_log(logger, logging.INFO, "Generating feature importance chart")
-                charts['feature_importance'] = self.chart_functions.create_feature_importance_chart(
-                    feature_importance=feature_importance,
-                    feature_names=feature_names
-                )
+            if getattr(self.config, 'feature_importance_chart', False):
+                try:    
+                    if chart_data["feature_importance"] is not None:
+                        charts['feature_importance'] = self.chart_functions.create_feature_importance_chart(
+                            feature_importance=chart_data["feature_importance"],
+                            feature_names=chart_data["feature_names"]
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create feature importance chart",
+                                 error=str(e))
+
+            # Confusion Matrix
+            if getattr(self.config, 'confusion_matrix', False):
+                try:
+                    if chart_data["y_true"] is not None and chart_data["y_pred"] is not None:
+                        charts['confusion_matrix'] = self.chart_functions.create_confusion_matrix(
+                            y_true=chart_data["y_true"],
+                            y_pred=chart_data["y_pred"]
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create confusion matrix",
+                                 error=str(e))
+
+            # ROC Curve
+            if getattr(self.config, 'roc_curve', False):
+                try:
+                    if chart_data["y_true"] is not None and chart_data["y_prob"] is not None:
+                        charts['roc_curve'] = self.chart_functions.create_roc_curve(
+                            y_true=chart_data["y_true"],
+                            y_score=chart_data["y_prob"]
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create ROC curve",
+                                 error=str(e))
 
             # SHAP Summary Plot
             if getattr(self.config, 'shap_summary_plot', False):
-                structured_log(logger, logging.INFO, "Generating SHAP summary plot")
-                charts['shap_summary'] = self.chart_functions.create_shap_summary_plot(
-                    model=model,
-                    X=X
-                )
+                try:
+                    if chart_data["model"] is not None and chart_data["X"] is not None:
+                        charts['shap_summary'] = self.chart_functions.create_shap_summary_plot(
+                            model=chart_data["model"],
+                            X=chart_data["X"],
+                            shap_values=results.shap_values
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create SHAP summary plot",
+                                 error=str(e))
 
             # SHAP Force Plot
             if getattr(self.config, 'shap_force_plot', False):
-                structured_log(logger, logging.INFO, "Generating SHAP force plot")
-                charts['shap_force'] = self.chart_functions.create_shap_force_plot(
-                    model=model,
-                    X=X
-                )
+                try:
+                    if chart_data["model"] is not None and chart_data["X"] is not None:
+                        charts['shap_force'] = self.chart_functions.create_shap_force_plot(
+                            model=chart_data["model"],
+                            X=chart_data["X"],
+                            shap_values=results.shap_values
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create SHAP force plot",
+                                 error=str(e))
 
             # SHAP Dependence Plot
-            if getattr(self.config, 'shap_dependence_plot', False) and shap_values is not None:
-                structured_log(logger, logging.INFO, "Generating SHAP dependence plots")
-                for feature in feature_names[:min(3, len(feature_names))]:  # Limit to top 3 features
-                    charts[f'shap_dependence_{feature}'] = self.chart_functions.create_shap_dependence_plot(
-                        shap_values=shap_values,
-                        features=X,
-                        feature_name=feature
-                    )
-
-            # Confusion Matrix (if classification metrics are provided)
-            if y_true is not None and y_pred is not None:
-                structured_log(logger, logging.INFO, "Generating confusion matrix")
-                charts['confusion_matrix'] = self.chart_functions.create_confusion_matrix(
-                    y_true=y_true,
-                    y_pred=y_pred
-                )
-
-            # ROC Curve (if classification scores are provided)
-            if y_true is not None and y_score is not None:
-                structured_log(logger, logging.INFO, "Generating ROC curve")
-                charts['roc_curve'] = self.chart_functions.create_roc_curve(
-                    y_true=y_true,
-                    y_score=y_score
-                )
+            if getattr(self.config, 'shap_dependence_plot', False):
+                try:
+                    if chart_data["X"] is not None and results.shap_values is not None:
+                        charts['shap_dependence'] = self.chart_functions.create_shap_dependence_plot(
+                            shap_values=results.shap_values,
+                            features=chart_data["X"],
+                            feature_name=chart_data["feature_names"][0]  # Using first feature as example
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create SHAP dependence plot",
+                                 error=str(e))
 
             # Learning Curve
-            if isinstance(X, np.ndarray) and y_true is not None:
-                structured_log(logger, logging.INFO, "Generating learning curve")
-                charts['learning_curve'] = self.chart_functions.create_learning_curve(
-                    model=model,
-                    X=X,
-                    y=y_true
-                )
+            if getattr(self.config, 'learning_curve', False):
+                try:
+                    charts['learning_curve'] = self.chart_functions.create_learning_curve(
+                        results=results
+                    )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create learning curve",
+                                 error=str(e))
 
-            # Partial Dependence Plot
-            if len(feature_names) > 0:
-                structured_log(logger, logging.INFO, "Generating partial dependence plots")
-                selected_features = feature_names[:min(3, len(feature_names))]  # Limit to top 3 features
-                charts['partial_dependence'] = self.chart_functions.create_partial_dependence_plot(
-                    model=model,
-                    X=X,
-                    feature_names=selected_features,
-                    target_names=target_names
-                )
+            # SHAP Waterfall Plot
+            if getattr(self.config, 'shap_waterfall_plot', False):
+                try:
+                    if chart_data["model"] is not None and chart_data["X"] is not None:
+                        charts['shap_waterfall'] = self.chart_functions.create_shap_waterfall_plot(
+                            model=chart_data["model"],
+                            X=chart_data["X"],
+                            shap_values=results.shap_values
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create SHAP waterfall plot",
+                                 error=str(e))
+
+            # SHAP Beeswarm Plot
+            if getattr(self.config, 'shap_beeswarm_plot', False):
+                try:
+                    if chart_data["model"] is not None and chart_data["X"] is not None:
+                        charts['shap_beeswarm'] = self.chart_functions.create_shap_beeswarm_plot(
+                            model=chart_data["model"],
+                            X=chart_data["X"],
+                            shap_values=results.shap_values
+                        )
+                except Exception as e:
+                    structured_log(logger, logging.WARNING, 
+                                 "Failed to create SHAP beeswarm plot",
+                                 error=str(e))
 
             structured_log(logger, logging.INFO, f"Chart generation completed. Generated {len(charts)} charts")
             return charts
 
         except Exception as e:
-            raise ChartCreationError("Error in chart generation orchestration",
+            raise ChartCreationError("Error in chart generation",
                                    error_message=str(e),
                                    charts_generated=list(charts.keys()))
 

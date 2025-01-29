@@ -92,7 +92,8 @@ class MLflowChartLogger:
                         if chart_data["model"] is not None and chart_data["X"] is not None:
                             fig = self.chart_functions.create_shap_summary_plot(
                                 model=chart_data["model"],
-                                X=chart_data["X"]
+                                X=chart_data["X"],
+                                shap_values=results.shap_values  # Pass pre-calculated SHAP values
                             )
                             self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_summary", temp_dir)
                     except Exception as e:
@@ -106,8 +107,9 @@ class MLflowChartLogger:
                         if chart_data["model"] is not None and chart_data["X"] is not None:
                             fig = self.chart_functions.create_shap_force_plot(
                                 model=chart_data["model"],
-                                X=chart_data["X"]
-                                )
+                                X=chart_data["X"],
+                                shap_values=results.shap_values  # Pass pre-calculated SHAP values
+                            )
                             self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_force", temp_dir)
                     except Exception as e:
                         structured_log(logger, logging.WARNING, 
@@ -117,10 +119,11 @@ class MLflowChartLogger:
                 # SHAP Dependence Plot
                 if self.config.chart_options.shap_dependence_plot:
                     try:
-                        if chart_data["model"] is not None and chart_data["X"] is not None:
+                        if chart_data["X"] is not None and results.shap_values is not None:
                             fig = self.chart_functions.create_shap_dependence_plot(
-                                model=chart_data["model"],
-                                X=chart_data["X"]
+                                shap_values=results.shap_values,
+                                features=chart_data["X"],
+                                feature_names=chart_data["feature_names"]
                             )
                             self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_dependence", temp_dir)
                     except Exception as e:
@@ -131,18 +134,42 @@ class MLflowChartLogger:
                 # Learning Curve
                 if self.config.chart_options.learning_curve:
                     try:
-                        if all(v is not None for v in [chart_data["model"], chart_data["X"], chart_data["y_true"]]):
-                            fig = self.chart_functions.create_learning_curve(
-                                model=chart_data["model"],
-                                X=chart_data["X"].values,
-                                y=chart_data["y_true"]
-                                )
-                            self._save_and_log_figure(fig, f"{chart_data['prefix']}learning_curve", temp_dir)
+                        fig = self.chart_functions.create_learning_curve(results=results)
+                        self._save_and_log_figure(fig, f"{chart_data['prefix']}learning_curve", temp_dir)
                     except Exception as e:
                         structured_log(logger, logging.WARNING, 
                                      "Failed to create learning curve",
                                      error=str(e))
 
+                # SHAP Waterfall Plot
+                if self.config.chart_options.shap_waterfall_plot:
+                    try:
+                        if chart_data["model"] is not None and chart_data["X"] is not None:
+                            fig = self.chart_functions.create_shap_waterfall_plot(
+                                model=chart_data["model"],
+                                X=chart_data["X"],
+                                shap_values=results.shap_values  # Pass pre-calculated SHAP values
+                            )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_waterfall", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                    "Failed to create SHAP waterfall plot",
+                                    error=str(e))
+
+                # SHAP Beeswarm Plot
+                if self.config.chart_options.shap_beeswarm_plot:
+                    try:
+                        if chart_data["model"] is not None and chart_data["X"] is not None:
+                            fig = self.chart_functions.create_shap_beeswarm_plot(
+                                model=chart_data["model"],
+                                X=chart_data["X"],
+                                shap_values=results.shap_values  # Pass pre-calculated SHAP values
+                            )
+                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_beeswarm", temp_dir)
+                    except Exception as e:
+                        structured_log(logger, logging.WARNING, 
+                                    "Failed to create SHAP beeswarm plot",
+                                    error=str(e))
 
                 structured_log(logger, logging.INFO, "All charts logged successfully")
 
