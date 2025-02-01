@@ -2,6 +2,7 @@ import sys
 import traceback
 import logging
 import pandas as pd
+import numpy as np
 from datetime import datetime
 
 from ..logging.logging_setup import setup_logging
@@ -136,7 +137,7 @@ def process_model_evaluation(
     y,
     X_eval=None,  # None for OOF, validation data for val testing
     y_eval=None,
-    primary_ids=None,  # Add this parameter
+    primary_ids=None,
     config=None,
     preprocessing_results=None,
     training_results=None,
@@ -147,73 +148,99 @@ def process_model_evaluation(
 ) -> tuple[ModelTrainingResults, ClassificationMetrics]:
     """
     Unified function to handle both OOF cross-validation and validation set testing.
-    
-    Args:
-        is_oof: If True, performs OOF cross-validation. If False, performs validation testing.
+    Ensures proper data filtering for TimeSeriesSplit.
     """
-    # Perform evaluation
-    if is_oof:
-        training_results = model_tester.perform_oof_cross_validation(X, y, model_name, model_params, training_results)
-        eval_data = X
-        eval_y = y
-    else:
-        training_results = model_tester.perform_validation_set_testing(X, y, X_eval, y_eval, model_name, model_params, training_results)
-        eval_data = X_eval
-        eval_y = y_eval
+    structured_log(logger, logging.INFO, "Starting model evaluation",
+                  is_oof=is_oof,
+                  input_shape=X.shape)
+    
+    try:
+        # Perform evaluation
+        if is_oof:
+            training_results = model_tester.perform_oof_cross_validation(X, y, model_name, model_params, training_results)
+        else:
+            training_results = model_tester.perform_validation_set_testing(X, y, X_eval, y_eval, model_name, model_params, training_results)
 
-    # Update results with additional information
-    training_results.is_validation = not is_oof
-    training_results.evaluation_type = "validation" if not is_oof else "oof"
-    training_results.model_name = model_name
-    
-    # Preserve existing params and add hyperparameters
-    if not hasattr(training_results.model_params, 'hyperparameters'):
-        training_results.model_params = {
-            'hyperparameters': model_params
-        }
-    else:
-        training_results.model_params['hyperparameters'] = model_params
-
-    if is_oof:
-        training_results.model_params["cross_validation_type"] = config.cross_validation_type
-        training_results.model_params["n_splits"] = config.n_splits
-    
-    # Update feature data
-    training_results.update_feature_data(eval_data, eval_y)
-    
-    # Calculate and update metrics
-    metrics = model_tester.calculate_classification_evaluation_metrics(training_results.target_data, training_results.predictions, metrics)
-    training_results.metrics = metrics
-    
-    # Update predictions with optimal threshold from metrics
-    training_results.update_predictions(training_results.predictions, metrics.optimal_threshold)
-    
-    # Handle predictions saving
-    if ((is_oof and config.save_oof_predictions) or 
-        (not is_oof and config.save_validation_predictions)):
+        # Update results with additional information
+        training_results.is_validation = not is_oof
+        training_results.evaluation_type = "validation" if not is_oof else "oof"
+        training_results.model_name = model_name
         
-        predictions_df = training_results.feature_data.copy()
-        predictions_df['target'] = training_results.target_data
-        if primary_ids is not None:
-            predictions_df.insert(0, config.primary_id_column, primary_ids)
-        predictions_df[f'{"oof" if is_oof else "val"}_predictions'] = training_results.probability_predictions
+        # Preserve existing params and add hyperparameters
+        if not hasattr(training_results.model_params, 'hyperparameters'):
+            training_results.model_params = {
+                'hyperparameters': model_params
+            }
+        else:
+            training_results.model_params['hyperparameters'] = model_params
 
+        if is_oof:
+            training_results.model_params["cross_validation_type"] = config.cross_validation_type
+            training_results.model_params["n_splits"] = config.n_splits
         
-        structured_log(logger, logging.INFO, f"Saving {'OOF' if is_oof else 'validation'} predictions")
-        data_access.save_dataframes(
-            [predictions_df], 
-            [f"{model_name}_{'oof' if is_oof else 'val'}_predictions.csv"]
+        # Calculate and update metrics using filtered data
+        metrics = model_tester.calculate_classification_evaluation_metrics(
+            training_results.target_data,
+            training_results.predictions,
+            metrics
         )
+        training_results.metrics = metrics
+        
+        # Update predictions with optimal threshold
+        training_results.update_predictions(training_results.predictions, metrics.optimal_threshold)
+        
+        # Handle predictions saving with proper data alignment
+        if ((is_oof and config.save_oof_predictions) or 
+            (not is_oof and config.save_validation_predictions)):
+            
+            # Get processed samples mask from training_results
+            if hasattr(training_results, 'processed_samples'):
+                processed_mask = training_results.processed_samples
+            else:
+                # Fallback: create mask based on non-NaN predictions
+                processed_mask = ~np.isnan(training_results.predictions)
+            
+            structured_log(logger, logging.INFO, "Preparing predictions dataframe",
+                         total_samples=len(y),
+                         processed_samples=np.sum(processed_mask))
+            
+            predictions_df = training_results.feature_data.copy()
+            predictions_df['target'] = training_results.target_data
+            
+            # Add primary IDs if available, ensuring proper filtering
+            if primary_ids is not None:
+                if len(primary_ids) != len(predictions_df):
+                    primary_ids = primary_ids[processed_mask]
+                predictions_df.insert(0, config.primary_id_column, primary_ids)
+            
+            predictions_df[f'{"oof" if is_oof else "val"}_predictions'] = training_results.probability_predictions
+            
+            structured_log(logger, logging.INFO, f"Saving {'OOF' if is_oof else 'validation'} predictions",
+                         output_shape=predictions_df.shape)
+            data_access.save_dataframes(
+                [predictions_df], 
+                [f"{model_name}_{'oof' if is_oof else 'val'}_predictions.csv"]
+            )
 
-    # Add preprocessing results to the results dataclass
-    training_results.preprocessing_results = preprocessing_results
-    
-    # Log experiment if configured
-    if config.log_experiment:
-        structured_log(logger, logging.INFO, f"Logging {'OOF' if is_oof else 'validation'} results")
-        experiment_logger.log_experiment(training_results)
-    
-    return training_results
+        # Add preprocessing results
+        training_results.preprocessing_results = preprocessing_results
+        
+        # Log experiment if configured
+        if config.log_experiment:
+            structured_log(logger, logging.INFO, f"Logging {'OOF' if is_oof else 'validation'} results")
+            experiment_logger.log_experiment(training_results)
+        
+        structured_log(logger, logging.INFO, "Model evaluation completed",
+                      final_shape=training_results.feature_data.shape,
+                      predictions_shape=training_results.predictions.shape)
+        
+        return training_results
+
+    except Exception as e:
+        raise ModelTestingError("Error in model evaluation",
+                              error_message=str(e),
+                              model_name=model_name,
+                              is_oof=is_oof)
 
 
 def _handle_known_error(error_logger, e):
