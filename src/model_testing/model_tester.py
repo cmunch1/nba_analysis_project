@@ -177,8 +177,10 @@ class ModelTester(AbstractModelTester):
                 oof_results = self._train_model(
                     X_train, y_train,
                     X_val, y_val,
+                    fold,
                     model_name, model_params,
                     fold_results
+
                 )
                 
                 # Copy first fold's configuration
@@ -205,6 +207,11 @@ class ModelTester(AbstractModelTester):
                 if oof_results.feature_importance_scores is not None:
                     feature_importance_accumulator += oof_results.feature_importance_scores
                     n_folds_with_importance += 1
+
+                if oof_results.learning_curve_data['raw_data']:
+                    full_results.learning_curve_data['raw_data'].extend(
+                        oof_results.learning_curve_data['raw_data']
+                    )
 
                 structured_log(logger, logging.INFO, f"Fold {fold} completed",
                             samples_processed=np.sum(processed_samples),
@@ -260,13 +267,15 @@ class ModelTester(AbstractModelTester):
         Perform model training and validation on a separate validation set.
         """
         try:
+            fold = 1 # needs a value for consistency with OOF cross-validation
             
             results = self._train_model(
                 X, y,
-                X_val, y_val,
+                X_val, y_val, fold,
                 model_name, model_params,
                 results
             )
+
             
             return results
             
@@ -326,7 +335,7 @@ class ModelTester(AbstractModelTester):
                                 n_predictions=len(y_prob) if y_prob is not None else None)
     
     @log_performance
-    def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, 
+    def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, fold: int,
                      model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """Train a model on the given data."""
         structured_log(logger, logging.INFO, f"{model_name} - Starting model training",
@@ -361,11 +370,11 @@ class ModelTester(AbstractModelTester):
             
             match model_name:
                 case "XGBoost":
-                    results = self._train_XGBoost(X, y, X_val, y_val, model_params, results)
+                    results = self._train_XGBoost(X, y, X_val, y_val, fold, model_params, results)
                 case "LGBM":
-                    results = self._train_LGBM(X, y, X_val, y_val, model_params, results)
+                    results = self._train_LGBM(X, y, X_val, y_val, fold,model_params, results)
                 case _:
-                    results = self._train_sklearn_model(X, y, X_val, y_val, model_name, model_params, results)
+                    results = self._train_sklearn_model(X, y, X_val, y_val, fold, model_name, model_params, results)
             
             if results.predictions is None:
                 raise ModelTestingError("Model training completed but predictions are None")
@@ -382,7 +391,7 @@ class ModelTester(AbstractModelTester):
                                   dataframe_shape=X.shape)
         
     @log_performance
-    def _train_sklearn_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
+    def _train_sklearn_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, fold: int, model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Train a scikit-learn model.
 
@@ -457,9 +466,9 @@ class ModelTester(AbstractModelTester):
                                      dataframe_shape=X_train.shape)
         
     @log_performance
-    def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, 
+    def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, fold: int,
                     model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """Train an XGBoost model with proper SHAP value handling."""
+        """Train an XGBoost model"""
         structured_log(logger, logging.INFO, "Starting XGBoost training", 
                     input_shape=X_train.shape)
         
@@ -569,6 +578,16 @@ class ModelTester(AbstractModelTester):
                             feature_data_shape=results.feature_data.shape,
                             shap_values_shape=results.shap_values.shape,
                             equal_shapes=results.feature_data.shape[1] == results.shap_values.shape[1])
+                
+            # Generate learning curve data if configured
+            if self.config.generate_learning_curve_data:
+                results = self._generate_XGB_learning_curve_data(X_train, y_train, X_val, y_val, fold, model_params, results)
+            
+
+            structured_log(logger, logging.INFO, "XGBoost training completed successfully",
+                        predictions_shape=results.predictions.shape)
+            
+
 
             return results
 
@@ -580,7 +599,7 @@ class ModelTester(AbstractModelTester):
             )   
          
     @log_performance
-    def _train_LGBM(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
+    def _train_LGBM(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
         Train a LightGBM model with the enhanced ModelTrainingResults.
         Returns:
@@ -590,11 +609,10 @@ class ModelTester(AbstractModelTester):
                     input_shape=X_train.shape)
         
         try:
-            
             train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
             val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
             
-            # Use filtered parameters
+            # Train model
             model = lgb.train(
                 model_params,  
                 train_data,
@@ -612,8 +630,8 @@ class ModelTester(AbstractModelTester):
             results.predictions = model.predict(X_val)
             results.num_boost_round = self.config.LGBM.num_boost_round
             results.early_stopping = self.config.LGBM.early_stopping
+            results.enable_categorical = True  # LightGBM always enables categorical
             results.categorical_features = self.config.categorical_features
-            
 
             structured_log(logger, logging.INFO, "Generated predictions", 
                         predictions_shape=results.predictions.shape,
@@ -635,39 +653,64 @@ class ModelTester(AbstractModelTester):
             # Calculate SHAP values if configured
             if self.config.calculate_shap_values:
                 try:
-                    results.shap_values = model.predict(X_val, pred_contrib=True)
-                    structured_log(logger, logging.INFO, "Calculated SHAP values",
-                                shap_values_shape=results.shap_values.shape)
+                    # Calculate SHAP values
+                    shap_values = model.predict(X_val, pred_contrib=True)
                     
+                    structured_log(logger, logging.INFO, "SHAP value details",
+                                shap_values_shape=shap_values.shape,
+                                shap_values_nulls=np.sum(np.isnan(shap_values)),
+                                X_val_shape=X_val.shape)
+                    
+                    # Remove the bias term (last column) from SHAP values
+                    if shap_values.shape[1] == X_val.shape[1] + 1:
+                        structured_log(logger, logging.INFO, 
+                                    "Removing bias term from SHAP values",
+                                    original_shape=shap_values.shape)
+                        shap_values = shap_values[:, :-1]
+                        structured_log(logger, logging.INFO, 
+                                    "SHAP values after bias removal",
+                                    new_shape=shap_values.shape)
+                    
+                    # Store feature data and SHAP values
+                    results.feature_data = X_val
+                    results.target_data = y_val
+                    results.shap_values = shap_values
+                    
+                    # Calculate interactions if configured
                     if self.config.calculate_shap_interactions:
                         n_features = X_val.shape[1]
                         estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
                         
                         if estimated_memory <= self.config.max_shap_interaction_memory_gb:
-                            results.shap_interaction_values = model.predict(X_val, pred_interactions=True)
-                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values")
+                            interaction_values = model.predict(X_val, pred_interactions=True)
+                            # Remove bias term from interaction values if present
+                            if interaction_values.shape[1] == X_val.shape[1] + 1:
+                                interaction_values = interaction_values[:, :-1, :-1]
+                            results.shap_interaction_values = interaction_values
+                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values",
+                                        interaction_shape=interaction_values.shape)
                             
                 except Exception as e:
-                    structured_log(logger, logging.WARNING, "Failed to calculate SHAP values",
-                                error=str(e))
-            
-            # Verify predictions exist and are valid
-            if results.predictions is None:
-                raise ModelTestingError("LightGBM model.predict returned None")
-            
-            if len(results.predictions) != len(y_val):
-                raise ModelTestingError(
-                    "Prediction length mismatch",
-                    expected_length=len(y_val),
-                    actual_length=len(results.predictions)
-                )
-            
-            structured_log(logger, logging.INFO, "LightGBM training completed successfully",
-                        predictions_shape=results.predictions.shape)
-            
+                    structured_log(logger, logging.ERROR, "Failed to calculate SHAP values",
+                                error=str(e),
+                                error_type=type(e).__name__)
+                    raise
+
+            # Final validation of shapes
+            if results.shap_values is not None:
+                structured_log(logger, logging.INFO, "Final shape validation",
+                            feature_data_shape=results.feature_data.shape,
+                            shap_values_shape=results.shap_values.shape,
+                            equal_shapes=results.feature_data.shape[1] == results.shap_values.shape[1])
+                
+            # Generate learning curve data if configured
+            if self.config.generate_learning_curve_data:
+                results = self._generate_LGBM_learning_curve_data(X_train, y_train, X_val, y_val, fold, model_params, results)
+        
             return results
 
         except Exception as e:
+
             structured_log(logger, logging.ERROR, "Error in LightGBM training",
                         error_message=str(e),
                         error_type=type(e).__name__,
@@ -782,54 +825,26 @@ class ModelTester(AbstractModelTester):
         
         return results
     
-    def _generate_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params, results, fold: int) -> ModelTrainingResults:
-        """
-        Route learning curve data generation to the appropriate model-specific method with improved sampling.
-        """
-        try:
-            structured_log(logger, logging.INFO, 
-                        "Starting learning curve generation",
-                        model_name=results.model_name,
-                        fold=fold)
 
-            # Calculate absolute sizes instead of percentages
-            min_samples = max(int(len(X_train) * self.config.learning_curve.min_size), 
-                            self.config.learning_curve.min_absolute_samples)
-            max_samples = min(int(len(X_train) * self.config.learning_curve.max_size),
-                            len(X_train))
-            train_sizes = np.linspace(min_samples, max_samples,
-                                    self.config.learning_curve.n_points, dtype=int)
-
-            # Set random seed for reproducibility
-            np.random.seed(self.config.random_state + fold)
-
-            match results.model_name:
-                case "XGBoost":
-                    results = self._generate_XGB_learning_curve_data(
-                        X_train, y_train, X_val, y_val, model_params, results, fold, train_sizes
-                    )
-                case "LGBM":
-                    results = self._generate_LGBM_learning_curve_data(
-                        X_train, y_train, X_val, y_val, model_params, results, fold, train_sizes
-                    )
-                case _:
-                    results = self._generate_sklearn_learning_curve_data(
-                        X_train, y_train, X_val, y_val, model_params, results, fold, train_sizes
-                    )
-
-            return results
-
-        except Exception as e:
-            raise ModelTestingError(
-                "Error generating learning curve data",
-                error_message=str(e),
-                model_name=results.model_name,
-                fold=fold
-            )
-
-    def _generate_XGB_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params, 
-                                        results, fold: int, train_sizes: np.ndarray) -> ModelTrainingResults:
+    def _generate_XGB_learning_curve_data(self, X_train, y_train, X_val, y_val, fold : int, model_params, 
+                                        results) -> ModelTrainingResults:
         """Generate learning curve data for XGBoost with memory optimization."""
+
+        structured_log(logger, logging.INFO, 
+                    "Starting XGBoost learning curve generation",
+                    fold=fold)
+
+        # Calculate absolute sizes instead of percentages
+
+        min_samples = max(int(len(X_train) * self.config.learning_curve.min_size), 
+                        self.config.learning_curve.min_absolute_samples)
+        max_samples = min(int(len(X_train) * self.config.learning_curve.max_size),
+                        len(X_train))
+        train_sizes = np.linspace(min_samples, max_samples,
+                                self.config.learning_curve.n_points, dtype=int)
+
+        # Set random seed for reproducibility
+        np.random.seed(self.config.random_state + fold)
         
         # Create validation DMatrix once
         dval = xgb.DMatrix(
@@ -868,7 +883,7 @@ class ModelTester(AbstractModelTester):
                     num_boost_round=self.config.XGB.num_boost_round,
                     early_stopping_rounds=early_stopping,
                     evals=[(dtrain_subset, 'train'), (dval, 'eval')],
-                    verbose_eval=False
+                    verbose_eval=self.config.XGB.verbose_eval
                 )
 
                 train_pred = subset_model.predict(dtrain_subset)
@@ -895,10 +910,26 @@ class ModelTester(AbstractModelTester):
 
         return results
 
-    def _generate_LGBM_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params,
-                                        results, fold: int, train_sizes: np.ndarray) -> ModelTrainingResults:
+    def _generate_LGBM_learning_curve_data(self, X_train, y_train, X_val, y_val, fold : int, model_params,
+                                        results) -> ModelTrainingResults:
         """Generate learning curve data for LightGBM with memory optimization."""
+
+        structured_log(logger, logging.INFO, 
+                    "Starting LightGBM learning curve generation",
+                    fold=fold)
         
+        # Calculate absolute sizes instead of percentages
+        min_samples = max(int(len(X_train) * self.config.learning_curve.min_size), 
+                        self.config.learning_curve.min_absolute_samples)
+
+        max_samples = min(int(len(X_train) * self.config.learning_curve.max_size),
+                        len(X_train))
+        train_sizes = np.linspace(min_samples, max_samples,
+                                self.config.learning_curve.n_points, dtype=int)
+
+        # Set random seed for reproducibility
+        np.random.seed(self.config.random_state + fold)
+
         # Create validation dataset once
         val_data = lgb.Dataset(
             X_val, 
@@ -938,7 +969,7 @@ class ModelTester(AbstractModelTester):
                     valid_names=['train', 'valid'],
                     callbacks=[
                         lgb.early_stopping(early_stopping),
-                        lgb.log_evaluation(False)
+                        lgb.log_evaluation(self.config.LGBM.log_evaluation)
                     ]
                 )
 
@@ -965,9 +996,25 @@ class ModelTester(AbstractModelTester):
 
         return results
 
-    def _generate_sklearn_learning_curve_data(self, X_train, y_train, X_val, y_val, model_params,
-                                            results, fold: int, train_sizes: np.ndarray) -> ModelTrainingResults:
+    def _generate_sklearn_learning_curve_data(self, X_train, y_train, X_val, y_val, fold : int, model_params,
+                                            results) -> ModelTrainingResults:
         """Generate learning curve data for sklearn models with consistent handling."""
+
+        structured_log(logger, logging.INFO, 
+                    "Starting sklearn learning curve generation",
+                    fold=fold)
+
+        # Calculate absolute sizes instead of percentages
+        min_samples = max(int(len(X_train) * self.config.learning_curve.min_size), 
+                        self.config.learning_curve.min_absolute_samples)
+
+        max_samples = min(int(len(X_train) * self.config.learning_curve.max_size),
+                        len(X_train))
+        train_sizes = np.linspace(min_samples, max_samples,
+                                self.config.learning_curve.n_points, dtype=int)
+
+        # Set random seed for reproducibility
+        np.random.seed(self.config.random_state + fold)
         
         # Get the appropriate model class once
         if hasattr(tree, results.model_name):

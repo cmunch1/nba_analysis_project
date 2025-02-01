@@ -157,69 +157,67 @@ class ModelTrainingResults:
         # Preprocessing results
         self.preprocessing_results: Optional[PreprocessingResults] = None
 
-        self.learning_curve_data: Dict[str, Dict[int, List]] = {
-            'train_sizes': {},  # fold_num -> list of sizes
-            'train_scores': {}, # fold_num -> list of scores
-            'val_scores': {},   # fold_num -> list of scores
-            'aggregated': {     # Final aggregated results
-                'train_sizes': [],
-                'train_scores_mean': [],
-                'val_scores_mean': [],
-                'train_scores_std': [],
-                'val_scores_std': []
-            }
+        self.learning_curve_data: Dict = {
+            'raw_data': [],  # List of (train_size, train_score, val_score, fold) tuples
+            'aggregated': None  # Will be populated after aggregation
         }
 
     def add_learning_curve_point(self, 
-                            train_size: int,
-                            train_score: float,
-                            val_score: float,
-                            fold: int) -> None:
-        """Add a learning curve point for a specific fold."""
-        # Initialize lists for this fold if needed
-        for key in ['train_sizes', 'train_scores', 'val_scores']:
-            if fold not in self.learning_curve_data[key]:
-                self.learning_curve_data[key][fold] = []
+                               train_size: int,
+                               train_score: float,
+                               val_score: float,
+                               fold: int) -> None:
+        """
+        Add a learning curve data point.
         
-        # Add the data points
-        self.learning_curve_data['train_sizes'][fold].append(train_size)
-        self.learning_curve_data['train_scores'][fold].append(train_score)
-        self.learning_curve_data['val_scores'][fold].append(val_score)
+        Args:
+            train_size: Number of training examples
+            train_score: Training score for this point
+            val_score: Validation score for this point
+            fold: Cross-validation fold number
+        """
+        self.learning_curve_data['raw_data'].append(
+            (train_size, train_score, val_score, fold)
+        )
 
     def aggregate_learning_curves(self) -> None:
-        """Aggregate learning curves across all folds."""
-        if not self.learning_curve_data['train_sizes']:
+        """
+        Aggregate learning curves across all folds.
+        Computes means and standard deviations for both training and validation scores.
+        """
+        if not self.learning_curve_data['raw_data']:
             return
 
-        # Get unique train sizes (should be same across folds)
-        train_sizes = np.array(list(self.learning_curve_data['train_sizes'].values())[0])
+        # Convert to numpy array for easier manipulation
+        data = np.array(self.learning_curve_data['raw_data'])
         
-        # Collect scores for each size across folds
-        train_scores = []
-        val_scores = []
+        # Get unique train sizes and folds
+        unique_sizes = np.unique(data[:, 0])  # First column is train_size
+        unique_folds = np.unique(data[:, 3])  # Fourth column is fold
         
-        for size_idx in range(len(train_sizes)):
-            fold_train_scores = []
-            fold_val_scores = []
-            
-            for fold in self.learning_curve_data['train_scores'].keys():
-                fold_train_scores.append(self.learning_curve_data['train_scores'][fold][size_idx])
-                fold_val_scores.append(self.learning_curve_data['val_scores'][fold][size_idx])
-            
-            train_scores.append(fold_train_scores)
-            val_scores.append(fold_val_scores)
+        # Initialize arrays for scores
+        train_scores = np.zeros((len(unique_sizes), len(unique_folds)))
+        val_scores = np.zeros((len(unique_sizes), len(unique_folds)))
         
-        # Convert to numpy arrays for easier computation
-        train_scores = np.array(train_scores)
-        val_scores = np.array(val_scores)
+        # Populate score arrays
+        for i, size in enumerate(unique_sizes):
+            size_mask = data[:, 0] == size
+            for j, fold in enumerate(unique_folds):
+                fold_mask = data[:, 3] == fold
+                mask = size_mask & fold_mask
+                
+                if np.any(mask):
+                    train_scores[i, j] = data[mask, 1][0]  # Second column is train_score
+                    val_scores[i, j] = data[mask, 2][0]    # Third column is val_score
         
-        # Calculate means and stds
-        self.learning_curve_data['aggregated']['train_sizes'] = train_sizes
-        self.learning_curve_data['aggregated']['train_scores_mean'] = np.mean(train_scores, axis=1)
-        self.learning_curve_data['aggregated']['val_scores_mean'] = np.mean(val_scores, axis=1)
-        self.learning_curve_data['aggregated']['train_scores_std'] = np.std(train_scores, axis=1)
-        self.learning_curve_data['aggregated']['val_scores_std'] = np.std(val_scores, axis=1)
-
+        # Calculate means and standard deviations
+        self.learning_curve_data['aggregated'] = {
+            'train_sizes': unique_sizes,
+            'train_scores_mean': np.mean(train_scores, axis=1),
+            'train_scores_std': np.std(train_scores, axis=1),
+            'val_scores_mean': np.mean(val_scores, axis=1),
+            'val_scores_std': np.std(val_scores, axis=1)
+        }
 
     def update_feature_data(self, X: pd.DataFrame, y: pd.Series) -> None:
         """Update feature and target data"""

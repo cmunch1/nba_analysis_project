@@ -104,47 +104,7 @@ class MLflowChartLogger:
                                      "Failed to create SHAP summary plot",
                                      error=str(e))
 
-                # SHAP Force Plot
-                if (hasattr(self.config.chart_options, 'shap_force') and 
-                    getattr(self.config.chart_options.shap_force, 'enabled', False)):
-                    try:
-                        if chart_data["model"] is not None and chart_data["X"] is not None:
-                            # Limit features if specified
-                            n_features = self.config.chart_options.shap_force.n_features
-                            if n_features:
-                                X_subset = chart_data["X"].iloc[:, :n_features]
-                                shap_values = results.shap_values[:, :n_features] if results.shap_values is not None else None
-                            else:
-                                X_subset = chart_data["X"]
-                                shap_values = results.shap_values
-
-                            fig = self.chart_functions.create_shap_force_plot(
-                                model=chart_data["model"],
-                                X=X_subset,
-                                shap_values=shap_values
-                            )
-                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_force", temp_dir)
-                    except Exception as e:
-                        structured_log(logger, logging.WARNING, 
-                                     "Failed to create SHAP force plot",
-                                     error=str(e))
-
-                # SHAP Dependence Plot
-                if (hasattr(self.config.chart_options, 'shap_dependence') and 
-                    getattr(self.config.chart_options.shap_dependence, 'enabled', False)):
-                    try:
-                        if chart_data["X"] is not None and results.shap_values is not None:
-                            fig = self.chart_functions.create_shap_dependence_plot(
-                                shap_values=results.shap_values,
-                                features=chart_data["X"],
-                                feature_name=chart_data["feature_names"][0]  # Using first feature as example
-                            )
-                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_dependence", temp_dir)
-                    except Exception as e:
-                        structured_log(logger, logging.WARNING, 
-                                     "Failed to create SHAP dependence plot",
-                                     error=str(e))
-
+ 
                 # Learning Curve
                 if getattr(self.config.chart_options, 'learning_curve', False):
                     try:
@@ -154,31 +114,6 @@ class MLflowChartLogger:
                         structured_log(logger, logging.WARNING, 
                                      "Failed to create learning curve",
                                      error=str(e))
-
-                # SHAP Waterfall Plot
-                if (hasattr(self.config.chart_options, 'shap_waterfall') and 
-                    getattr(self.config.chart_options.shap_waterfall, 'enabled', False)):
-                    try:
-                        if chart_data["model"] is not None and chart_data["X"] is not None:
-                            # Limit features if specified
-                            n_features = self.config.chart_options.shap_waterfall.n_features
-                            if n_features:
-                                X_subset = chart_data["X"].iloc[:, :n_features]
-                                shap_values = results.shap_values[:, :n_features] if results.shap_values is not None else None
-                            else:
-                                X_subset = chart_data["X"]
-                                shap_values = results.shap_values
-
-                            fig = self.chart_functions.create_shap_waterfall_plot(
-                                model=chart_data["model"],
-                                X=X_subset,
-                                shap_values=shap_values
-                            )
-                            self._save_and_log_figure(fig, f"{chart_data['prefix']}shap_waterfall", temp_dir)
-                    except Exception as e:
-                        structured_log(logger, logging.WARNING, 
-                                    "Failed to create SHAP waterfall plot",
-                                    error=str(e))
 
                 # SHAP Beeswarm Plot
                 if (hasattr(self.config.chart_options, 'shap_beeswarm') and 

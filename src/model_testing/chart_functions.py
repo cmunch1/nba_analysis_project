@@ -266,62 +266,54 @@ class ChartFunctions:
 
 
     @log_performance
-    def create_learning_curve(self, results: ModelTrainingResults) -> plt.Figure:
-        """
-        Create a learning curve from stored training results.
-        
-        Args:
-            results (ModelTrainingResults): Results object containing learning curve data
-            
-        Returns:
-            plt.Figure: Learning curve visualization
-        """
+    def create_learning_curve(self, results: ModelTrainingResults) -> Optional[plt.Figure]:
         structured_log(logger, logging.INFO, "Creating learning curve from results")
         try:
-            if not hasattr(results, 'learning_curve_data'):
+            # Check if we have raw data
+            if not results.learning_curve_data['raw_data']:
                 structured_log(logger, logging.WARNING, "No learning curve data available")
                 return None
+                
+            # Ensure data is aggregated
+            results.aggregate_learning_curves()
             
-            aggregated_data = results.learning_curve_data.get('aggregated')
-            if not aggregated_data:
+            # Get aggregated data
+            aggregated_data = results.learning_curve_data['aggregated']
+            if aggregated_data is None:
                 structured_log(logger, logging.WARNING, "No aggregated learning curve data")
                 return None
-            
             # Log what data is available
             structured_log(logger, logging.INFO, 
-                          "Learning curve data keys available",
-                          keys=list(aggregated_data.keys()))
-                          
+                        "Learning curve data keys available",
+                        keys=list(aggregated_data.keys()))
+                        
+            # Create the plot
             fig, ax = plt.subplots(figsize=(10, 8))
             
-            # Plot mean scores
-            train_sizes = aggregated_data['train_sizes']
-            train_scores_mean = aggregated_data['train_scores_mean']
-            val_scores_mean = aggregated_data['val_scores_mean']
+            # Convert to numpy arrays for operations
+            train_sizes = np.array(aggregated_data['train_sizes'])
+            train_scores_mean = np.array(aggregated_data['train_scores_mean'])
+            val_scores_mean = np.array(aggregated_data['val_scores_mean'])
+            train_scores_std = np.array(aggregated_data['train_scores_std'])
+            val_scores_std = np.array(aggregated_data['val_scores_std'])
             
-            # Plot training scores
-            ax.plot(train_sizes, train_scores_mean, 'o-', label='Training score',
-                    color='blue')
-                
-            # Only add error bands if std data exists
-            if 'train_scores_std' in aggregated_data and 'val_scores_std' in aggregated_data:
-                train_scores_std = aggregated_data['train_scores_std']
-                val_scores_std = aggregated_data['val_scores_std']
-                
-                ax.fill_between(train_sizes, 
-                               train_scores_mean - train_scores_std,
-                               train_scores_mean + train_scores_std, 
-                               alpha=0.1, color='blue')
-                               
-                ax.fill_between(train_sizes, 
-                               val_scores_mean - val_scores_std,
-                               val_scores_mean + val_scores_std, 
-                               alpha=0.1, color='orange')
-
-            # Plot validation scores
-            ax.plot(train_sizes, val_scores_mean, 'o-', label='Cross-validation score',
-                    color='orange')
+            # Plot training scores with error bands
+            ax.plot(train_sizes, train_scores_mean, 'o-', 
+                label='Training score', color='blue')
+            ax.fill_between(train_sizes, 
+                        train_scores_mean - train_scores_std,
+                        train_scores_mean + train_scores_std, 
+                        alpha=0.1, color='blue')
             
+            # Plot validation scores with error bands
+            ax.plot(train_sizes, val_scores_mean, 'o-', 
+                label='Cross-validation score', color='orange')
+            ax.fill_between(train_sizes, 
+                        val_scores_mean - val_scores_std,
+                        val_scores_mean + val_scores_std, 
+                        alpha=0.1, color='orange')
+            
+            # Customize the plot
             ax.set_xlabel('Training examples')
             ax.set_ylabel('Score')
             ax.set_title(f'Learning Curve ({results.model_name})')
@@ -334,6 +326,7 @@ class ChartFunctions:
         except Exception as e:
             raise ChartCreationError("Error creating learning curve",
                                 error_message=str(e))
+
     
     @log_performance
     def create_partial_dependence_plot(self, model: Any, X: pd.DataFrame, feature_names: List[str], target_names: List[str] = None) -> plt.Figure:
@@ -544,61 +537,6 @@ class ChartOrchestrator:
         self.config = config
         structured_log(logger, logging.INFO, "ChartOrchestrator initialized")
 
-    @log_performance
-    def create_charts_from_results(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
-        """
-        Create all available charts from a ModelTrainingResults object.
-        
-        Args:
-            results: ModelTrainingResults object containing model evaluation data
-            
-        Returns:
-            Dict[str, plt.Figure]: Dictionary mapping chart names to matplotlib figures
-        """
-        structured_log(logger, logging.INFO, "Creating charts from ModelTrainingResults")
-        charts = {}
-        
-        try:
-            # Feature Importance Chart
-            if results.feature_importance_scores is not None:
-                charts['feature_importance'] = self.create_feature_importance_chart(
-                    feature_importance=results.feature_importance_scores,
-                    feature_names=results.feature_names
-                )
-
-            # Confusion Matrix
-            if results.binary_predictions is not None:
-                charts['confusion_matrix'] = self.create_confusion_matrix(
-                    y_true=results.target_data,
-                    y_pred=results.binary_predictions
-                )
-
-            # ROC Curve
-            if results.probability_predictions is not None:
-                charts['roc_curve'] = self.create_roc_curve(
-                    y_true=results.target_data,
-                    y_score=results.probability_predictions
-                )
-
-            # SHAP Summary Plot
-            if results.model is not None and results.feature_data is not None:
-                charts['shap_summary'] = self.create_shap_summary_plot(
-                    model=results.model,
-                    X=results.feature_data
-                )
-
-            # Learning Curve
-            if all(x is not None for x in [results.model, results.feature_data, results.target_data]):
-                charts['learning_curve'] = self.create_learning_curve(
-                    results=results
-                )
-
-            structured_log(logger, logging.INFO, f"Created {len(charts)} charts successfully")
-            return charts
-
-        except Exception as e:
-            raise ChartCreationError("Error creating charts from results",
-                                   error_message=str(e))
 
     @log_performance
     def generate_charts(
@@ -685,44 +623,7 @@ class ChartOrchestrator:
                                  "Failed to create SHAP summary plot",
                                  error=str(e))
 
-            # SHAP Force Plot
-            chart_config = self.config.chart_options.shap_force_plot
-            if isinstance(chart_config, dict) and chart_config.get('enabled'):
-                try:
-                    if chart_data["model"] is not None and chart_data["X"] is not None:
-                        # Limit features if specified
-                        n_features = chart_config.get('n_features')
-                        if n_features:
-                            X_subset = chart_data["X"].iloc[:, :n_features]
-                            shap_values = results.shap_values[:, :n_features] if results.shap_values is not None else None
-                        else:
-                            X_subset = chart_data["X"]
-                            shap_values = results.shap_values
-
-                        charts['shap_force'] = self.chart_functions.create_shap_force_plot(
-                            model=chart_data["model"],
-                            X=X_subset,
-                            shap_values=shap_values
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create SHAP force plot",
-                                 error=str(e))
-
-            # SHAP Dependence Plot
-            if self.config.chart_options.shap_dependence_plot:
-                try:
-                    if chart_data["X"] is not None and results.shap_values is not None:
-                        charts['shap_dependence'] = self.chart_functions.create_shap_dependence_plot(
-                            shap_values=results.shap_values,
-                            features=chart_data["X"],
-                            feature_name=chart_data["feature_names"][0]  # Using first feature as example
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create SHAP dependence plot",
-                                 error=str(e))
-
+ 
             # Learning Curve
             if self.config.chart_options.learning_curve:
                 try:
@@ -734,29 +635,7 @@ class ChartOrchestrator:
                                  "Failed to create learning curve",
                                  error=str(e))
 
-            # SHAP Waterfall Plot
-            chart_config = self.config.chart_options.shap_waterfall_plot
-            if isinstance(chart_config, dict) and chart_config.get('enabled'):
-                try:
-                    if chart_data["model"] is not None and chart_data["X"] is not None:
-                        # Limit features if specified
-                        n_features = chart_config.get('n_features')
-                        if n_features:
-                            X_subset = chart_data["X"].iloc[:, :n_features]
-                            shap_values = results.shap_values[:, :n_features] if results.shap_values is not None else None
-                        else:
-                            X_subset = chart_data["X"]
-                            shap_values = results.shap_values
 
-                        charts['shap_waterfall'] = self.chart_functions.create_shap_waterfall_plot(
-                            model=chart_data["model"],
-                            X=X_subset,
-                            shap_values=shap_values
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create SHAP waterfall plot",
-                                 error=str(e))
 
             # SHAP Beeswarm Plot
             chart_config = self.config.chart_options.shap_beeswarm_plot
