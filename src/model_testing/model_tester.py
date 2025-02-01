@@ -131,7 +131,6 @@ class ModelTester(AbstractModelTester):
                     ]
                     
                     structured_log(logger, logging.INFO, "Preprocessing results",
-                                preprocessing_summary=preprocessing_results.summarize(),
                                 steps_overview=steps_summary)
 
             X = self._reduce_memory_footprint(X)
@@ -144,24 +143,21 @@ class ModelTester(AbstractModelTester):
             raise ModelTestingError("Error in data preparation",
                                 error_message=str(e),
                                 dataframe_shape=df.shape)
-    @log_performance
+        
     def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict, full_results: ModelTrainingResults) -> ModelTrainingResults:
         """
-        Perform Out-of-Fold (OOF) cross-validation with tracking of each fold.
-
-        Note that TimeSeriesSplit can cause NaNs in the predictions, which have to be dealt with 
-        in the calculate_classification_evaluation_metrics method and in the chart_functions.py file.
-        
-
+        Perform Out-of-Fold (OOF) cross-validation with proper handling of TimeSeriesSplit results.
         """
         structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
                     input_shape=X.shape)
         try:
-            full_results.predictions = np.full(len(y), np.nan)  # Initialize with NaN to detect overlaps
-            full_results.shap_values = np.zeros((len(y), X.shape[1]))
-            if self.config.calculate_shap_interactions:
-                full_results.shap_interaction_values = np.zeros((len(y), X.shape[1], X.shape[1]))
-
+            # Initialize predictions and SHAP arrays with NaN
+            full_results.predictions = np.full(len(y), np.nan)
+            if self.config.calculate_shap_values:
+                full_results.shap_values = np.full((len(y), X.shape[1]), np.nan)
+                if self.config.calculate_shap_interactions:
+                    full_results.shap_interaction_values = np.full((len(y), X.shape[1], X.shape[1]), np.nan)
+            
             if self.config.cross_validation_type == "StratifiedKFold":
                 kf = StratifiedKFold(n_splits=self.config.n_splits, shuffle=True, random_state=self.config.random_state)
             elif self.config.cross_validation_type == "TimeSeriesSplit":
@@ -171,171 +167,90 @@ class ModelTester(AbstractModelTester):
 
             feature_importance_accumulator = np.zeros(X.shape[1])
             n_folds_with_importance = 0
-            
-            # Store fold boundaries for time series
-            fold_boundaries = []
-
+            processed_samples = np.zeros(len(y), dtype=bool)
             
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y), 1):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
-                # Log time series specific information
-                if self.config.cross_validation_type == "TimeSeriesSplit":
-                    train_start = X.index[train_idx[0]]
-                    train_end = X.index[train_idx[-1]]
-                    val_start = X.index[val_idx[0]]
-                    val_end = X.index[val_idx[-1]]
-                    
-                    fold_boundaries.append({
-                        'fold': fold,
-                        'train_period': (train_start, train_end),
-                        'val_period': (val_start, val_end)
-                    })
-                    
-                    structured_log(logger, logging.INFO, f"Fold {fold} time periods",
-                                train_period_start=train_start,
-                                train_period_end=train_end,
-                                val_period_start=val_start,
-                                val_period_end=val_end)
-
-                # Check for overlapping validation indices
-                if np.any(~np.isnan(full_results.predictions[val_idx])):
-                    structured_log(logger, logging.WARNING,
-                                f"Fold {fold} - Validation indices overlap with previous folds")
-
-                # Create fold-specific results object
                 fold_results = ModelTrainingResults(X_train.shape)
-                
                 oof_results = self._train_model(
                     X_train, y_train,
                     X_val, y_val,
                     model_name, model_params,
                     fold_results
                 )
-
-                # Copy all relevant parameters from the first fold's results
+                
+                # Copy first fold's configuration
                 if fold == 1:
                     full_results.num_boost_round = oof_results.num_boost_round
                     full_results.early_stopping = oof_results.early_stopping
                     full_results.enable_categorical = oof_results.enable_categorical
                     full_results.categorical_features = oof_results.categorical_features
-                    full_results.model_name = oof_results.model_name
-            
+                    full_results.model = oof_results.model
+                    full_results.feature_names = oof_results.feature_names
 
-                full_results.model = oof_results.model
                 full_results.predictions[val_idx] = oof_results.predictions
-                
-                if oof_results.shap_values is not None:
-                    if oof_results.shap_values.shape[1] == X.shape[1] + 1:
-                        oof_shap_values = oof_results.shap_values[:, :-1]
-                    else:
-                        oof_shap_values = oof_results.shap_values
-                    full_results.shap_values[val_idx] = oof_shap_values
+                processed_samples[val_idx] = True
 
-                if oof_results.shap_interaction_values is not None and self.config.calculate_shap_interactions:
-                    if oof_results.shap_interaction_values.shape[1] == X.shape[1] + 1:
-                        oof_interaction_values = oof_results.shap_interaction_values[:, :-1, :-1]
-                    else:
-                        oof_interaction_values = oof_results.shap_interaction_values
-                        
-                    if oof_interaction_values.shape[1:] == full_results.shap_interaction_values.shape[1:]:
-                        full_results.shap_interaction_values[val_idx] = oof_interaction_values
-                    else:
-                        structured_log(logger, logging.WARNING, 
-                                    f"SHAP interaction values shape mismatch in fold {fold}")
+                if oof_results.shap_values is not None and self.config.calculate_shap_values:
+                    full_results.shap_values[val_idx] = oof_results.shap_values
+
+                    if (oof_results.shap_interaction_values is not None and 
+                        self.config.calculate_shap_interactions):
+                        full_results.shap_interaction_values[val_idx] = (
+                            oof_results.shap_interaction_values
+                        )
 
                 if oof_results.feature_importance_scores is not None:
                     feature_importance_accumulator += oof_results.feature_importance_scores
                     n_folds_with_importance += 1
 
-                full_results.feature_names = oof_results.feature_names
-
-                if oof_results.predictions is not None:
-                    binary_predictions = (oof_results.predictions >= 0.5).astype(int)
-                    fold_accuracy = accuracy_score(y_val, binary_predictions)
-                    fold_auc = roc_auc_score(y_val, oof_results.predictions)
-                    structured_log(logger, logging.INFO, f"Fold {fold} completed",
-                                fold_accuracy=fold_accuracy, fold_auc=fold_auc)
-                    
-                if self.config.generate_learning_curve_data:
-                    full_results = self._generate_learning_curve_data(
-                        X_train, y_train,
-                        X_val, y_val,
-                        model_params,
-                        full_results,
-                        fold
-                    )
+                structured_log(logger, logging.INFO, f"Fold {fold} completed",
+                            samples_processed=np.sum(processed_samples),
+                            total_samples=len(y))
 
             if n_folds_with_importance > 0:
-                full_results.feature_importance_scores = feature_importance_accumulator / n_folds_with_importance
+                full_results.feature_importance_scores = (
+                    feature_importance_accumulator / n_folds_with_importance
+                )
 
-            # Add diagnostics for TimeSeriesSplit
-            if self.config.cross_validation_type == "TimeSeriesSplit":
-                split_diagnostics = self._debug_time_series_split(X, y, self.config.n_splits)
-                structured_log(logger, logging.INFO, "TimeSeriesSplit diagnostics",
-                            unused_samples=split_diagnostics['unused_count'],
-                            unused_percentage=split_diagnostics['unused_percentage'],
-                            multiple_predictions=split_diagnostics['multiple_predictions_count'])
-                
-                # Store diagnostics in results
-                full_results.split_diagnostics = split_diagnostics
-                
-            # Analyze predictions
-            pred_diagnostics = self._analyze_predictions(full_results.predictions, y)
-            structured_log(logger, logging.INFO, "Prediction diagnostics",
-                        **pred_diagnostics)
-                
-            # Handle NaN predictions
-            nan_mask = np.isnan(full_results.predictions)
-            if np.any(nan_mask):
+            # Handle TimeSeriesSplit unprocessed samples
+            if not np.all(processed_samples):
+                unprocessed_count = np.sum(~processed_samples)
                 structured_log(logger, logging.WARNING,
-                            "Some predictions are missing (NaN values present)",
-                            nan_count=np.sum(nan_mask))
+                            "Some samples were not processed in cross-validation",
+                            unprocessed_count=unprocessed_count,
+                            cv_type=self.config.cross_validation_type)
                 
-                # Filter out NaN values for metric calculation
-                valid_indices = ~nan_mask
-                if np.sum(valid_indices) > 0:
-                    y_valid = y[valid_indices]
-                    predictions_valid = full_results.predictions[valid_indices]
+                # Keep only processed samples in the results
+                processed_mask = processed_samples
+                if full_results.feature_data is None:
+                    full_results.feature_data = X
+                    full_results.target_data = y
                     
-                    overall_accuracy = accuracy_score(y_valid, (predictions_valid >= 0.5).astype(int))
-                    overall_auc = roc_auc_score(y_valid, predictions_valid)
-                else:
-                    structured_log(logger, logging.ERROR,
-                                "No valid predictions available for metric calculation")
-                    overall_accuracy = overall_auc = np.nan
-            else:
-                overall_accuracy = accuracy_score(y, (full_results.predictions >= 0.5).astype(int))
-                overall_auc = roc_auc_score(y, full_results.predictions)
-
-            # Store fold boundaries in results for time series
-            if self.config.cross_validation_type == "TimeSeriesSplit":
-                full_results.fold_boundaries = fold_boundaries
-
-            if self.config.generate_learning_curve_data:
-                full_results.aggregate_learning_curves()
+                full_results.feature_data = X[processed_mask]
+                full_results.target_data = y[processed_mask]
+                full_results.predictions = full_results.predictions[processed_mask]
                 
-                # Log the aggregated results
-                structured_log(logger, logging.INFO, "Learning curve aggregation completed",
-                            n_folds=len(full_results.learning_curve_data['train_scores']),
-                            final_train_sizes=full_results.learning_curve_data['aggregated']['train_sizes'].tolist(),
-                            final_train_scores_mean=full_results.learning_curve_data['aggregated']['train_scores_mean'].tolist(),
-                            final_val_scores_mean=full_results.learning_curve_data['aggregated']['val_scores_mean'].tolist())
-            
+                if full_results.shap_values is not None:
+                    structured_log(logger, logging.INFO, "Filtering SHAP values for processed samples")
+                    full_results.shap_values = full_results.shap_values[processed_mask]
+                    if full_results.shap_interaction_values is not None:
+                        full_results.shap_interaction_values = full_results.shap_interaction_values[processed_mask]
 
-
-            structured_log(logger, logging.INFO, "OOF cross-validation completed",
-                        overall_accuracy=overall_accuracy, overall_auc=overall_auc)
+            structured_log(logger, logging.INFO, "Cross-validation completed",
+                        final_feature_shape=full_results.feature_data.shape,
+                        final_shap_shape=full_results.shap_values.shape if full_results.shap_values is not None else None)
 
             return full_results
 
         except Exception as e:
-            raise ModelTestingError("Error in OOF cross-validation",
-                                error_message=str(e),
-                                dataframe_shape=X.shape)
-        
-
+            raise ModelTestingError(
+                "Error in OOF cross-validation",
+                error_message=str(e),
+                dataframe_shape=X.shape
+            )
     
     @log_performance
     def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, 
@@ -364,48 +279,52 @@ class ModelTester(AbstractModelTester):
     def calculate_classification_evaluation_metrics(self, y_true, y_prob, metrics: ClassificationMetrics) -> ClassificationMetrics:
         """Calculate classification metrics using probability scores and optimal threshold."""
         
-        # Filter out NaN values - TimeSeriesSplit can cause this
-        mask = ~np.isnan(y_prob)
-        y_true_valid = y_true[mask]
-        y_prob_valid = y_prob[mask]
+        structured_log(logger, logging.INFO, "Calculating classification metrics",
+                    n_samples=len(y_true))
         
-        if len(y_true_valid) == 0:
-            raise ValueError("No valid predictions available after filtering NaN values")
-        
-        structured_log(logger, logging.INFO, "Calculating metrics after filtering NaNs",
-                      original_samples=len(y_true),
-                      valid_samples=len(y_true_valid),
-                      nan_percentage=100 * (1 - len(y_true_valid)/len(y_true)))
-        
-        # Find optimal threshold using ROC curve
-        fpr, tpr, thresholds = roc_curve(y_true_valid, y_prob_valid)
-        optimal_idx = np.argmax(tpr - fpr)
-        optimal_threshold = thresholds[optimal_idx]
-        
-        # Convert probabilities to predictions using optimal threshold
-        y_pred = (y_prob_valid >= optimal_threshold).astype(int)
-        
-        # Calculate metrics
-        metrics.accuracy = accuracy_score(y_true_valid, y_pred)
-        metrics.precision = precision_score(y_true_valid, y_pred)
-        metrics.recall = recall_score(y_true_valid, y_pred)
-        metrics.f1 = f1_score(y_true_valid, y_pred)
-        metrics.auc = roc_auc_score(y_true_valid, y_prob_valid)
-        metrics.optimal_threshold = float(optimal_threshold)
-        
-        # Add information about NaN handling
-        metrics.valid_samples = len(y_true_valid)
-        metrics.total_samples = len(y_true)
-        metrics.nan_percentage = 100 * (1 - len(y_true_valid)/len(y_true))
-        
-        structured_log(logger, logging.INFO, "Classification metrics calculated",
-                      optimal_threshold=float(optimal_threshold),
-                      accuracy=float(metrics.accuracy),
-                      auc=float(metrics.auc),
-                      nan_percentage=metrics.nan_percentage)
-        
-        return metrics
+        try:
 
+            if np.any(np.isnan(y_prob)):
+                structured_log(logger, logging.WARNING, 
+                            "Unexpected NaN values found in predictions after OOF filtering",
+                            nan_count=np.sum(np.isnan(y_prob)))
+                raise ValueError("Unexpected NaN values in predictions after OOF filtering")
+            
+            # Find optimal threshold using ROC curve
+            fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+            optimal_idx = np.argmax(tpr - fpr)
+            optimal_threshold = thresholds[optimal_idx]
+            
+            # Convert probabilities to predictions using optimal threshold
+            y_pred = (y_prob >= optimal_threshold).astype(int)
+            
+            # Calculate metrics
+            metrics.accuracy = accuracy_score(y_true, y_pred)
+            metrics.precision = precision_score(y_true, y_pred)
+            metrics.recall = recall_score(y_true, y_pred)
+            metrics.f1 = f1_score(y_true, y_pred)
+            metrics.auc = roc_auc_score(y_true, y_prob)
+            metrics.optimal_threshold = float(optimal_threshold)
+            
+            # Add information about samples
+            metrics.valid_samples = len(y_true)
+            metrics.total_samples = len(y_true)  # These are now equal since filtering happened earlier
+            metrics.nan_percentage = 0  # No NaNs should be present
+            
+            structured_log(logger, logging.INFO, "Classification metrics calculated",
+                        optimal_threshold=float(optimal_threshold),
+                        accuracy=float(metrics.accuracy),
+                        auc=float(metrics.auc),
+                        n_samples=len(y_true))
+            
+            return metrics
+            
+        except Exception as e:
+            raise ModelTestingError("Error calculating classification metrics",
+                                error_message=str(e),
+                                n_samples=len(y_true) if y_true is not None else None,
+                                n_predictions=len(y_prob) if y_prob is not None else None)
+    
     @log_performance
     def _train_model(self, X: pd.DataFrame, y: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, 
                      model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
@@ -539,10 +458,10 @@ class ModelTester(AbstractModelTester):
         
     @log_performance
     def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, 
-                       model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """Train an XGBoost model with the enhanced ModelTrainingResults."""
+                    model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
+        """Train an XGBoost model with proper SHAP value handling."""
         structured_log(logger, logging.INFO, "Starting XGBoost training", 
-                      input_shape=X_train.shape)
+                    input_shape=X_train.shape)
         
         try:
             # Create DMatrix objects
@@ -578,16 +497,17 @@ class ModelTester(AbstractModelTester):
             results.categorical_features = self.config.categorical_features
 
             structured_log(logger, logging.INFO, "Generated predictions", 
-                predictions_shape=results.predictions.shape,
-                predictions_mean=float(np.mean(results.predictions)))
+                        predictions_shape=results.predictions.shape,
+                        predictions_mean=float(np.mean(results.predictions)))
 
-            # Calculate feature importance
+            # Calculate feature importance and store feature names
             try:
                 importance_dict = model.get_score(importance_type='gain')
                 results.feature_importance_scores = np.array([
                     importance_dict.get(feature, 0) 
-                    for feature in X_train.columns
+                    for feature in X_val.columns
                 ])
+                results.feature_names = X_val.columns.tolist()
                 
                 structured_log(logger, logging.INFO, "Calculated feature importance",
                             num_features_with_importance=len(importance_dict))
@@ -595,49 +515,60 @@ class ModelTester(AbstractModelTester):
             except Exception as e:
                 structured_log(logger, logging.WARNING, "Failed to calculate feature importance",
                             error=str(e))
-                results.feature_importance_scores = np.zeros(X_train.shape[1])
+                results.feature_importance_scores = np.zeros(X_val.shape[1])
 
             # Calculate SHAP values if configured
-            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+            if self.config.calculate_shap_values:
                 try:
-                    results.shap_values = model.predict(dval, pred_contribs=True)
-                    structured_log(logger, logging.INFO, "Calculated SHAP values",
-                                shap_values_shape=results.shap_values.shape)
+                    # Calculate SHAP values
+                    shap_values = model.predict(dval, pred_contribs=True)
                     
+                    structured_log(logger, logging.INFO, "SHAP value details",
+                                shap_values_shape=shap_values.shape,
+                                shap_values_nulls=np.sum(np.isnan(shap_values)),
+                                X_val_shape=X_val.shape)
+                    
+                    # Remove the bias term (last column) from SHAP values
+                    if shap_values.shape[1] == X_val.shape[1] + 1:
+                        structured_log(logger, logging.INFO, 
+                                    "Removing bias term from SHAP values",
+                                    original_shape=shap_values.shape)
+                        shap_values = shap_values[:, :-1]
+                        structured_log(logger, logging.INFO, 
+                                    "SHAP values after bias removal",
+                                    new_shape=shap_values.shape)
+                    
+                    # Store feature data and SHAP values
+                    results.feature_data = X_val
+                    results.target_data = y_val
+                    results.shap_values = shap_values
+                    
+                    # Calculate interactions if configured
                     if self.config.calculate_shap_interactions:
                         n_features = X_val.shape[1]
                         estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
                         
                         if estimated_memory <= self.config.max_shap_interaction_memory_gb:
-                            results.shap_interaction_values = model.predict(dval, pred_interactions=True)
-                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values")
-                            
+                            interaction_values = model.predict(dval, pred_interactions=True)
+                            # Remove bias term from interaction values if present
+                            if interaction_values.shape[1] == X_val.shape[1] + 1:
+                                interaction_values = interaction_values[:, :-1, :-1]
+                            results.shap_interaction_values = interaction_values
+                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values",
+                                        interaction_shape=interaction_values.shape)
+                                
                 except Exception as e:
-                    structured_log(logger, logging.WARNING, "Failed to calculate SHAP values",
-                                error=str(e))
-            
-            # Verify predictions exist and are valid
-            if results.predictions is None:
-                raise ModelTestingError("XGBoost model.predict returned None")
-            
-            if len(results.predictions) != len(y_val):
-                raise ModelTestingError(
-                    "Prediction length mismatch",
-                    expected_length=len(y_val),
-                    actual_length=len(results.predictions)
-                )
-            
+                    structured_log(logger, logging.ERROR, "Failed to calculate SHAP values",
+                                error=str(e),
+                                error_type=type(e).__name__)
+                    raise
 
-
-            # Generate learning curve data if configured
-            if self.config.generate_learning_curve_data:
-                results = self._generate_learning_curve_data(
-                    X_train, y_train,
-                    X_val, y_val,
-                    model_params,
-                    results,
-                    fold=1  # Default to fold 1 for non-CV training
-                )
+            # Final validation of shapes
+            if results.shap_values is not None:
+                structured_log(logger, logging.INFO, "Final shape validation",
+                            feature_data_shape=results.feature_data.shape,
+                            shap_values_shape=results.shap_values.shape,
+                            equal_shapes=results.feature_data.shape[1] == results.shap_values.shape[1])
 
             return results
 
@@ -646,8 +577,8 @@ class ModelTester(AbstractModelTester):
                 "Error in XGBoost model training",
                 error_message=str(e),
                 dataframe_shape=X_train.shape
-            )
-        
+            )   
+         
     @log_performance
     def _train_LGBM(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """
@@ -702,7 +633,7 @@ class ModelTester(AbstractModelTester):
                 results.feature_importance_scores = np.zeros(X_train.shape[1])
 
             # Calculate SHAP values if configured
-            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+            if self.config.calculate_shap_values:
                 try:
                     results.shap_values = model.predict(X_val, pred_contrib=True)
                     structured_log(logger, logging.INFO, "Calculated SHAP values",

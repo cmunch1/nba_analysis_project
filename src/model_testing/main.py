@@ -182,7 +182,7 @@ def process_model_evaluation(
     training_results.update_feature_data(eval_data, eval_y)
     
     # Calculate and update metrics
-    metrics = model_tester.calculate_classification_evaluation_metrics(eval_y, training_results.predictions, metrics)
+    metrics = model_tester.calculate_classification_evaluation_metrics(training_results.target_data, training_results.predictions, metrics)
     training_results.metrics = metrics
     
     # Update predictions with optimal threshold from metrics
