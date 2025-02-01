@@ -130,10 +130,7 @@ class ModularPreprocessor:
                         n_features=len(feature_names))
             
             preprocessing_results.final_shape = transformed_df.shape
-            
-            structured_log(logger, logging.INFO, "Preprocessing results",
-                          results=preprocessing_results.to_dict())
-            
+                       
             return transformed_df, preprocessing_results
             
         except Exception as e:

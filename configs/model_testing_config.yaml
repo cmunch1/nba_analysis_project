@@ -78,9 +78,6 @@ LGBM:
   early_stopping: 100
   log_evaluation: 100
 
-# SHAP settings
-max_shap_interaction_memory_gb: 256.0
-calculate_shap_interactions: false
 
 # cross validation type
 cross_validation_type: TimeSeriesSplit
@@ -90,23 +87,40 @@ cross_validation_type: TimeSeriesSplit
 n_splits: 5
 
 # learning curve settings
-generate_learning_curve_data: true # this will slow down the model training process
+generate_learning_curve_data: false # this will slow down the model training process - particularly for cross validation
 learning_curve:
   min_size: 0.1
   max_size: 1.0
   n_points: 10
   min_absolute_samples: 100
 
+# SHAP settings
+calculate_shap_values: true
+max_shap_interaction_memory_gb: 256.0
+calculate_shap_interactions: false
+
 
 # chart options
 chart_options:
   confusion_matrix: true
   roc_curve: true
-  feature_importance_chart: true
-  shap_summary_plot: true
-  shap_force_plot: true
-  shap_dependence_plot: false
-  shap_waterfall_plot: true
-  shap_beeswarm_plot: true
-  learning_curve: true
+  feature_importance:
+    enabled: true
+    n_features: 25
+  shap_summary:
+    enabled: true
+    n_features: 25
+  shap_force:
+    enabled: true
+    n_features: 15
+  shap_dependence:
+    enabled: true
+    n_features: 15
+  shap_waterfall:
+    enabled: true
+    n_features: 25
+  shap_beeswarm:
+    enabled: true
+    n_features: 25
+  learning_curve: false
 
