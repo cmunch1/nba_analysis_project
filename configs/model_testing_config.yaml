@@ -80,8 +80,9 @@ LGBM:
 
 
 # cross validation type
-#cross_validation_type: TimeSeriesSplit
-cross_validation_type: StratifiedKFold
+cross_validation_type: TimeSeriesSplit
+#cross_validation_type: StratifiedKFold
+
 
 # number of cross validation splits
 n_splits: 5

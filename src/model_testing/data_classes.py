@@ -184,8 +184,8 @@ class ModelTrainingResults:
         self.categorical_features: List[str] = []
         self.metrics: Optional[ClassificationMetrics] = None
         
-        # Data fields
-        self.feature_data: Optional[pd.DataFrame] = None
+        # Data fields - Initialize with empty DataFrame of correct shape
+        self.feature_data: Optional[pd.DataFrame] = pd.DataFrame(np.zeros(X_shape))  # Initialize with zeros
         self.target_data: Optional[pd.Series] = None
         self.binary_predictions: Optional[NDArray[np.int_]] = None
         self.probability_predictions: Optional[NDArray[np.float_]] = None
@@ -193,13 +193,12 @@ class ModelTrainingResults:
         # Evaluation context
         self.is_validation: bool = False
         self.evaluation_type: str = ""
-
+        
         # Preprocessing results
         self.preprocessing_results: Optional[PreprocessingResults] = None
-
+        
         self.learning_curve_data = LearningCurveData()
-
-        self.n_folds = 0  # Add this field
+        self.n_folds = 0
 
     def add_learning_curve_point(self, train_size: int, train_score: float, val_score: float, 
                                fold: int, iteration: Optional[int] = None, metric_name: Optional[str] = None):
