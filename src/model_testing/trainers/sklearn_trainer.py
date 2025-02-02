@@ -11,11 +11,13 @@ from ...config.config import AbstractConfig
 logger = logging.getLogger(__name__)
 
 class SKLearnTrainer(BaseTrainer):
-    def __init__(self, config: AbstractConfig):
+    def __init__(self, config: AbstractConfig, model_type: str = None):
         """Initialize SKLearn trainer with configuration."""
         super().__init__(config)
+        self.model_type = model_type
         self.model_registry = {
             'RandomForest': 'sklearn.ensemble.RandomForestRegressor',
+            'LogisticRegression': 'sklearn.linear_model.LogisticRegression',
             'ExtraTrees': 'sklearn.ensemble.ExtraTreesRegressor',
             'GradientBoosting': 'sklearn.ensemble.GradientBoostingRegressor',
             'LinearRegression': 'sklearn.linear_model.LinearRegression',
@@ -28,6 +30,10 @@ class SKLearnTrainer(BaseTrainer):
 
     def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
         """Train a scikit-learn model with the enhanced ModelTrainingResults."""
+        # Use the specific model type if provided
+        if self.model_type:
+            results.model_name = self.model_type
+        
         structured_log(logger, logging.INFO, "Starting SKLearn model training", 
                     input_shape=X_train.shape,
                     model_name=results.model_name)

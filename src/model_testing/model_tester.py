@@ -20,40 +20,30 @@ from .data_classes import ModelTrainingResults, ClassificationMetrics, Preproces
 from .modular_preprocessor import ModularPreprocessor
 import lightgbm as lgb
 from .hyperparameter_manager import HyperparameterManager
-from .trainers import XGBoostTrainer, LightGBMTrainer, SklearnTrainer
 from .trainers.base_trainer import BaseTrainer
-from .trainers.xgboost_trainer import XGBoostTrainer
-from .trainers.lightgbm_trainer import LightGBMTrainer
-from .trainers.catboost_trainer import CatBoostTrainer
-from .trainers.sklearn_trainer import SKLearnTrainer
+
+
 
 logger = logging.getLogger(__name__)
 
 class ModelTester(AbstractModelTester):
     @log_performance
-    def __init__(self, config: AbstractConfig, hyperparameter_manager: HyperparameterManager):
+    def __init__(self, config: AbstractConfig, hyperparameter_manager: HyperparameterManager, trainers: Dict[str, BaseTrainer]):
         """
         Initialize the ModelTester class.
 
         Args:
             config (AbstractConfig): Configuration object containing model testing parameters.
             hyperparameter_manager (HyperparameterManager): Manager for model hyperparameters.
+            trainers (Dict[str, BaseTrainer]): Dictionary mapping model names to their trainers.
         """
         self.config = config
         self.hyperparameter_manager = hyperparameter_manager
         self.preprocessor = ModularPreprocessor(config)
-        self._initialize_trainers()
+        self.trainers = trainers
         structured_log(logger, logging.INFO, "ModelTester initialized",
-                      config_type=type(config).__name__)
-
-    def _initialize_trainers(self):
-        """Initialize model trainers."""
-        self.trainers = {
-            "XGBoost": XGBoostTrainer(self.config),
-            "LGBM": LightGBMTrainer(self.config),
-            "CatBoost": CatBoostTrainer(self.config),
-            "SKLearn": SKLearnTrainer(self.config)
-        }
+                      config_type=type(config).__name__,
+                      available_trainers=list(trainers.keys()))
 
     def get_model_params(self, model_name: str) -> Dict:
         """
@@ -457,10 +447,10 @@ class ModelTester(AbstractModelTester):
         
     def _get_trainer(self, model_name: str) -> BaseTrainer:
         """Get the appropriate trainer for the model."""
-        if model_name in ["XGBoost", "LGBM", "CatBoost"]:
-            return self.trainers[model_name]
-        else:
-            return self.trainers["SKLearn"]
+        if model_name not in self.trainers:
+            raise ModelTestingError(f"No trainer found for model: {model_name}",
+                                  available_trainers=list(self.trainers.keys()))
+        return self.trainers[model_name]
 
     @log_performance
     def _reduce_memory_footprint(self, df: pd.DataFrame) -> pd.DataFrame:

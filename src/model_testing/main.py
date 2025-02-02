@@ -51,72 +51,43 @@ def main() -> None:
             training_dataframe = data_access.load_dataframe(config.training_data_file)
             validation_dataframe = data_access.load_dataframe(config.validation_data_file)
             
-            for model_name in config.models:
-
-                primary_ids_oof = None
-                primary_ids_val = None
-                oof_metrics = ClassificationMetrics()
-                val_metrics = ClassificationMetrics()
-                oof_training_results = ModelTrainingResults(training_dataframe.shape)
-                val_training_results = ModelTrainingResults(validation_dataframe.shape)
-                oof_preprocessing_results = PreprocessingResults()
-                val_preprocessing_results = PreprocessingResults()
+            # Update: Iterate over models using vars() for SimpleNamespace
+            for model_name in vars(config.models):
+                enabled = getattr(config.models, model_name)
                 
-                # prepare the data for the model, including preprocessing steps saved in the results dataclass
-                if config.perform_oof_cross_validation or config.perform_hyperparameter_optimization:
-                    X, y, oof_preprocessing_results, primary_ids_oof = model_tester.prepare_data(training_dataframe.copy(), 
-                                                                                model_name, 
-                                                                                is_training=True, 
-                                                                                preprocessing_results=oof_preprocessing_results)
-                if config.perform_validation_set_testing:
-                    X_val, y_val, val_preprocessing_results, primary_ids_val = model_tester.prepare_data(validation_dataframe.copy(), 
-                                                                                        model_name, 
-                                                                                        is_training=False, 
-                                                                                        preprocessing_results=val_preprocessing_results)
-                
-                
-
-                if config.perform_hyperparameter_optimization:
-                    best_params = optimizer.optimize(
-                        model_type=model_name,
-                        X=X,
-                        y=y
-                    )
-                    model_params = best_params
-
+                # Skip disabled models
+                if not enabled:
+                    continue
+                    
+                # Handle nested SKLearn models
+                if model_name == "SKLearn" and hasattr(enabled, '__dict__'):
+                    for sklearn_model, is_enabled in vars(enabled).items():
+                        if not is_enabled:
+                            continue
+                        process_single_model(
+                            f"SKLearn_{sklearn_model}",
+                            training_dataframe,
+                            validation_dataframe,
+                            config,
+                            model_tester,
+                            data_access,
+                            experiment_logger,
+                            optimizer,
+                            logger
+                        )
                 else:
-                    model_params = model_tester.get_model_params(model_name)    
-
-
-                if config.perform_oof_cross_validation:
-                    oof_training_results = process_model_evaluation(
-                        model_tester, data_access, experiment_logger, logger,
-                        model_name, model_params, X, y,
-                        primary_ids=primary_ids_oof,
-                        config=config,
-                        preprocessing_results=oof_preprocessing_results,
-                        training_results=oof_training_results,
-                        metrics=oof_metrics,
-                        experiment_name=config.experiment_name,
-                        experiment_description=config.experiment_description,
-                        is_oof=True
+                    process_single_model(
+                        model_name,
+                        training_dataframe,
+                        validation_dataframe,
+                        config,
+                        model_tester,
+                        data_access,
+                        experiment_logger,
+                        optimizer,
+                        logger
                     )
-                
-                if config.perform_validation_set_testing:
-                    val_training_results = process_model_evaluation(
-                        model_tester, data_access, experiment_logger, logger,
-                        model_name, model_params, X, y,
-                        X_eval=X_val, 
-                        y_eval=y_val,
-                        primary_ids=primary_ids_val,
-                        config=config,
-                        preprocessing_results=val_preprocessing_results,
-                        training_results=val_training_results,
-                        metrics=val_metrics,
-                        experiment_name=config.experiment_name,
-                        experiment_description=config.experiment_description,
-                        is_oof=False
-                    )
+
             structured_log(logger, logging.INFO, "Model testing completed successfully")
 
     except (ConfigurationError, DataValidationError, 
@@ -124,6 +95,83 @@ def main() -> None:
         _handle_known_error(error_logger, e)
     except Exception as e:
         _handle_unexpected_error(error_logger, e)
+
+def process_single_model(
+    model_name: str,
+    training_dataframe: pd.DataFrame,
+    validation_dataframe: pd.DataFrame,
+    config,
+    model_tester,
+    data_access,
+    experiment_logger,
+    optimizer,
+    logger
+):
+    """Helper function to process a single model"""
+    primary_ids_oof = None
+    primary_ids_val = None
+    oof_metrics = ClassificationMetrics()
+    val_metrics = ClassificationMetrics()
+    oof_training_results = ModelTrainingResults(training_dataframe.shape)
+    val_training_results = ModelTrainingResults(validation_dataframe.shape)
+    oof_preprocessing_results = PreprocessingResults()
+    val_preprocessing_results = PreprocessingResults()
+    
+    # prepare the data for the model
+    if config.perform_oof_cross_validation or config.perform_hyperparameter_optimization:
+        X, y, oof_preprocessing_results, primary_ids_oof = model_tester.prepare_data(
+            training_dataframe.copy(), 
+            model_name, 
+            is_training=True, 
+            preprocessing_results=oof_preprocessing_results
+        )
+    if config.perform_validation_set_testing:
+        X_val, y_val, val_preprocessing_results, primary_ids_val = model_tester.prepare_data(
+            validation_dataframe.copy(), 
+            model_name, 
+            is_training=False, 
+            preprocessing_results=val_preprocessing_results
+        )
+
+    if config.perform_hyperparameter_optimization:
+        best_params = optimizer.optimize(
+            model_type=model_name,
+            X=X,
+            y=y
+        )
+        model_params = best_params
+    else:
+        model_params = model_tester.get_model_params(model_name)    
+
+    if config.perform_oof_cross_validation:
+        oof_training_results = process_model_evaluation(
+            model_tester, data_access, experiment_logger, logger,
+            model_name, model_params, X, y,
+            primary_ids=primary_ids_oof,
+            config=config,
+            preprocessing_results=oof_preprocessing_results,
+            training_results=oof_training_results,
+            metrics=oof_metrics,
+            experiment_name=config.experiment_name,
+            experiment_description=config.experiment_description,
+            is_oof=True
+        )
+    
+    if config.perform_validation_set_testing:
+        val_training_results = process_model_evaluation(
+            model_tester, data_access, experiment_logger, logger,
+            model_name, model_params, X, y,
+            X_eval=X_val, 
+            y_eval=y_val,
+            primary_ids=primary_ids_val,
+            config=config,
+            preprocessing_results=val_preprocessing_results,
+            training_results=val_training_results,
+            metrics=val_metrics,
+            experiment_name=config.experiment_name,
+            experiment_description=config.experiment_description,
+            is_oof=False
+        )
 
 
 def process_model_evaluation(

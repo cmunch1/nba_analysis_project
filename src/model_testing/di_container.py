@@ -7,16 +7,22 @@ from .model_tester import ModelTester
 from .hyperparameter_manager import HyperparameterManager
 from .experiment_logger_factory import ExperimentLoggerFactory, LoggerType
 from .optimizer_factory import OptimizerFactory, OptimizerType
+from .trainer_factory import TrainerFactory
 
 class DIContainer(containers.DeclarativeContainer):
     config = providers.Singleton(Config)
     data_access = providers.Factory(DataAccess, config=config)
     data_validator = providers.Factory(DataValidator, config=config)
     hyperparameter_manager = providers.Factory(HyperparameterManager, config=config)
+    trainers = providers.Factory(
+        TrainerFactory.create_trainers,
+        config=config
+    )
     model_tester = providers.Factory(
         ModelTester, 
         config=config,
-        hyperparameter_manager=hyperparameter_manager
+        hyperparameter_manager=hyperparameter_manager,
+        trainers=trainers
     )
     experiment_logger = providers.Factory(
         ExperimentLoggerFactory.create_logger, 
