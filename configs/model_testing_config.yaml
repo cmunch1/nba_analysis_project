@@ -60,12 +60,22 @@ random_state: 42
 
 # models
 models:
-  - XGBoost
-  - LGBM
+  XGBoost: true
+  LGBM: false
+  CatBoost: false
+  SKLearn:
+    RandomForest: false
+    LogisticRegression: false
+
+
+
+
+
 
 # XGBoost settings
 enable_categorical: false
 XGB:
+
   num_boost_round: 10000
   early_stopping_rounds: 100
   verbose_eval: 100
@@ -77,6 +87,20 @@ LGBM:
   num_boost_round: 10000
   early_stopping: 100
   log_evaluation: 100
+
+# SKLearn settings
+SKLearn:
+  RandomForest:
+    n_estimators: 100
+    max_depth: 10
+    min_samples_split: 2
+    random_state: 42
+
+  
+  LogisticRegression:
+    C: 1.0
+    max_iter: 100
+    random_state: 42
 
 
 # cross validation type
@@ -110,4 +134,7 @@ chart_options:
     enabled: true
     n_features: 25
   learning_curve: true
+
+
+
 
