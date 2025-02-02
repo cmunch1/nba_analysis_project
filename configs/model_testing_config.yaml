@@ -1,3 +1,7 @@
+# settings for experiment logging
+experiment_name: "NBA Predictor"
+experiment_description: "NBA Predictor"
+
 #sort columns - ensures that the columns are in the correct order - important for TimeSeriesSplit cross validation
 sort_columns:
   - season
@@ -8,9 +12,7 @@ sort_order:
   - true
   - true
 
-# perform preprocessing 
-# this is ideally done in the feature engineering module, especially for production
-# but having this option here this gives the flexibility to possibly iterate faster during testing.
+# perform preprocessing - particularly for non-GBT models that require scaling and standardization
 perform_preprocessing: true
 
 # hyperparameters path (${PROJECT_ROOT} is the root directory of the project and is parsed from the environment variable in config.py)
@@ -54,14 +56,12 @@ categorical_features:
 # random state for cross validation and model training
 random_state: 42
 
-# settings for experiment logging
-experiment_name: "NBA Predictor"
-experiment_description: "NBA Predictor"
+
 
 # models
 models:
   - XGBoost
-  #- LGBM
+  - LGBM
 
 # XGBoost settings
 enable_categorical: false
@@ -80,19 +80,14 @@ LGBM:
 
 
 # cross validation type
-cross_validation_type: TimeSeriesSplit
-#cross_validation_type: StratifiedKFold
+#cross_validation_type: TimeSeriesSplit
+cross_validation_type: StratifiedKFold
 
 # number of cross validation splits
 n_splits: 5
 
 # learning curve settings
-generate_learning_curve_data: true # this will slow down the model training process - particularly for cross validation
-learning_curve:
-  min_size: 0.1
-  max_size: 1.0
-  n_points: 10
-  min_absolute_samples: 100
+generate_learning_curve_data: true 
 
 # SHAP settings
 calculate_shap_values: true

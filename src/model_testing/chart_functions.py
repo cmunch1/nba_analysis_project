@@ -9,6 +9,7 @@ from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import ChartCreationError
 from sklearn.inspection import partial_dependence
 from .data_classes import ModelTrainingResults
+import xgboost as xgb
 
 logger = logging.getLogger(__name__)
 
@@ -264,70 +265,51 @@ class ChartFunctions:
                                    y_score_shape=y_score.shape,
                                    nan_count=np.sum(np.isnan(y_score)))
 
-
     @log_performance
     def create_learning_curve(self, results: ModelTrainingResults) -> Optional[plt.Figure]:
-        structured_log(logger, logging.INFO, "Creating learning curve from results")
+        """
+        Create learning curve showing average performance across folds.
+        
+        Args:
+            results: ModelTrainingResults containing averaged learning curve data
+            
+        Returns:
+            Optional[plt.Figure]: Figure containing the learning curve plot
+        """
         try:
-            # Check if we have raw data
-            if not results.learning_curve_data['raw_data']:
-                structured_log(logger, logging.WARNING, "No learning curve data available")
+            plot_data = results.learning_curve_data.get_plot_data()
+            if not plot_data:
                 return None
-                
-            # Ensure data is aggregated
-            results.aggregate_learning_curves()
+
+            fig, ax = plt.subplots(figsize=(10, 6))
             
-            # Get aggregated data
-            aggregated_data = results.learning_curve_data['aggregated']
-            if aggregated_data is None:
-                structured_log(logger, logging.WARNING, "No aggregated learning curve data")
-                return None
-            # Log what data is available
-            structured_log(logger, logging.INFO, 
-                        "Learning curve data keys available",
-                        keys=list(aggregated_data.keys()))
-                        
-            # Create the plot
-            fig, ax = plt.subplots(figsize=(10, 8))
+            # Plot averaged training and validation scores
+            ax.plot(plot_data['iterations'], plot_data['train_scores'], 
+                    label='Training score', color='blue', alpha=0.8)
+            ax.plot(plot_data['iterations'], plot_data['val_scores'], 
+                    label='Validation score', color='orange', alpha=0.8)
             
-            # Convert to numpy arrays for operations
-            train_sizes = np.array(aggregated_data['train_sizes'])
-            train_scores_mean = np.array(aggregated_data['train_scores_mean'])
-            val_scores_mean = np.array(aggregated_data['val_scores_mean'])
-            train_scores_std = np.array(aggregated_data['train_scores_std'])
-            val_scores_std = np.array(aggregated_data['val_scores_std'])
+            # Add labels and title
+            ax.set_xlabel('Iteration')
+            ax.set_ylabel(f'Score ({results.learning_curve_data.metric_name})')
+            ax.set_title(f'Learning Curve - {results.model_name}\nAveraged across {results.n_folds} folds')
             
-            # Plot training scores with error bands
-            ax.plot(train_sizes, train_scores_mean, 'o-', 
-                label='Training score', color='blue')
-            ax.fill_between(train_sizes, 
-                        train_scores_mean - train_scores_std,
-                        train_scores_mean + train_scores_std, 
-                        alpha=0.1, color='blue')
-            
-            # Plot validation scores with error bands
-            ax.plot(train_sizes, val_scores_mean, 'o-', 
-                label='Cross-validation score', color='orange')
-            ax.fill_between(train_sizes, 
-                        val_scores_mean - val_scores_std,
-                        val_scores_mean + val_scores_std, 
-                        alpha=0.1, color='orange')
-            
-            # Customize the plot
-            ax.set_xlabel('Training examples')
-            ax.set_ylabel('Score')
-            ax.set_title(f'Learning Curve ({results.model_name})')
-            ax.grid(True)
+            # Add grid and legend
+            ax.grid(True, linestyle='--', alpha=0.7)
             ax.legend(loc='best')
             
-            structured_log(logger, logging.INFO, "Learning curve created successfully")
+            # Adjust layout to prevent label cutoff
+            plt.tight_layout()
+            
             return fig
             
         except Exception as e:
+            structured_log(logger, logging.ERROR, "Error creating learning curve",
+                        error=str(e),
+                        error_type=type(e).__name__)
             raise ChartCreationError("Error creating learning curve",
                                 error_message=str(e))
 
-    
     @log_performance
     def create_partial_dependence_plot(self, model: Any, X: pd.DataFrame, feature_names: List[str], target_names: List[str] = None) -> plt.Figure:
         """
@@ -524,6 +506,7 @@ class ChartFunctions:
                                 error_message=str(e),
                                 X_shape=X.shape,
                                 shap_values_shape=values.shape if 'values' in locals() else None)
+
 class ChartOrchestrator:
     @log_performance
     def __init__(self, config):

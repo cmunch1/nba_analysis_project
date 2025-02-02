@@ -208,14 +208,36 @@ class ModelTester(AbstractModelTester):
                     feature_importance_accumulator += oof_results.feature_importance_scores
                     n_folds_with_importance += 1
 
-                if oof_results.learning_curve_data['raw_data']:
-                    full_results.learning_curve_data['raw_data'].extend(
-                        oof_results.learning_curve_data['raw_data']
-                    )
+                if oof_results.learning_curve_data.train_scores:  # Check if we have any learning curve data
+                    # Initialize arrays for accumulating scores if this is the first fold
+                    if len(full_results.learning_curve_data.train_scores) == 0:
+                        # Store the first fold's data
+                        full_results.learning_curve_data.train_scores = np.array(oof_results.learning_curve_data.train_scores)
+                        full_results.learning_curve_data.val_scores = np.array(oof_results.learning_curve_data.val_scores)
+                        full_results.learning_curve_data.iterations = oof_results.learning_curve_data.iterations
+                        full_results.learning_curve_data.metric_name = oof_results.learning_curve_data.metric_name
+                        n_folds_with_curves = 1
+                    else:
+                        # Find minimum length between current data and new data
+                        min_length = min(len(full_results.learning_curve_data.train_scores),
+                                        len(oof_results.learning_curve_data.train_scores))
+                        
+                        # Truncate both arrays to minimum length and add
+                        full_results.learning_curve_data.train_scores = (
+                            full_results.learning_curve_data.train_scores[:min_length] + 
+                            np.array(oof_results.learning_curve_data.train_scores[:min_length])
+                        )
+                        full_results.learning_curve_data.val_scores = (
+                            full_results.learning_curve_data.val_scores[:min_length] + 
+                            np.array(oof_results.learning_curve_data.val_scores[:min_length])
+                        )
+                        full_results.learning_curve_data.iterations = full_results.learning_curve_data.iterations[:min_length]
+                        n_folds_with_curves += 1
 
-                structured_log(logger, logging.INFO, f"Fold {fold} completed",
-                            samples_processed=np.sum(processed_samples),
-                            total_samples=len(y))
+                        structured_log(logger, logging.INFO, "Learning curve data combined",
+                                    current_fold=fold,
+                                    iterations_used=min_length,
+                                    original_iterations=len(oof_results.learning_curve_data.train_scores))
 
             if n_folds_with_importance > 0:
                 full_results.feature_importance_scores = (
@@ -245,6 +267,18 @@ class ModelTester(AbstractModelTester):
                     full_results.shap_values = full_results.shap_values[processed_mask]
                     if full_results.shap_interaction_values is not None:
                         full_results.shap_interaction_values = full_results.shap_interaction_values[processed_mask]
+
+            # After the fold loop, calculate averages
+            if hasattr(full_results.learning_curve_data, 'train_scores') and n_folds_with_curves > 0:
+                full_results.learning_curve_data.train_scores = (
+                    full_results.learning_curve_data.train_scores / n_folds_with_curves
+                ).tolist()
+                full_results.learning_curve_data.val_scores = (
+                    full_results.learning_curve_data.val_scores / n_folds_with_curves
+                ).tolist()
+                
+                # Add this line to set the number of folds
+                full_results.n_folds = n_folds_with_curves
 
             structured_log(logger, logging.INFO, "Cross-validation completed",
                         final_feature_shape=full_results.feature_data.shape,
@@ -487,14 +521,19 @@ class ModelTester(AbstractModelTester):
                 enable_categorical=self.config.enable_categorical
             )
 
-            # Train the model
+            # Initialize dict to store evaluation results
+            evals_result = {}
+
+
+            # Train model
             model = xgb.train(
                 params=model_params,
                 dtrain=dtrain,
                 num_boost_round=self.config.XGB.num_boost_round,
                 early_stopping_rounds=self.config.XGB.early_stopping_rounds,
                 evals=[(dtrain, 'train'), (dval, 'eval')],
-                verbose_eval=self.config.XGB.verbose_eval
+                verbose_eval=self.config.XGB.verbose_eval,
+                evals_result=evals_result
             )
 
             # Store model and generate predictions
@@ -505,9 +544,27 @@ class ModelTester(AbstractModelTester):
             results.enable_categorical = self.config.enable_categorical
             results.categorical_features = self.config.categorical_features
 
-            structured_log(logger, logging.INFO, "Generated predictions", 
-                        predictions_shape=results.predictions.shape,
-                        predictions_mean=float(np.mean(results.predictions)))
+            # If learning curve data is requested, process eval results
+            if self.config.generate_learning_curve_data:
+                # Get the evaluation metric from params, default to 'binary_logloss'
+                eval_metric = list(evals_result['train'].keys())[0]  # Get the metric name
+                results.learning_curve_data.metric_name = eval_metric
+
+                # Populate all iterations at once
+                for i, (train_score, val_score) in enumerate(zip(
+                    evals_result['train'][eval_metric], 
+                    evals_result['eval'][eval_metric]
+                )):
+                    train_score_converted, val_score_converted = self._convert_metric_scores(
+                        train_score, 
+                        val_score,
+                        eval_metric
+                    )
+                    results.learning_curve_data.add_iteration(
+                        train_score=train_score_converted,
+                        val_score=val_score_converted,
+                        iteration=i
+                    )
 
             # Calculate feature importance and store feature names
             try:
@@ -579,11 +636,6 @@ class ModelTester(AbstractModelTester):
                             shap_values_shape=results.shap_values.shape,
                             equal_shapes=results.feature_data.shape[1] == results.shap_values.shape[1])
                 
-            # Generate learning curve data if configured
-            if self.config.generate_learning_curve_data:
-                results = self._generate_XGB_learning_curve_data(X_train, y_train, X_val, y_val, fold, model_params, results)
-            
-
             structured_log(logger, logging.INFO, "XGBoost training completed successfully",
                         predictions_shape=results.predictions.shape)
             
@@ -612,6 +664,9 @@ class ModelTester(AbstractModelTester):
             train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
             val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
             
+            # Dictionary to store evaluation history
+            eval_results = {}
+            
             # Train model
             model = lgb.train(
                 model_params,  
@@ -621,7 +676,8 @@ class ModelTester(AbstractModelTester):
                 valid_names=['train', 'valid'],
                 callbacks=[
                     lgb.early_stopping(self.config.LGBM.early_stopping),
-                    lgb.log_evaluation(self.config.LGBM.log_evaluation)
+                    lgb.log_evaluation(self.config.LGBM.log_evaluation),
+                    lgb.record_evaluation(eval_results)  # Add callback to record evaluation history
                 ]
             )
 
@@ -632,6 +688,28 @@ class ModelTester(AbstractModelTester):
             results.early_stopping = self.config.LGBM.early_stopping
             results.enable_categorical = True  # LightGBM always enables categorical
             results.categorical_features = self.config.categorical_features
+
+            # If learning curve data is requested, process eval results
+            if self.config.generate_learning_curve_data:
+                # Get the evaluation metric from params, default to 'binary_logloss'
+                eval_metric = list(eval_results['train'].keys())[0]  # Get the metric name
+                results.learning_curve_data.metric_name = eval_metric
+
+                # Populate all iterations at once
+                for i, (train_score, val_score) in enumerate(zip(
+                    eval_results['train'][eval_metric], 
+                    eval_results['valid'][eval_metric]
+                )):
+                    train_score_converted, val_score_converted = self._convert_metric_scores(
+                        train_score, 
+                        val_score,
+                        eval_metric
+                    )
+                    results.learning_curve_data.add_iteration(
+                        train_score=train_score_converted,
+                        val_score=val_score_converted,
+                        iteration=i
+                    )
 
             structured_log(logger, logging.INFO, "Generated predictions", 
                         predictions_shape=results.predictions.shape,
@@ -703,14 +781,9 @@ class ModelTester(AbstractModelTester):
                             shap_values_shape=results.shap_values.shape,
                             equal_shapes=results.feature_data.shape[1] == results.shap_values.shape[1])
                 
-            # Generate learning curve data if configured
-            if self.config.generate_learning_curve_data:
-                results = self._generate_LGBM_learning_curve_data(X_train, y_train, X_val, y_val, fold, model_params, results)
-        
             return results
 
         except Exception as e:
-
             structured_log(logger, logging.ERROR, "Error in LightGBM training",
                         error_message=str(e),
                         error_type=type(e).__name__,
@@ -826,241 +899,42 @@ class ModelTester(AbstractModelTester):
         return results
     
 
-    def _generate_XGB_learning_curve_data(self, X_train, y_train, X_val, y_val, fold : int, model_params, 
-                                        results) -> ModelTrainingResults:
-        """Generate learning curve data for XGBoost with memory optimization."""
+ 
+    def _generate_sklearn_learning_curve_data(self, X_train, y_train, X_val, y_val, 
+                                        fold: int, model_params,
+                                        results: ModelTrainingResults) -> ModelTrainingResults:
+        """Generate learning curve data for sklearn models."""
+        try:
+            model = model_class(**model_params)
+            model.fit(X_train, y_train)
+            
+            # Get predictions
+            train_pred = (model.predict_proba(X_train)[:, 1] 
+                        if hasattr(model, 'predict_proba') 
+                        else model.predict(X_train))
+            val_pred = (model.predict_proba(X_val)[:, 1]
+                    if hasattr(model, 'predict_proba')
+                    else model.predict(X_val))
 
-        structured_log(logger, logging.INFO, 
-                    "Starting XGBoost learning curve generation",
-                    fold=fold)
+            # Calculate scores
+            train_score = self._calculate_model_score(y_train, train_pred)
+            val_score = self._calculate_model_score(y_val, val_pred)
 
-        # Calculate absolute sizes instead of percentages
+            # For sklearn models, we only have one iteration (the final model)
+            results.learning_curve_data.add_iteration(
+                train_score=train_score,
+                val_score=val_score,
+                iteration=0
+            )
+            results.learning_curve_data.metric_name = 'accuracy'  # or whatever metric you're using
 
-        min_samples = max(int(len(X_train) * self.config.learning_curve.min_size), 
-                        self.config.learning_curve.min_absolute_samples)
-        max_samples = min(int(len(X_train) * self.config.learning_curve.max_size),
-                        len(X_train))
-        train_sizes = np.linspace(min_samples, max_samples,
-                                self.config.learning_curve.n_points, dtype=int)
+            return results
 
-        # Set random seed for reproducibility
-        np.random.seed(self.config.random_state + fold)
-        
-        # Create validation DMatrix once
-        dval = xgb.DMatrix(
-            X_val,
-            label=y_val,
-            feature_names=X_val.columns.tolist(),
-            enable_categorical=self.config.enable_categorical
-        )
-
-        # Adjust early stopping for smaller datasets
-        min_early_stopping = max(5, self.config.XGB.early_stopping_rounds // 4)
-        
-        for n_samples in train_sizes:
-            try:
-                # Stratified sampling to maintain class distribution
-                indices = self._stratified_sample_indices(y_train, n_samples)
-                X_subset = X_train.iloc[indices]
-                y_subset = y_train.iloc[indices]
-
-                dtrain_subset = xgb.DMatrix(
-                    X_subset,
-                    label=y_subset,
-                    feature_names=X_subset.columns.tolist(),
-                    enable_categorical=self.config.enable_categorical
-                )
-
-                # Adjust early stopping based on sample size
-                early_stopping = max(
-                    min_early_stopping,
-                    int(self.config.XGB.early_stopping_rounds * (n_samples / len(X_train)))
-                )
-
-                subset_model = xgb.train(
-                    params=model_params,
-                    dtrain=dtrain_subset,
-                    num_boost_round=self.config.XGB.num_boost_round,
-                    early_stopping_rounds=early_stopping,
-                    evals=[(dtrain_subset, 'train'), (dval, 'eval')],
-                    verbose_eval=self.config.XGB.verbose_eval
-                )
-
-                train_pred = subset_model.predict(dtrain_subset)
-                val_pred = subset_model.predict(dval)
-
-                # Calculate metrics
-                train_score = self._calculate_model_score(y_subset, train_pred)
-                val_score = self._calculate_model_score(y_val, val_pred)
-
-                results.add_learning_curve_point(
-                    train_size=n_samples,
-                    train_score=train_score,
-                    val_score=val_score,
-                    fold=fold
-                )
-
-                del subset_model, dtrain_subset
-                
-            except Exception as e:
-                structured_log(logger, logging.ERROR,
-                            f"Error in XGBoost learning curve at size {n_samples}",
-                            error=str(e))
-                raise
-
-        return results
-
-    def _generate_LGBM_learning_curve_data(self, X_train, y_train, X_val, y_val, fold : int, model_params,
-                                        results) -> ModelTrainingResults:
-        """Generate learning curve data for LightGBM with memory optimization."""
-
-        structured_log(logger, logging.INFO, 
-                    "Starting LightGBM learning curve generation",
-                    fold=fold)
-        
-        # Calculate absolute sizes instead of percentages
-        min_samples = max(int(len(X_train) * self.config.learning_curve.min_size), 
-                        self.config.learning_curve.min_absolute_samples)
-
-        max_samples = min(int(len(X_train) * self.config.learning_curve.max_size),
-                        len(X_train))
-        train_sizes = np.linspace(min_samples, max_samples,
-                                self.config.learning_curve.n_points, dtype=int)
-
-        # Set random seed for reproducibility
-        np.random.seed(self.config.random_state + fold)
-
-        # Create validation dataset once
-        val_data = lgb.Dataset(
-            X_val, 
-            label=y_val,
-            categorical_feature=self.config.categorical_features,
-            free_raw_data=False  # Keep raw data for reuse
-        )
-
-        # Adjust early stopping for smaller datasets
-        min_early_stopping = max(5, self.config.LGBM.early_stopping // 4)
-
-        for n_samples in train_sizes:
-            try:
-                # Stratified sampling
-                indices = self._stratified_sample_indices(y_train, n_samples)
-                X_subset = X_train.iloc[indices]
-                y_subset = y_train.iloc[indices]
-
-                train_data = lgb.Dataset(
-                    X_subset,
-                    label=y_subset,
-                    categorical_feature=self.config.categorical_features,
-                    free_raw_data=True
-                )
-
-                # Adjust early stopping based on sample size
-                early_stopping = max(
-                    min_early_stopping,
-                    int(self.config.LGBM.early_stopping * (n_samples / len(X_train)))
-                )
-
-                subset_model = lgb.train(
-                    model_params,
-                    train_data,
-                    num_boost_round=self.config.LGBM.num_boost_round,
-                    valid_sets=[train_data, val_data],
-                    valid_names=['train', 'valid'],
-                    callbacks=[
-                        lgb.early_stopping(early_stopping),
-                        lgb.log_evaluation(self.config.LGBM.log_evaluation)
-                    ]
-                )
-
-                train_pred = subset_model.predict(X_subset)
-                val_pred = subset_model.predict(X_val)
-
-                train_score = self._calculate_model_score(y_subset, train_pred)
-                val_score = self._calculate_model_score(y_val, val_pred)
-
-                results.add_learning_curve_point(
-                    train_size=n_samples,
-                    train_score=train_score,
-                    val_score=val_score,
-                    fold=fold
-                )
-
-                del subset_model, train_data
-
-            except Exception as e:
-                structured_log(logger, logging.ERROR,
-                            f"Error in LightGBM learning curve at size {n_samples}",
-                            error=str(e))
-                raise
-
-        return results
-
-    def _generate_sklearn_learning_curve_data(self, X_train, y_train, X_val, y_val, fold : int, model_params,
-                                            results) -> ModelTrainingResults:
-        """Generate learning curve data for sklearn models with consistent handling."""
-
-        structured_log(logger, logging.INFO, 
-                    "Starting sklearn learning curve generation",
-                    fold=fold)
-
-        # Calculate absolute sizes instead of percentages
-        min_samples = max(int(len(X_train) * self.config.learning_curve.min_size), 
-                        self.config.learning_curve.min_absolute_samples)
-
-        max_samples = min(int(len(X_train) * self.config.learning_curve.max_size),
-                        len(X_train))
-        train_sizes = np.linspace(min_samples, max_samples,
-                                self.config.learning_curve.n_points, dtype=int)
-
-        # Set random seed for reproducibility
-        np.random.seed(self.config.random_state + fold)
-        
-        # Get the appropriate model class once
-        if hasattr(tree, results.model_name):
-            model_class = getattr(tree, results.model_name)
-        elif hasattr(ensemble, results.model_name):
-            model_class = getattr(ensemble, results.model_name)
-        else:
-            raise ValueError(f"Unsupported model: {results.model_name}")
-
-        for n_samples in train_sizes:
-            try:
-                # Stratified sampling
-                indices = self._stratified_sample_indices(y_train, n_samples)
-                X_subset = X_train.iloc[indices]
-                y_subset = y_train.iloc[indices]
-
-                model = model_class(**model_params)
-                model.fit(X_subset, y_subset)
-
-                # Consistent prediction handling
-                train_pred = (model.predict_proba(X_subset)[:, 1] 
-                            if hasattr(model, 'predict_proba') 
-                            else model.predict(X_subset))
-                val_pred = (model.predict_proba(X_val)[:, 1]
-                        if hasattr(model, 'predict_proba')
-                        else model.predict(X_val))
-
-                train_score = self._calculate_model_score(y_subset, train_pred)
-                val_score = self._calculate_model_score(y_val, val_pred)
-
-                results.add_learning_curve_point(
-                    train_size=n_samples,
-                    train_score=train_score,
-                    val_score=val_score,
-                    fold=fold
-                )
-
-                del model
-
-            except Exception as e:
-                structured_log(logger, logging.ERROR,
-                            f"Error in sklearn learning curve at size {n_samples}",
-                            error=str(e))
-                raise
-
-        return results
+        except Exception as e:
+            structured_log(logger, logging.ERROR,
+                        "Error in sklearn learning curve generation",
+                        error=str(e))
+            raise
 
     def _stratified_sample_indices(self, y: pd.Series, n_samples: int) -> np.ndarray:
         """Generate stratified sample indices maintaining class distribution."""
@@ -1078,3 +952,26 @@ class ModelTester(AbstractModelTester):
     def _calculate_model_score(self, y_true: pd.Series, y_pred: np.ndarray) -> float:
         """Calculate consistent model score across all implementations."""
         return accuracy_score(y_true, (y_pred >= 0.5).astype(int))
+
+    def _convert_metric_scores(self, train_score: float, val_score: float, metric_name: str) -> Tuple[float, float]:
+        """
+        Convert metric scores to a consistent format (higher is better).
+        Some metrics like logloss are "lower is better" and need to be converted.
+
+        Args:
+            train_score (float): Training score
+            val_score (float): Validation score
+            metric_name (str): Name of the metric being used
+
+        Returns:
+            Tuple[float, float]: Converted (train_score, val_score)
+        """
+        # List of metrics where lower values are better
+        lower_is_better = ['logloss', 'binary_logloss', 'multi_logloss', 'rmse', 'mae']
+        
+        # Check if metric name contains any of the "lower is better" metrics
+        if any(metric in metric_name.lower() for metric in lower_is_better):
+            # Convert to "higher is better" by negating
+            return -train_score, -val_score
+        
+        return train_score, val_score
