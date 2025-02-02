@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import Tuple, Dict, Union, Any
+from typing import Tuple, Dict, Union, Any, List, Optional
 import yaml
 import os
 from sklearn import tree, ensemble
@@ -20,6 +20,12 @@ from .data_classes import ModelTrainingResults, ClassificationMetrics, Preproces
 from .modular_preprocessor import ModularPreprocessor
 import lightgbm as lgb
 from .hyperparameter_manager import HyperparameterManager
+from .trainers import XGBoostTrainer, LightGBMTrainer, SklearnTrainer
+from .trainers.base_trainer import BaseTrainer
+from .trainers.xgboost_trainer import XGBoostTrainer
+from .trainers.lightgbm_trainer import LightGBMTrainer
+from .trainers.catboost_trainer import CatBoostTrainer
+from .trainers.sklearn_trainer import SKLearnTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +42,18 @@ class ModelTester(AbstractModelTester):
         self.config = config
         self.hyperparameter_manager = hyperparameter_manager
         self.preprocessor = ModularPreprocessor(config)
+        self._initialize_trainers()
         structured_log(logger, logging.INFO, "ModelTester initialized",
                       config_type=type(config).__name__)
+
+    def _initialize_trainers(self):
+        """Initialize model trainers."""
+        self.trainers = {
+            "XGBoost": XGBoostTrainer(self.config),
+            "LGBM": LightGBMTrainer(self.config),
+            "CatBoost": CatBoostTrainer(self.config),
+            "SKLearn": SKLearnTrainer(self.config)
+        }
 
     def get_model_params(self, model_name: str) -> Dict:
         """
@@ -181,7 +197,6 @@ class ModelTester(AbstractModelTester):
                     fold,
                     model_name, model_params,
                     fold_results
-
                 )
                 
                 # Copy first fold's configuration
@@ -420,14 +435,12 @@ class ModelTester(AbstractModelTester):
             results.feature_names = X.columns.tolist()
             results.update_feature_data(X_val, y_val)
             
-            match model_name:
-                case "XGBoost":
-                    results = self._train_XGBoost(X, y, X_val, y_val, fold, model_params, results)
-                case "LGBM":
-                    results = self._train_LGBM(X, y, X_val, y_val, fold,model_params, results)
-                case _:
-                    results = self._train_sklearn_model(X, y, X_val, y_val, fold, model_name, model_params, results)
+            # Get appropriate trainer
+            trainer = self._get_trainer(model_name)
             
+            # Train model using appropriate trainer
+            results = trainer.train(X, y, X_val, y_val, fold, model_params, results)
+
             if results.predictions is None:
                 raise ModelTestingError("Model training completed but predictions are None")
                                     
@@ -442,376 +455,13 @@ class ModelTester(AbstractModelTester):
                                   model_name=model_name,
                                   dataframe_shape=X.shape)
         
-    @log_performance
-    def _train_sklearn_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, fold: int, model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """
-        Train a scikit-learn model.
+    def _get_trainer(self, model_name: str) -> BaseTrainer:
+        """Get the appropriate trainer for the model."""
+        if model_name in ["XGBoost", "LGBM", "CatBoost"]:
+            return self.trainers[model_name]
+        else:
+            return self.trainers["SKLearn"]
 
-        Args:
-            X_train (pd.DataFrame): Training feature dataframe.
-            y_train (pd.Series): Training target series.
-            X_val (pd.DataFrame): Validation feature dataframe.
-            y_val (pd.Series): Validation target series.
-            model_name (str): Name of the sklearn model (from tree or ensemble modules).
-            model_params (Dict): Model hyperparameters.
-            
-
-        Returns:
-            ModelTrainingResults: Object containing model, predictions, and various model analysis results.
-
-        Raises:
-            ModelTestingError: If there's an error during model training.
-            ValueError: If the model name is not supported.
-        """
-
-        # Ensure X_val has the same columns in the same order as X_train
-        X_val = X_val[X_train.columns]
-
-        structured_log(logger, logging.INFO, f"{model_name} - Starting model training",
-                       input_shape=X_train.shape)
-        try:
-            # Get the appropriate model class
-            if hasattr(tree, model_name):
-                model_class = getattr(tree, model_name)
-            elif hasattr(ensemble, model_name):
-                model_class = getattr(ensemble, model_name)
-            else:
-                raise ValueError(f"Unsupported model: {model_name}")
-            
-            # Initialize and train the model
-            model = model_class()
-            model.set_params(**model_params)
-            model.fit(X_train, y_train)
-            
-            # Store model and generate predictions
-            results.model = model
-            results.predictions = model.predict_proba(X_val)[:, 1] if hasattr(model, 'predict_proba') else model.predict(X_val)
-
-            # Safely get feature importance scores
-            try:
-                if hasattr(model, 'feature_importances_'):
-                    results.feature_importance_scores = model.feature_importances_
-                    results.feature_names = X_train.columns.tolist()
-                    structured_log(logger, logging.INFO, "Feature importance scores calculated successfully",
-                                num_features=len(results.feature_importance_scores))
-            except Exception as e:
-                structured_log(logger, logging.WARNING, "Failed to get feature importance scores",
-                            error=str(e),
-                            error_type=type(e).__name__)
-                results.feature_importance_scores = None
-                results.feature_names = None
-
-            # Note: Most sklearn models don't support SHAP values directly
-            results.shap_values = None
-            results.shap_interaction_values = None
-            
-            structured_log(logger, logging.INFO, f"{model_name} - Predictions generated",
-                          predictions_type=type(results.predictions).__name__,
-                          predictions_shape=results.predictions.shape,
-                          predictions_sample=results.predictions[:5].tolist())
-            
-            return results
-        
-        except Exception as e:
-            raise ModelTestingError("Error in sklearn model training",
-                                     error_message=str(e),
-                                     dataframe_shape=X_train.shape)
-        
-    @log_performance
-    def _train_XGBoost(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, fold: int,
-                    model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """Train an XGBoost model"""
-        structured_log(logger, logging.INFO, "Starting XGBoost training", 
-                    input_shape=X_train.shape)
-        
-        try:
-            # Create DMatrix objects
-            dtrain = xgb.DMatrix(
-                X_train, 
-                label=y_train,
-                feature_names=X_train.columns.tolist(),
-                enable_categorical=self.config.enable_categorical
-            )
-            dval = xgb.DMatrix(
-                X_val, 
-                label=y_val,
-                feature_names=X_val.columns.tolist(),
-                enable_categorical=self.config.enable_categorical
-            )
-
-            # Initialize dict to store evaluation results
-            evals_result = {}
-
-
-            # Train model
-            model = xgb.train(
-                params=model_params,
-                dtrain=dtrain,
-                num_boost_round=self.config.XGB.num_boost_round,
-                early_stopping_rounds=self.config.XGB.early_stopping_rounds,
-                evals=[(dtrain, 'train'), (dval, 'eval')],
-                verbose_eval=self.config.XGB.verbose_eval,
-                evals_result=evals_result
-            )
-
-            # Store model and generate predictions
-            results.model = model
-            results.predictions = model.predict(dval)
-            results.num_boost_round = self.config.XGB.num_boost_round
-            results.early_stopping = self.config.XGB.early_stopping_rounds
-            results.enable_categorical = self.config.enable_categorical
-            results.categorical_features = self.config.categorical_features
-
-            # If learning curve data is requested, process eval results
-            if self.config.generate_learning_curve_data:
-                # Get the evaluation metric from params, default to 'binary_logloss'
-                eval_metric = list(evals_result['train'].keys())[0]  # Get the metric name
-                results.learning_curve_data.metric_name = eval_metric
-
-                # Populate all iterations at once
-                for i, (train_score, val_score) in enumerate(zip(
-                    evals_result['train'][eval_metric], 
-                    evals_result['eval'][eval_metric]
-                )):
-                    train_score_converted, val_score_converted = self._convert_metric_scores(
-                        train_score, 
-                        val_score,
-                        eval_metric
-                    )
-                    results.learning_curve_data.add_iteration(
-                        train_score=train_score_converted,
-                        val_score=val_score_converted,
-                        iteration=i
-                    )
-
-            # Calculate feature importance and store feature names
-            try:
-                importance_dict = model.get_score(importance_type='gain')
-                results.feature_importance_scores = np.array([
-                    importance_dict.get(feature, 0) 
-                    for feature in X_val.columns
-                ])
-                results.feature_names = X_val.columns.tolist()
-                
-                structured_log(logger, logging.INFO, "Calculated feature importance",
-                            num_features_with_importance=len(importance_dict))
-                
-            except Exception as e:
-                structured_log(logger, logging.WARNING, "Failed to calculate feature importance",
-                            error=str(e))
-                results.feature_importance_scores = np.zeros(X_val.shape[1])
-
-            # Calculate SHAP values if configured
-            if self.config.calculate_shap_values:
-                try:
-                    # Calculate SHAP values
-                    shap_values = model.predict(dval, pred_contribs=True)
-                    
-                    structured_log(logger, logging.INFO, "SHAP value details",
-                                shap_values_shape=shap_values.shape,
-                                shap_values_nulls=np.sum(np.isnan(shap_values)),
-                                X_val_shape=X_val.shape)
-                    
-                    # Remove the bias term (last column) from SHAP values
-                    if shap_values.shape[1] == X_val.shape[1] + 1:
-                        structured_log(logger, logging.INFO, 
-                                    "Removing bias term from SHAP values",
-                                    original_shape=shap_values.shape)
-                        shap_values = shap_values[:, :-1]
-                        structured_log(logger, logging.INFO, 
-                                    "SHAP values after bias removal",
-                                    new_shape=shap_values.shape)
-                    
-                    # Store feature data and SHAP values
-                    results.feature_data = X_val
-                    results.target_data = y_val
-                    results.shap_values = shap_values
-                    
-                    # Calculate interactions if configured
-                    if self.config.calculate_shap_interactions:
-                        n_features = X_val.shape[1]
-                        estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
-                        
-                        if estimated_memory <= self.config.max_shap_interaction_memory_gb:
-                            interaction_values = model.predict(dval, pred_interactions=True)
-                            # Remove bias term from interaction values if present
-                            if interaction_values.shape[1] == X_val.shape[1] + 1:
-                                interaction_values = interaction_values[:, :-1, :-1]
-                            results.shap_interaction_values = interaction_values
-                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values",
-                                        interaction_shape=interaction_values.shape)
-                                
-                except Exception as e:
-                    structured_log(logger, logging.ERROR, "Failed to calculate SHAP values",
-                                error=str(e),
-                                error_type=type(e).__name__)
-                    raise
-
-            # Final validation of shapes
-            if results.shap_values is not None:
-                structured_log(logger, logging.INFO, "Final shape validation",
-                            feature_data_shape=results.feature_data.shape,
-                            shap_values_shape=results.shap_values.shape,
-                            equal_shapes=results.feature_data.shape[1] == results.shap_values.shape[1])
-                
-            structured_log(logger, logging.INFO, "XGBoost training completed successfully",
-                        predictions_shape=results.predictions.shape)
-            
-
-
-            return results
-
-        except Exception as e:
-            raise ModelTestingError(
-                "Error in XGBoost model training",
-                error_message=str(e),
-                dataframe_shape=X_train.shape
-            )   
-         
-    @log_performance
-    def _train_LGBM(self, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """
-        Train a LightGBM model with the enhanced ModelTrainingResults.
-        Returns:
-            ModelTrainingResults object with trained model and predictions
-        """
-        structured_log(logger, logging.INFO, "Starting LightGBM training", 
-                    input_shape=X_train.shape)
-        
-        try:
-            train_data = lgb.Dataset(X_train, label=y_train, categorical_feature=self.config.categorical_features)
-            val_data = lgb.Dataset(X_val, label=y_val, categorical_feature=self.config.categorical_features, reference=train_data)
-            
-            # Dictionary to store evaluation history
-            eval_results = {}
-            
-            # Train model
-            model = lgb.train(
-                model_params,  
-                train_data,
-                num_boost_round=self.config.LGBM.num_boost_round,
-                valid_sets=[train_data, val_data],
-                valid_names=['train', 'valid'],
-                callbacks=[
-                    lgb.early_stopping(self.config.LGBM.early_stopping),
-                    lgb.log_evaluation(self.config.LGBM.log_evaluation),
-                    lgb.record_evaluation(eval_results)  # Add callback to record evaluation history
-                ]
-            )
-
-            # Store model and generate predictions
-            results.model = model
-            results.predictions = model.predict(X_val)
-            results.num_boost_round = self.config.LGBM.num_boost_round
-            results.early_stopping = self.config.LGBM.early_stopping
-            results.enable_categorical = True  # LightGBM always enables categorical
-            results.categorical_features = self.config.categorical_features
-
-            # If learning curve data is requested, process eval results
-            if self.config.generate_learning_curve_data:
-                # Get the evaluation metric from params, default to 'binary_logloss'
-                eval_metric = list(eval_results['train'].keys())[0]  # Get the metric name
-                results.learning_curve_data.metric_name = eval_metric
-
-                # Populate all iterations at once
-                for i, (train_score, val_score) in enumerate(zip(
-                    eval_results['train'][eval_metric], 
-                    eval_results['valid'][eval_metric]
-                )):
-                    train_score_converted, val_score_converted = self._convert_metric_scores(
-                        train_score, 
-                        val_score,
-                        eval_metric
-                    )
-                    results.learning_curve_data.add_iteration(
-                        train_score=train_score_converted,
-                        val_score=val_score_converted,
-                        iteration=i
-                    )
-
-            structured_log(logger, logging.INFO, "Generated predictions", 
-                        predictions_shape=results.predictions.shape,
-                        predictions_mean=float(np.mean(results.predictions)))
-
-            # Calculate feature importance
-            try:
-                results.feature_importance_scores = model.feature_importance('gain')
-                results.feature_names = X_train.columns.tolist()
-                
-                structured_log(logger, logging.INFO, "Calculated feature importance",
-                            num_features_with_importance=len(results.feature_importance_scores))
-                
-            except Exception as e:
-                structured_log(logger, logging.WARNING, "Failed to calculate feature importance",
-                            error=str(e))
-                results.feature_importance_scores = np.zeros(X_train.shape[1])
-
-            # Calculate SHAP values if configured
-            if self.config.calculate_shap_values:
-                try:
-                    # Calculate SHAP values
-                    shap_values = model.predict(X_val, pred_contrib=True)
-                    
-                    structured_log(logger, logging.INFO, "SHAP value details",
-                                shap_values_shape=shap_values.shape,
-                                shap_values_nulls=np.sum(np.isnan(shap_values)),
-                                X_val_shape=X_val.shape)
-                    
-                    # Remove the bias term (last column) from SHAP values
-                    if shap_values.shape[1] == X_val.shape[1] + 1:
-                        structured_log(logger, logging.INFO, 
-                                    "Removing bias term from SHAP values",
-                                    original_shape=shap_values.shape)
-                        shap_values = shap_values[:, :-1]
-                        structured_log(logger, logging.INFO, 
-                                    "SHAP values after bias removal",
-                                    new_shape=shap_values.shape)
-                    
-                    # Store feature data and SHAP values
-                    results.feature_data = X_val
-                    results.target_data = y_val
-                    results.shap_values = shap_values
-                    
-                    # Calculate interactions if configured
-                    if self.config.calculate_shap_interactions:
-                        n_features = X_val.shape[1]
-                        estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
-                        
-                        if estimated_memory <= self.config.max_shap_interaction_memory_gb:
-                            interaction_values = model.predict(X_val, pred_interactions=True)
-                            # Remove bias term from interaction values if present
-                            if interaction_values.shape[1] == X_val.shape[1] + 1:
-                                interaction_values = interaction_values[:, :-1, :-1]
-                            results.shap_interaction_values = interaction_values
-                            structured_log(logger, logging.INFO, "Calculated SHAP interaction values",
-                                        interaction_shape=interaction_values.shape)
-                            
-                except Exception as e:
-                    structured_log(logger, logging.ERROR, "Failed to calculate SHAP values",
-                                error=str(e),
-                                error_type=type(e).__name__)
-                    raise
-
-            # Final validation of shapes
-            if results.shap_values is not None:
-                structured_log(logger, logging.INFO, "Final shape validation",
-                            feature_data_shape=results.feature_data.shape,
-                            shap_values_shape=results.shap_values.shape,
-                            equal_shapes=results.feature_data.shape[1] == results.shap_values.shape[1])
-                
-            return results
-
-        except Exception as e:
-            structured_log(logger, logging.ERROR, "Error in LightGBM training",
-                        error_message=str(e),
-                        error_type=type(e).__name__,
-                        dataframe_shape=X_train.shape)
-            raise ModelTestingError(
-                "Error in LightGBM model training",
-                error_message=str(e),
-                dataframe_shape=X_train.shape
-            )
-        
     @log_performance
     def _reduce_memory_footprint(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -916,44 +566,6 @@ class ModelTester(AbstractModelTester):
         
         return results
     
-
- 
-    def _generate_sklearn_learning_curve_data(self, X_train, y_train, X_val, y_val, 
-                                        fold: int, model_params,
-                                        results: ModelTrainingResults) -> ModelTrainingResults:
-        """Generate learning curve data for sklearn models."""
-        try:
-            model = model_class(**model_params)
-            model.fit(X_train, y_train)
-            
-            # Get predictions
-            train_pred = (model.predict_proba(X_train)[:, 1] 
-                        if hasattr(model, 'predict_proba') 
-                        else model.predict(X_train))
-            val_pred = (model.predict_proba(X_val)[:, 1]
-                    if hasattr(model, 'predict_proba')
-                    else model.predict(X_val))
-
-            # Calculate scores
-            train_score = self._calculate_model_score(y_train, train_pred)
-            val_score = self._calculate_model_score(y_val, val_pred)
-
-            # For sklearn models, we only have one iteration (the final model)
-            results.learning_curve_data.add_iteration(
-                train_score=train_score,
-                val_score=val_score,
-                iteration=0
-            )
-            results.learning_curve_data.metric_name = 'accuracy'  # or whatever metric you're using
-
-            return results
-
-        except Exception as e:
-            structured_log(logger, logging.ERROR,
-                        "Error in sklearn learning curve generation",
-                        error=str(e))
-            raise
-
     def _stratified_sample_indices(self, y: pd.Series, n_samples: int) -> np.ndarray:
         """Generate stratified sample indices maintaining class distribution."""
         from sklearn.model_selection import StratifiedShuffleSplit
@@ -971,25 +583,7 @@ class ModelTester(AbstractModelTester):
         """Calculate consistent model score across all implementations."""
         return accuracy_score(y_true, (y_pred >= 0.5).astype(int))
 
-    def _convert_metric_scores(self, train_score: float, val_score: float, metric_name: str) -> Tuple[float, float]:
-        """
-        Convert metric scores to a consistent format (higher is better).
-        Some metrics like logloss are "lower is better" and need to be converted.
-
-        Args:
-            train_score (float): Training score
-            val_score (float): Validation score
-            metric_name (str): Name of the metric being used
-
-        Returns:
-            Tuple[float, float]: Converted (train_score, val_score)
-        """
-        # List of metrics where lower values are better
-        lower_is_better = ['logloss', 'binary_logloss', 'multi_logloss', 'rmse', 'mae']
-        
-        # Check if metric name contains any of the "lower is better" metrics
-        if any(metric in metric_name.lower() for metric in lower_is_better):
-            # Convert to "higher is better" by negating
-            return -train_score, -val_score
-        
-        return train_score, val_score
+    def cleanup(self):
+        """Cleanup any resources."""
+        # Implement if needed
+        pass
