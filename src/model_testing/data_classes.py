@@ -9,11 +9,50 @@ Contains:
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Any, Dict, List, Set, Tuple
+from typing import Optional, Any, Dict, List, Set, Tuple, Union
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 import json
+
+@dataclass
+class LearningCurvePoint:
+    """Data point for learning curves."""
+    train_size: int
+    train_score: float
+    val_score: float
+    fold: int
+    iteration: Optional[int] = None
+    metric_name: Optional[str] = None
+
+@dataclass
+class LearningCurveData:
+    """Container for learning curve data averaged across folds."""
+    train_scores: List[float] = field(default_factory=list)
+    val_scores: List[float] = field(default_factory=list)
+    iterations: List[int] = field(default_factory=list)
+    metric_name: Optional[str] = None
+
+    def add_iteration(self, train_score: float, val_score: float, iteration: int):
+        """Add scores for a single iteration."""
+        self.train_scores.append(train_score)
+        self.val_scores.append(val_score)
+        self.iterations.append(iteration)
+
+    def get_plot_data(self) -> Dict[str, np.ndarray]:
+        """Get data ready for plotting."""
+        if not self.train_scores:
+            return {}
+            
+        return {
+            'iterations': np.array(self.iterations),
+            'train_scores': np.array(self.train_scores),
+            'val_scores': np.array(self.val_scores)
+        }
+
+    def __bool__(self) -> bool:
+        """Return True if there is data to plot."""
+        return bool(self.train_scores and self.val_scores and self.iterations)
 
 @dataclass
 class ClassificationMetrics:
@@ -23,9 +62,10 @@ class ClassificationMetrics:
     recall: float = 0.0
     f1: float = 0.0
     auc: float = 0.0
-    optimal_threshold: float = 0.0
-
-
+    optimal_threshold: float = 0.5
+    valid_samples: int = 0
+    total_samples: int = 0
+    nan_percentage: float = 0.0
 
 @dataclass
 class PreprocessingStep:
@@ -157,67 +197,21 @@ class ModelTrainingResults:
         # Preprocessing results
         self.preprocessing_results: Optional[PreprocessingResults] = None
 
-        self.learning_curve_data: Dict = {
-            'raw_data': [],  # List of (train_size, train_score, val_score, fold) tuples
-            'aggregated': None  # Will be populated after aggregation
-        }
+        self.learning_curve_data = LearningCurveData()
 
-    def add_learning_curve_point(self, 
-                               train_size: int,
-                               train_score: float,
-                               val_score: float,
-                               fold: int) -> None:
-        """
-        Add a learning curve data point.
-        
-        Args:
-            train_size: Number of training examples
-            train_score: Training score for this point
-            val_score: Validation score for this point
-            fold: Cross-validation fold number
-        """
-        self.learning_curve_data['raw_data'].append(
-            (train_size, train_score, val_score, fold)
+        self.n_folds = 0  # Add this field
+
+    def add_learning_curve_point(self, train_size: int, train_score: float, val_score: float, 
+                               fold: int, iteration: Optional[int] = None, metric_name: Optional[str] = None):
+        """Add a learning curve data point."""
+        self.learning_curve_data.add_point(
+            train_size=train_size,
+            train_score=train_score,
+            val_score=val_score,
+            fold=fold,
+            iteration=iteration,
+            metric_name=metric_name
         )
-
-    def aggregate_learning_curves(self) -> None:
-        """
-        Aggregate learning curves across all folds.
-        Computes means and standard deviations for both training and validation scores.
-        """
-        if not self.learning_curve_data['raw_data']:
-            return
-
-        # Convert to numpy array for easier manipulation
-        data = np.array(self.learning_curve_data['raw_data'])
-        
-        # Get unique train sizes and folds
-        unique_sizes = np.unique(data[:, 0])  # First column is train_size
-        unique_folds = np.unique(data[:, 3])  # Fourth column is fold
-        
-        # Initialize arrays for scores
-        train_scores = np.zeros((len(unique_sizes), len(unique_folds)))
-        val_scores = np.zeros((len(unique_sizes), len(unique_folds)))
-        
-        # Populate score arrays
-        for i, size in enumerate(unique_sizes):
-            size_mask = data[:, 0] == size
-            for j, fold in enumerate(unique_folds):
-                fold_mask = data[:, 3] == fold
-                mask = size_mask & fold_mask
-                
-                if np.any(mask):
-                    train_scores[i, j] = data[mask, 1][0]  # Second column is train_score
-                    val_scores[i, j] = data[mask, 2][0]    # Third column is val_score
-        
-        # Calculate means and standard deviations
-        self.learning_curve_data['aggregated'] = {
-            'train_sizes': unique_sizes,
-            'train_scores_mean': np.mean(train_scores, axis=1),
-            'train_scores_std': np.std(train_scores, axis=1),
-            'val_scores_mean': np.mean(val_scores, axis=1),
-            'val_scores_std': np.std(val_scores, axis=1)
-        }
 
     def update_feature_data(self, X: pd.DataFrame, y: pd.Series) -> None:
         """Update feature and target data"""

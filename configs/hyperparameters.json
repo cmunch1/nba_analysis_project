@@ -61,7 +61,7 @@
           "reg_lambda": 1,
           "random_state": 42,
           "objective": "binary",
-          "metric": "binary_logloss"
+          "metric": "auc"
         }
       },
       {
