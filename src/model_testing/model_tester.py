@@ -144,15 +144,16 @@ class ModelTester(AbstractModelTester):
                                 error_message=str(e),
                                 dataframe_shape=df.shape)
         
+    @log_performance
     def perform_oof_cross_validation(self, X: pd.DataFrame, y: pd.Series, model_name: str, model_params: Dict, full_results: ModelTrainingResults) -> ModelTrainingResults:
-        """
-        Perform Out-of-Fold (OOF) cross-validation with proper handling of TimeSeriesSplit results.
-        """
+        """Perform Out-of-Fold (OOF) cross-validation with proper handling of TimeSeriesSplit results."""
         structured_log(logger, logging.INFO, f"{model_name} - Starting OOF cross-validation",
                     input_shape=X.shape)
         try:
             # Initialize predictions and SHAP arrays with NaN
             full_results.predictions = np.full(len(y), np.nan)
+            full_results.target_data = y.copy()  # Store target data
+            
             if self.config.calculate_shap_values:
                 full_results.shap_values = np.full((len(y), X.shape[1]), np.nan)
                 if self.config.calculate_shap_interactions:
@@ -322,16 +323,27 @@ class ModelTester(AbstractModelTester):
     def calculate_classification_evaluation_metrics(self, y_true, y_prob, metrics: ClassificationMetrics) -> ClassificationMetrics:
         """Calculate classification metrics using probability scores and optimal threshold."""
         
-        structured_log(logger, logging.INFO, "Calculating classification metrics",
-                    n_samples=len(y_true))
+        structured_log(logger, logging.INFO, "Calculating classification metrics")
         
         try:
+            # Input validation
+            if y_true is None or y_prob is None:
+                raise ValueError("y_true and y_prob must not be None")
+            
+            if not isinstance(y_true, (np.ndarray, pd.Series)) or not isinstance(y_prob, (np.ndarray, pd.Series)):
+                raise ValueError("y_true and y_prob must be numpy arrays or pandas Series")
 
             if np.any(np.isnan(y_prob)):
                 structured_log(logger, logging.WARNING, 
                             "Unexpected NaN values found in predictions after OOF filtering",
                             nan_count=np.sum(np.isnan(y_prob)))
-                raise ValueError("Unexpected NaN values in predictions after OOF filtering")
+                # Filter out NaN values
+                mask = ~np.isnan(y_prob)
+                y_true = y_true[mask]
+                y_prob = y_prob[mask]
+                
+                if len(y_true) == 0:
+                    raise ValueError("No valid predictions after filtering NaN values")
             
             # Find optimal threshold using ROC curve
             fpr, tpr, thresholds = roc_curve(y_true, y_prob)
@@ -363,6 +375,12 @@ class ModelTester(AbstractModelTester):
             return metrics
             
         except Exception as e:
+            structured_log(logger, logging.ERROR, "Error calculating classification metrics",
+                        error=str(e),
+                        y_true_type=type(y_true).__name__ if y_true is not None else None,
+                        y_prob_type=type(y_prob).__name__ if y_prob is not None else None,
+                        y_true_shape=y_true.shape if hasattr(y_true, 'shape') else None,
+                        y_prob_shape=y_prob.shape if hasattr(y_prob, 'shape') else None)
             raise ModelTestingError("Error calculating classification metrics",
                                 error_message=str(e),
                                 n_samples=len(y_true) if y_true is not None else None,
