@@ -48,10 +48,11 @@
         "run_id": "optuna_20250124_104536"
       }
     ],
-    "LGBM": [
+    "LightGBM": [
       {
         "name": "baseline",
         "params": {
+
           "max_depth": 4,
           "learning_rate": 0.05,
           "subsample": 0.8,
@@ -94,11 +95,11 @@
       {
         "name": "baseline",
         "params": {
-          "max_depth": 4,
-          "learning_rate": 0.05,
+          "depth": 8,
+          "learning_rate": 0.03,
           "subsample": 0.8,
-          "colsample_bylevel": 0.8,
-          "min_child_weight": 2,
+          "rsm": 0.8,
+          "min_data_in_leaf": 20,
           "reg_lambda": 1,
           "random_state": 42,
           "eval_metric": "AUC",

@@ -33,14 +33,13 @@
 preprocessing:
   default:
     numerical:
-      scaling: standard
-      handling_missing: mean
+      scaling: null
+      handling_missing: null
       handling_outliers: null
-
     categorical:
-      handling_missing: constant
-      max_categories: null
-      min_frequency: null
+      encoding: null
+      handling_missing: null
+
 
 
   # Model-specific preprocessing settings
@@ -49,9 +48,11 @@ preprocessing:
       numerical:
         scaling: standard
         handling_missing: mean
-        handling_outliers: winsorize
+        handling_outliers: null
       categorical:
+        encoding: ordinal
         handling_missing: constant
+
 
 
     RandomForest:
@@ -65,20 +66,35 @@ preprocessing:
     
     XGBoost:
       numerical:
-        scaling: null  
+        scaling: null
         handling_missing: null
+        handling_outliers: null
       categorical:
         encoding: ordinal
         handling_missing: null
 
-    LGBM:
+
+    LightGBM:
       numerical:
-        scaling: null  
+        scaling: null
         handling_missing: null
+        handling_outliers: null
       categorical:
         encoding: ordinal
         handling_missing: null
+
+
+    CatBoost:
+      numerical:
+        scaling: null
+        handling_missing: null
+        handling_outliers: null
+      categorical:
+        encoding: null # CatBoost handles categories internally
+        handling_missing: null
+
     
+
     NeuralNetwork:
       numerical:
         scaling: standard

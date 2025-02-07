@@ -43,20 +43,22 @@ class LightGBMTrainer(BaseTrainer):
             model = lgb.train(
                 params=model_params,
                 train_set=train_data,
-                num_boost_round=self.config.LGBM.num_boost_round,
+                num_boost_round=self.config.LightGBM.num_boost_round,
                 valid_sets=[train_data, val_data],
                 valid_names=['train', 'eval'],
-                early_stopping_rounds=self.config.LGBM.early_stopping_rounds,
-                verbose_eval=self.config.LGBM.verbose_eval,
+                early_stopping_rounds=self.config.LightGBM.early_stopping_rounds,
+                verbose_eval=self.config.LightGBM.verbose_eval,
+
                 evals_result=evals_result
             )
 
             # Store model and generate predictions
             results.model = model
             results.predictions = model.predict(X_val)
-            results.num_boost_round = self.config.LGBM.num_boost_round
-            results.early_stopping = self.config.LGBM.early_stopping_rounds
+            results.num_boost_round = self.config.LightGBM.num_boost_round
+            results.early_stopping = self.config.LightGBM.early_stopping_rounds
             results.categorical_features = self.config.categorical_features
+
 
             # Process learning curve data if requested
             if self.config.generate_learning_curve_data:
