@@ -26,13 +26,13 @@ class XGBoostTrainer(BaseTrainer):
                 X_train, 
                 label=y_train,
                 feature_names=X_train.columns.tolist(),
-                enable_categorical=self.config.enable_categorical
+                enable_categorical=self.config.XGBoost.enable_categorical
             )
             dval = xgb.DMatrix(
                 X_val, 
                 label=y_val,
                 feature_names=X_val.columns.tolist(),
-                enable_categorical=self.config.enable_categorical
+                enable_categorical=self.config.XGBoost.enable_categorical
             )
 
             # Initialize dict to store evaluation results
@@ -42,20 +42,22 @@ class XGBoostTrainer(BaseTrainer):
             model = xgb.train(
                 params=model_params,
                 dtrain=dtrain,
-                num_boost_round=self.config.XGB.num_boost_round,
-                early_stopping_rounds=self.config.XGB.early_stopping_rounds,
+                num_boost_round=self.config.XGBoost.num_boost_round,
+                early_stopping_rounds=self.config.XGBoost.early_stopping_rounds,
                 evals=[(dtrain, 'train'), (dval, 'eval')],
-                verbose_eval=self.config.XGB.verbose_eval,
+                verbose_eval=self.config.XGBoost.verbose_eval,
                 evals_result=evals_result
+
             )
 
             # Store model and generate predictions
             results.model = model
             results.predictions = model.predict(dval)
-            results.num_boost_round = self.config.XGB.num_boost_round
-            results.early_stopping = self.config.XGB.early_stopping_rounds
-            results.enable_categorical = self.config.enable_categorical
+            results.num_boost_round = self.config.XGBoost.num_boost_round
+            results.early_stopping = self.config.XGBoost.early_stopping_rounds
+            results.enable_categorical = self.config.XGBoost.enable_categorical
             results.categorical_features = self.config.categorical_features
+
 
             # Process learning curve data if requested
             if self.config.generate_learning_curve_data:

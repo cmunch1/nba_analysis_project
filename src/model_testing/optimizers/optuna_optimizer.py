@@ -67,10 +67,11 @@ class OptunaOptimizer:
         if model_type:
             if model_type.lower() == "xgboost":
                 param_space = self._namespace_to_dict(self.config.xgb_param_space)
-            elif model_type.lower() == "lgbm":
+            elif model_type.lower() == "lightgbm":
                 param_space = self._namespace_to_dict(self.config.lgbm_param_space)
             else:
                 raise ValueError(f"Unsupported model type: {model_type}")
+
 
 
         # Get optimization settings from config
@@ -93,7 +94,7 @@ class OptunaOptimizer:
             result = None
             if model_type.lower() == "xgboost":
                 self.study = self._optimize_xgboost(X, y, param_space, n_trials, n_splits, cv_type, scoring)
-            elif model_type.lower() == "lgbm":
+            elif model_type.lower() == "lightgbm":
                 self.study = self._optimize_lightgbm(X, y, param_space, n_trials, n_splits, cv_type, scoring)
             else:
                 raise ValueError(f"Unsupported model type: {model_type}")
@@ -148,7 +149,7 @@ class OptunaOptimizer:
             # Use appropriate cross-validation strategy from config
             if cv_type == "TimeSeriesSplit":
                 kf = TimeSeriesSplit(n_splits=n_splits)
-            else:  # Default to StratifiedKFold
+            else:  
                 kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.config.random_state)
             
             for train_idx, val_idx in kf.split(X, y):
@@ -156,18 +157,20 @@ class OptunaOptimizer:
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
                 
                 dtrain = xgb.DMatrix(X_train, label=y_train,
-                                   enable_categorical=self.config.enable_categorical)
+                                   enable_categorical=self.config.XGBoost.enable_categorical)
                 dval = xgb.DMatrix(X_val, label=y_val,
-                                 enable_categorical=self.config.enable_categorical)
+                                 enable_categorical=self.config.XGBoost.enable_categorical)
                 
+
                 # Train model using config settings
                 model = xgb.train(
                     params,
                     dtrain,
-                    num_boost_round=self.config.XGB.num_boost_round,
+                    num_boost_round=self.config.XGBoost.num_boost_round,
                     evals=[(dval, 'val')],
-                    early_stopping_rounds=self.config.XGB.early_stopping_rounds,
+                    early_stopping_rounds=self.config.XGBoost.early_stopping_rounds,
                     verbose_eval=False
+
                 )
                 
                 # Get predictions
@@ -227,12 +230,13 @@ class OptunaOptimizer:
                 model = lgb.train(
                     params,
                     train_data,
-                    num_boost_round=self.config.LGBM.num_boost_round,
+                    num_boost_round=self.config.LightGBM.num_boost_round,
                     valid_sets=[val_data],
                     callbacks=[
-                        lgb.early_stopping(self.config.LGBM.early_stopping),
+                        lgb.early_stopping(self.config.LightGBM.early_stopping),
                         lgb.log_evaluation(0)
                     ]
+
                 )
                 
                 # Get predictions

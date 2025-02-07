@@ -9,9 +9,8 @@ optuna:
   interval_steps: 1
 
 # XGBoost parameter space
-xgb_param_space:
+XGBoost_param_space:
   static_params:
-    verbosity: 0
     device: cuda
     random_state: 42
     objective: binary:logistic
@@ -31,11 +30,10 @@ xgb_param_space:
     scale_pos_weight: [1, 15, int] # may need to higher for imbalanced data
 
 # LightGBM parameter space
-lgbm_param_space:
+LightGBM_param_space:
   static_params:
     objective: binary
     metric: auc
-    verbosity: -1
     random_state: 42
 
   dynamic_params:
@@ -51,12 +49,13 @@ lgbm_param_space:
     bagging_freq: [1, 10, int]
 
 # CatBoost parameter space  
-catboost_param_space:
+CatBoost_param_space:
  static_params:
    loss_function: Logloss
    eval_metric: AUC
    task_type: GPU
-   verbose: False
+
+
  dynamic_params:
    learning_rate: [1e-3, 1.0, float, true]
    depth: [3, 10, int] 

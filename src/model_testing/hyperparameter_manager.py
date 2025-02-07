@@ -117,17 +117,25 @@ class HyperparameterManager(AbstractHyperparameterManager):
             run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         if model_name == "xgboost":
-            num_boost_round = self.config.XGB.num_boost_round   
-            early_stopping = self.config.XGB.early_stopping_rounds
-            enable_categorical = self.config.XGB.enable_categorical
-            categorical_features = self.config.XGB.categorical_features
-        elif model_name == "lgbm":
-            num_boost_round = self.config.LGBM.num_boost_round
-            early_stopping = self.config.LGBM.early_stopping
-            categorical_features = self.config.LGBM.categorical_features
+            num_boost_round = self.config.XGBoost.num_boost_round   
+            early_stopping = self.config.XGBoost.early_stopping_rounds
+            enable_categorical = self.config.XGBoost.enable_categorical
+            categorical_features = self.config.XGBoost.categorical_features
+
+        elif model_name == "lightgbm":
+            num_boost_round = self.config.LightGBM.num_boost_round
+            early_stopping = self.config.LightGBM.early_stopping
+            categorical_features = self.config.LightGBM.categorical_features
+
+        elif model_name == "catboost":
+            num_boost_round = self.config.CatBoost.num_boost_round
+            early_stopping = self.config.CatBoost.early_stopping_rounds
+            categorical_features = self.config.CatBoost.categorical_features
+
         else:
             raise ValueError(f"Unsupported model type: {model_name}")
         
+
         # Create new hyperparameter set
         new_set = HyperparameterSet(
             name=f"{model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",

@@ -140,9 +140,13 @@ class ModelTester(AbstractModelTester):
                                 steps_overview=steps_summary)
 
             X = self._reduce_memory_footprint(X)
+
+            
+            X.to_csv("X.csv", index=False)
             
             structured_log(logger, logging.INFO, "Data preparation completed",
                         output_shape=X.shape)
+
             return X, y, preprocessing_results, primary_ids
         
         except Exception as e:

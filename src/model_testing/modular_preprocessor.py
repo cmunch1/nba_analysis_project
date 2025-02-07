@@ -80,26 +80,28 @@ class ModularPreprocessor:
             # Split features
             numerical_features = X.select_dtypes(include=['int64', 'float64']).columns
             categorical_features = X.select_dtypes(include=['object', 'category']).columns
-
-            print('categorical_features', categorical_features)
             
             # Create transformers list
             transformers = []
+
+            model_config = self._get_model_config(model_name)
             
             # Add numerical pipeline if there are numerical features
             if len(numerical_features) > 0:
-                if num_pipeline := self._create_numerical_pipeline(model_name):
+                if num_pipeline := self._create_numerical_pipeline(model_config):
                     transformers.append(('numerical', num_pipeline, numerical_features))
                     
+
                     self._track_numerical_preprocessing(
                         num_pipeline, X[numerical_features], y, preprocessing_results
                     )
             
             # Add categorical pipeline if there are categorical features
             if len(categorical_features) > 0:
-                if cat_pipeline := self._create_categorical_pipeline(model_name):
+                if cat_pipeline := self._create_categorical_pipeline(model_config):
                     transformers.append(('categorical', cat_pipeline, categorical_features))
                     
+
                     self._track_categorical_preprocessing(
                         cat_pipeline, X[categorical_features], preprocessing_results
                     )
@@ -107,17 +109,23 @@ class ModularPreprocessor:
             # Create and fit ColumnTransformer
             self.preprocessor = ColumnTransformer(
                 transformers=transformers,
-                remainder='passthrough'  # Keep any columns not explicitly transformed
+                remainder='passthrough',  # Keep any columns not explicitly transformed
+                verbose_feature_names_out=False  # Add this to simplify feature names
             )
             
             # Fit and transform the data
             transformed = self.preprocessor.fit_transform(X, y)
             
-            # Get model-specific config for additional preprocessing steps
-            model_config = self._get_model_config(model_name)
-                   
             # Generate feature names for the transformed data
             feature_names = self._get_feature_names(X, self.preprocessor)
+            
+            # Convert to DataFrame with proper feature names and preserve dtypes
+            transformed_df = pd.DataFrame(transformed, columns=feature_names, index=X.index)
+            
+            # Restore original dtypes for untransformed columns
+            for col in X.columns:
+                if col in transformed_df.columns and col in X.columns:
+                    transformed_df[col] = transformed_df[col].astype(X[col].dtype)
             
             # Update results with final feature names if tracking
             preprocessing_results.final_features = feature_names
@@ -181,12 +189,25 @@ class ModularPreprocessor:
         """Get preprocessing config for specific model, falling back to default if not specified."""
         if (hasattr(self.config.preprocessing, 'model_specific') and 
             hasattr(self.config.preprocessing.model_specific, model_name)):
-            return getattr(self.config.preprocessing.model_specific, model_name)
-        return self.config.preprocessing.default
+            model_config = getattr(self.config.preprocessing.model_specific, model_name)
+
+            # Convert SimpleNamespace to dict for logging
+            structured_log(logger, logging.INFO, "Model-specific preprocessing config found",
+                        model_name=model_name,
+                        )
+        else:
+            model_config = self.config.preprocessing.default
+            # Convert SimpleNamespace to dict for logging
+            config_dict = vars(model_config) if hasattr(model_config, '__dict__') else str(model_config)
+            structured_log(logger, logging.WARNING, "No model-specific preprocessing config found, using default")
         
-    def _create_numerical_pipeline(self, model_name: str) -> Pipeline:
+        return model_config
+        
+
+
+    def _create_numerical_pipeline(self, model_config: dict) -> Pipeline:
         """Create numerical preprocessing pipeline based on config."""
-        model_config = self._get_model_config(model_name)
+        
         steps = []
         
         if hasattr(model_config.numerical, 'handling_missing'):
@@ -216,11 +237,11 @@ class ModularPreprocessor:
             
         return Pipeline(steps) if steps else None
         
-    def _create_categorical_pipeline(self, model_name: str) -> Pipeline:
+    def _create_categorical_pipeline(self, model_config: dict) -> Pipeline:
         """Create categorical preprocessing pipeline based on config."""
-        model_config = self._get_model_config(model_name)
         steps = []
         
+            
         if hasattr(model_config.categorical, 'handling_missing'):
             if model_config.categorical.handling_missing == "constant":
                 steps.append(('imputer', SimpleImputer(

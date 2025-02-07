@@ -13,7 +13,8 @@ sort_order:
   - true
 
 # perform preprocessing - particularly for non-GBT models that require scaling and standardization
-perform_preprocessing: true
+# the settings are in the preprocessing_config.yaml file
+perform_preprocessing: false
 
 # hyperparameters path (${PROJECT_ROOT} is the root directory of the project and is parsed from the environment variable in config.py)
 current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
@@ -22,14 +23,14 @@ current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
 hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
 
 # true = use baseline hyperparameters, false = use current best hyperparameters in config/hyperparameters.json
-use_baseline_hyperparameters: false
+use_baseline_hyperparameters: true
 
 # perform hyperparameter optimization 
 perform_hyperparameter_optimization: false
 always_use_new_hyperparameters: false # false = use the best hyperparameters from the hyperparameter_history directory
 
 # optimizer
-optimizer:
+optimizer: #(Optuna is currently the only optimizer supported)
   - Optuna
 
 
@@ -53,44 +54,44 @@ categorical_features:
   - h_team_id
   - v_team_id
  
-# random state for cross validation and model training
+# random state for cross validation and other random operations (each model has its own random state in hyperparameter.json)
 random_state: 42
 
 
-
-# models
+# models to use in this experiment run
 models:
-  XGBoost: true
+  XGBoost: false
   LGBM: false
-  CatBoost: false
+  CatBoost: true
   SKLearn:
     RandomForest: false
     LogisticRegression: false
 
 
-
-
-
-
+# model specific static settings - tunable hyperparameters are in the hyperparameters.json file
 # XGBoost settings
-enable_categorical: false
-XGB:
-
+XGBoost:
   num_boost_round: 10000
   early_stopping_rounds: 100
   verbose_eval: 100
   enable_categorical: false
-  use_label_encoder: false
 
 # LGBM settings
-LGBM:
+LightGBM:
   num_boost_round: 10000
   early_stopping: 100
   log_evaluation: 100
 
+# CatBoost settings
+CatBoost:
+  num_boost_round: 10000
+  early_stopping_rounds: 100
+  verbose_eval: 100
+
 # SKLearn settings
 SKLearn:
   RandomForest:
+
     n_estimators: 100
     max_depth: 10
     min_samples_split: 2
@@ -103,9 +104,10 @@ SKLearn:
     random_state: 42
 
 
-# cross validation type
+# cross validation type (only TimeSeriesSplit and StratifiedKFold are supported currently)
 cross_validation_type: TimeSeriesSplit
 #cross_validation_type: StratifiedKFold
+
 
 
 # number of cross validation splits
