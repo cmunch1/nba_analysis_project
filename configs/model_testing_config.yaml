@@ -62,11 +62,11 @@ random_state: 42
 models:
   XGBoost: false
   LGBM: false
-  CatBoost: true
+  CatBoost: false
   SKLearn:
-    RandomForest: false
+    RandomForest: true
     LogisticRegression: false
-
+    HistGradientBoosting: false
 
 # model specific static settings - tunable hyperparameters are in the hyperparameters.json file
 # XGBoost settings
@@ -90,24 +90,19 @@ CatBoost:
 
 # SKLearn settings
 SKLearn:
-  RandomForest:
+  #RandomForest:    all settings are tunable and found in hyperparameters.json
 
-    n_estimators: 100
-    max_depth: 10
-    min_samples_split: 2
-    random_state: 42
-
-  
   LogisticRegression:
-    C: 1.0
-    max_iter: 100
-    random_state: 42
+    max_iter: 1000     
+    
+  HistGradientBoosting:
+    max_iter: 1000     
+    early_stopping: true  
 
 
 # cross validation type (only TimeSeriesSplit and StratifiedKFold are supported currently)
 cross_validation_type: TimeSeriesSplit
 #cross_validation_type: StratifiedKFold
-
 
 
 # number of cross validation splits

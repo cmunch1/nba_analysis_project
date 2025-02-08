@@ -76,26 +76,37 @@ class ChartFunctions:
                 explainer = shap.TreeExplainer(model)
                 shap_values = explainer.shap_values(X)
             
+            # Handle different SHAP value formats
+            if isinstance(shap_values, list):
+                values = shap_values[1]  # For binary classification, use positive class
+            elif shap_values.ndim > 2:
+                values = np.mean(shap_values, axis=tuple(range(2, shap_values.ndim)))
+            else:
+                values = shap_values
+
+            # Ensure values is 2D
+            if values.ndim == 1:
+                values = values.reshape(-1, 1)
+
             # Check for NaN values
-            if np.any(np.isnan(shap_values)):
+            if np.any(np.isnan(values)):
                 structured_log(logger, logging.WARNING, 
                              "NaN values found in SHAP values",
-                             nan_count=np.sum(np.isnan(shap_values)))
+                             nan_count=np.sum(np.isnan(values)))
                 # Remove rows with NaN values
-                valid_mask = ~np.any(np.isnan(shap_values), axis=1)
-                shap_values = shap_values[valid_mask]
+                valid_mask = ~np.any(np.isnan(values), axis=1)
+                values = values[valid_mask]
                 X = X.iloc[valid_mask]
 
             # Create the plot
             fig = plt.figure(figsize=(12, 8))
-            values = shap_values[1] if isinstance(shap_values, list) else shap_values
             
             # Limit features if specified
             if n_features is not None:
                 feature_importance = np.abs(values).mean(0)
                 top_indices = np.argsort(feature_importance)[-n_features:]
                 values = values[:, top_indices]
-                X = X.iloc[:, top_indices]
+                X = X.iloc[:, top_indices.tolist()]  # Convert indices to list for pandas
 
             shap.summary_plot(values, X, plot_type="bar", show=False)
             plt.title("SHAP Summary Plot")
@@ -460,24 +471,28 @@ class ChartFunctions:
 
             # Create figure and plot
             plt.figure(figsize=(12, 8))
-            values = shap_values[1] if isinstance(shap_values, list) else shap_values
             
+            # Handle different SHAP value formats
+            if isinstance(shap_values, list):
+                # For tree models that return a list of arrays
+                values = shap_values[1]  # For binary classification, use positive class
+            elif shap_values.ndim > 2:
+                # For multi-dimensional SHAP values, take mean across extra dimensions
+                values = np.mean(shap_values, axis=tuple(range(2, shap_values.ndim)))
+            else:
+                values = shap_values
+
+            # Ensure values is 2D
+            if values.ndim == 1:
+                values = values.reshape(-1, 1)
+
             # Handle shape mismatch from OOF predictions
             if values.shape[0] != X.shape[0]:
                 structured_log(logger, logging.INFO, 
                             "Shape mismatch detected - filtering X to match SHAP values",
                             X_shape=X.shape,
                             shap_shape=values.shape)
-                
-                # Create a mask of rows that have SHAP values (processed in cross-validation)
-                processed_mask = np.zeros(X.shape[0], dtype=bool)
-                processed_mask[:values.shape[0]] = True  # Assuming first N rows were processed
                 X = X.iloc[:values.shape[0]]
-                
-                structured_log(logger, logging.INFO, 
-                            "After filtering",
-                            new_X_shape=X.shape,
-                            shap_shape=values.shape)
 
             # Limit features if specified
             if n_features is not None:
@@ -485,12 +500,7 @@ class ChartFunctions:
                 feature_importance = np.abs(values).mean(0)
                 top_indices = np.argsort(feature_importance)[-n_features:]
                 values = values[:, top_indices]
-                X = X.iloc[:, top_indices]
-                
-                structured_log(logger, logging.INFO, 
-                            "After feature selection",
-                            final_X_shape=X.shape,
-                            final_shap_shape=values.shape)
+                X = X.iloc[:, top_indices.tolist()]  # Convert indices to list for pandas
 
             shap.summary_plot(values, X, plot_type="dot", show=False)
             fig = plt.gcf()

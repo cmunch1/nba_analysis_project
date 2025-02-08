@@ -142,7 +142,7 @@ class ModelTester(AbstractModelTester):
             X = self._reduce_memory_footprint(X)
 
             
-            X.to_csv("X.csv", index=False)
+            #X.to_csv("X.csv", index=False)
             
             structured_log(logger, logging.INFO, "Data preparation completed",
                         output_shape=X.shape)
