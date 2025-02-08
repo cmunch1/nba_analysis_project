@@ -36,24 +36,42 @@ class ChartFunctions:
         """
         try:
             # Sort features by importance and get top_n features
-            indices = np.argsort(feature_importance)[-top_n:]
+            indices = np.argsort(np.abs(feature_importance))[-top_n:]  # Use absolute values for sorting
             top_importance = feature_importance[indices]
             top_names = [feature_names[i] for i in indices]
 
-            plt.figure(figsize=(10, 6))
-            plt.barh(range(len(top_importance)), top_importance)
-            plt.yticks(range(len(top_importance)), top_names)
-            plt.xlabel('Feature Importance')
-            plt.title(f'Top {top_n} Most Important Features')
+            # Create figure and axis
+            fig, ax = plt.subplots(figsize=(12, 8))
+            
+            # Create horizontal bar chart
+            y_pos = np.arange(len(top_importance))
+            ax.barh(y_pos, np.abs(top_importance))  # Use absolute values for bars
+            
+            # Customize the plot
+            ax.set_yticks(y_pos)
+            ax.set_yticklabels(top_names)
+            ax.invert_yaxis()  # Invert y-axis to show highest importance at top
+            ax.set_xlabel('Feature Importance (absolute value)')
+            ax.set_title(f'Top {top_n} Most Important Features')
+            
+            # Add grid lines
+            ax.grid(True, axis='x', linestyle='--', alpha=0.7)
+            
+            # Adjust layout to prevent label cutoff
             plt.tight_layout()
             
-            return plt.gcf()
+            structured_log(logger, logging.INFO, "Feature importance chart created",
+                          n_features=len(top_importance),
+                          max_importance=float(np.max(np.abs(top_importance))),
+                          min_importance=float(np.min(np.abs(top_importance))))
+            
+            return fig
             
         except Exception as e:
             raise ChartCreationError("Error creating feature importance chart",
-                                     error_message=str(e),
-                                     feature_importance_shape=feature_importance.shape,
-                                     feature_names_length=len(feature_names))
+                                    error_message=str(e),
+                                    feature_importance_shape=feature_importance.shape,
+                                    feature_names_length=len(feature_names))
 
     @log_performance
     def create_shap_summary_plot(self, model: Any, X: pd.DataFrame, shap_values: Optional[np.ndarray] = None, n_features: Optional[int] = None) -> plt.Figure:
