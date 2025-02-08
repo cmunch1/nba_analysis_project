@@ -52,7 +52,6 @@
       {
         "name": "baseline",
         "params": {
-
           "max_depth": 4,
           "learning_rate": 0.05,
           "subsample": 0.8,
@@ -110,43 +109,58 @@
         }
       }
     ],
-    "HistGradientBoosting": [
+    "SKLearn_RandomForest": [
       {
         "name": "baseline",
         "params": {
-          "max_depth": 4,
-          "learning_rate": 0.05,
-          "max_leaf_nodes": 31,
-          "min_samples_leaf": 20,
           "random_state": 42,
-          "scoring": "roc_auc",
-          "loss": "log_loss"
-        }
-      }
-    ],
-    "RandomForest": [
-      {
-        "name": "baseline",
-        "params": {
+          "n_estimators": 100,
           "max_depth": 4,
           "min_samples_split": 2,
           "min_samples_leaf": 1,
-          "n_estimators": 100,
-          "random_state": 42,
-          "criterion": "gini"
-        }
+          "criterion": "gini",
+          "class_weight": "balanced",
+          "max_features": "sqrt"
+        },
+        "eval_metric": "auc"
       }
     ],
-    "LogisticRegression": [
+    "SKLearn_LogisticRegression": [
       {
         "name": "baseline",
         "params": {
+          "random_state": 42,
           "C": 1.0,
           "penalty": "l2",
-          "max_iter": 100,
+          "solver": "lbfgs",
+          "class_weight": "balanced",
+          "tol": 0.0001,     
+          "fit_intercept": true,
+          "warm_start": false
+        },
+        "eval_metric": "logloss"
+      }
+    ],
+    "SKLearn_HistGradientBoosting": [
+      {
+        "name": "baseline",
+        "params": {
           "random_state": 42,
-          "solver": "lbfgs"
-        }
+          "learning_rate": 0.1,
+          "max_depth": 4,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 20,
+          "l2_regularization": 0,
+          "max_bins": 255,
+          "categorical_features": null,
+          "monotonic_cst": null,
+          "loss": "log_loss",
+          "class_weight": "balanced",
+          "validation_fraction": 0.1,  
+          "n_iter_no_change": 10,
+          "scoring": "roc_auc"
+        },
+        "eval_metric": "auc"
       }
     ]
   }

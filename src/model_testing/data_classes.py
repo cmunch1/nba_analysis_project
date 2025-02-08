@@ -183,6 +183,7 @@ class ModelTrainingResults:
         self.enable_categorical: bool = False
         self.categorical_features: List[str] = []
         self.metrics: Optional[ClassificationMetrics] = None
+        self.eval_metric = None  
         
         # Data fields - Initialize with empty DataFrame of correct shape
         self.feature_data: Optional[pd.DataFrame] = pd.DataFrame(np.zeros(X_shape))  # Initialize with zeros
