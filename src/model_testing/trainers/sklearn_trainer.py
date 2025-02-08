@@ -2,11 +2,15 @@ import logging
 import numpy as np
 from typing import Dict, Optional, Any
 from sklearn.base import BaseEstimator
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.inspection import permutation_importance
 from .base_trainer import BaseTrainer
 from ..data_classes import ModelTrainingResults, LearningCurveData
 from ...logging.logging_utils import structured_log
 from ...error_handling.custom_exceptions import ModelTestingError
 from ...config.config import AbstractConfig
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.inspection import permutation_importance
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +134,25 @@ class SKLearnTrainer(BaseTrainer):
     def _calculate_feature_importance(self, model, X_train, results: ModelTrainingResults) -> None:
         """Calculate and store feature importance scores with proper handling for different model types."""
         try:
-            if hasattr(model, 'feature_importances_'):  # Tree-based models
+            
+            # Different models expose feature importances in different ways
+            if isinstance(model, HistGradientBoostingClassifier):
+                # For HistGradientBoosting, use permutation importance
+                from sklearn.inspection import permutation_importance
+                
+                # Get final predictions (not staged)
+                y_pred = model.predict_proba(X_train)[:, 1]
+                
+                # Calculate permutation importance
+                r = permutation_importance(
+                    model, X_train, y_pred,
+                    n_repeats=5,
+                    random_state=self.config.random_state,
+                    n_jobs=-1
+                )
+                importance_scores = r.importances_mean
+                
+            elif hasattr(model, 'feature_importances_'):  # Tree-based models like RandomForest
                 importance_scores = model.feature_importances_
             elif hasattr(model, 'coef_'):  # Linear models
                 importance_scores = np.abs(model.coef_)
@@ -138,19 +160,35 @@ class SKLearnTrainer(BaseTrainer):
                     importance_scores = np.mean(importance_scores, axis=0)
             else:
                 structured_log(logger, logging.WARNING, 
-                             "Model does not provide feature importance scores",
-                             model_type=type(model).__name__)
+                            "Model does not provide feature importance scores",
+                            model_type=type(model).__name__)
                 importance_scores = np.zeros(X_train.shape[1])
+
+            # Ensure importance_scores is a 1D numpy array
+            importance_scores = np.asarray(importance_scores).flatten()
+
+            # Normalize importance scores to [0,1] range
+            if len(importance_scores) > 0 and importance_scores.max() > 0:
+                importance_scores = importance_scores / importance_scores.max()
+
+            # Ensure we have non-zero importances
+            if np.all(importance_scores == 0):
+                structured_log(logger, logging.WARNING,
+                            "All feature importances are zero",
+                            model_type=type(model).__name__)
 
             results.feature_importance_scores = importance_scores
             results.feature_names = X_train.columns.tolist()
             
             structured_log(logger, logging.INFO, "Calculated feature importance",
-                         num_features_with_importance=np.sum(importance_scores > 0))
+                        num_features_with_importance=np.sum(importance_scores > 0),
+                        max_importance=float(np.max(importance_scores)),
+                        min_importance=float(np.min(importance_scores)))
             
         except Exception as e:
             structured_log(logger, logging.WARNING, "Failed to calculate feature importance",
-                         error=str(e))
+                        error=str(e),
+                        model_type=type(model).__name__)
             results.feature_importance_scores = np.zeros(X_train.shape[1])
 
     def _calculate_shap_values(self, model, X_val, y_val, results: ModelTrainingResults) -> None:

@@ -64,9 +64,11 @@ models:
   LGBM: false
   CatBoost: false
   SKLearn:
-    RandomForest: true
+    RandomForest: false
     LogisticRegression: false
-    HistGradientBoosting: false
+    HistGradientBoosting: true
+
+
 
 # model specific static settings - tunable hyperparameters are in the hyperparameters.json file
 # XGBoost settings
