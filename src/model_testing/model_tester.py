@@ -169,6 +169,9 @@ class ModelTester(AbstractModelTester):
                 if self.config.calculate_shap_interactions:
                     full_results.shap_interaction_values = np.full((len(y), X.shape[1], X.shape[1]), np.nan)
             
+            # Initialize learning curve tracking variables
+            n_folds_with_curves = 0
+            
             if self.config.cross_validation_type == "StratifiedKFold":
                 kf = StratifiedKFold(n_splits=self.config.n_splits, shuffle=True, random_state=self.config.random_state)
             elif self.config.cross_validation_type == "TimeSeriesSplit":

@@ -95,10 +95,13 @@
       {
         "name": "baseline",
         "params": {
+          "task_type": "GPU",
+          "devices": "0",
+          "metric_period": 10,
+          "gpu_ram_part": 0.95,
+          "max_bin": 128,
           "depth": 8,
           "learning_rate": 0.03,
-          "subsample": 0.8,
-          "rsm": 0.8,
           "min_data_in_leaf": 20,
           "reg_lambda": 1,
           "random_state": 42,
