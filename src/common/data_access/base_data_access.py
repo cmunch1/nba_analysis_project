@@ -12,7 +12,7 @@ from typing import List, Tuple, Dict
 
 
 
-class AbstractDataAccess(ABC):
+class BaseDataAccess(ABC):
     @abstractmethod
     def save_dataframes(self, dataframes: List[pd.DataFrame], file_names: List[str], cumulative: bool = False) -> None:
         """

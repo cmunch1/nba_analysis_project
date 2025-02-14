@@ -3,9 +3,9 @@ import numpy as np
 from typing import List
 import logging
 
-from ..config.abstract_config import AbstractConfig
-from ..error_handling.custom_exceptions import DataValidationError, DataProcessingError
-from ..logging.logging_utils import log_performance, structured_log
+from ..config_management.base_config_manager import AbstractConfig
+from ..error_handling.error_handler import DataValidationError, DataProcessingError
+from ..app_logging.logger_utils import log_performance, structured_log
 from .abstract_data_validator import AbstractDataValidator
 
 logger = logging.getLogger(__name__)

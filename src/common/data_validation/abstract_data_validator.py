@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from ..config.abstract_config import AbstractConfig
-from ..data_access.abstract_data_access import AbstractDataAccess
+from ..config_management.base_config_manager import AbstractConfig
+from ..data_access.base_data_access import AbstractDataAccess
 from typing import List
 import pandas as pd
 
