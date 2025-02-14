@@ -28,23 +28,26 @@ from yaml.constructor import Constructor, ConstructorError
 
 logger = logging.getLogger(__name__)
 
-from .abstract_config import AbstractConfig
+from .base_config_manager import BaseConfigManager
 
-class Config(AbstractConfig):
-    def __init__(self):
-        super().__init__()
-        config_dir = Path('.') / 'configs'
-        
+class ConfigManager(BaseConfigManager):
+    def __init__(self, config_dir: Path = None):
+        self.config_dir = config_dir or Path('..') / 'configs'
+        self._load_configurations()
+
+    def get_config(self) -> SimpleNamespace:
+        return self
+
+    def _load_configurations(self):
         # Create a custom SafeLoader class with our constructors
         class CustomSafeLoader(yaml.SafeLoader):
             pass
         
-        # Add custom constructors for Optuna suggestion tags
         CustomSafeLoader.add_constructor('!suggest_int', self._construct_suggestion)
         CustomSafeLoader.add_constructor('!suggest_float', self._construct_suggestion)
         
         config_dict = {}
-        for config_file in config_dir.glob('*.yaml'):
+        for config_file in self.config_dir.glob('*.yaml'):
             with open(config_file, 'r', encoding='utf-8') as yaml_file:
                 config_dict.update(yaml.load(yaml_file, Loader=CustomSafeLoader))
 
@@ -62,7 +65,7 @@ class Config(AbstractConfig):
         for key, value in vars(config_obj).items():
             setattr(self, key, value)
         
-        app_config_path = config_dir / 'app_config.yaml'
+        app_config_path = self.config_dir / 'app_config.yaml'
         if app_config_path.exists():
             with open(app_config_path) as yaml_file:
                 app_config = yaml.safe_load(yaml_file)
@@ -71,7 +74,7 @@ class Config(AbstractConfig):
                         value = self.resolve_project_root_path(value)
                     setattr(self, key, value)
         else:
-            raise FileNotFoundError(f"app_config.yaml not found in {config_dir}")
+            raise FileNotFoundError(f"app_config.yaml not found in {self.config_dir}")
 
     def resolve_project_root_path(self, path: str) -> str:
         """Resolves paths that contain ${PROJECT_ROOT} to absolute paths"""

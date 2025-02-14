@@ -1,5 +1,5 @@
 """
-data_access.py
+csv_data_access.py
 
 Concrete implementation of the AbstractDataAccess class for saving and loading data from CSV files.
 
@@ -13,30 +13,33 @@ from typing import List, Tuple, Dict
 from pathlib import Path
 import json
 
-from ..config.abstract_config import AbstractConfig
-from .abstract_data_access import AbstractDataAccess
-from ..error_handling.custom_exceptions import (
+from ..config_management.base_config_manager import BaseConfigManager
+from .base_data_access import BaseDataAccess
+from ..error_handling.error_handler import (
     DataStorageError, ConfigurationError, DataValidationError
 )
-from ..logging.logging_utils import log_performance, structured_log
+from ..app_logging import log_performance, structured_log
+from ..app_logging.base_app_logger import BaseAppLogger
 
 logger = logging.getLogger(__name__)
 
-class DataAccess(AbstractDataAccess):
+class CSVDataAccess(BaseDataAccess):
     @log_performance
-    def __init__(self, config: AbstractConfig):
+    def __init__(self, config: BaseConfigManager, logger: BaseAppLogger):
         """
-        Initialize the DataAccess object with the given configuration.
+        Initialize the DataAccess object with the given configuration and logger.
 
         Args:
-            config (AbstractConfig): The configuration object.
+            config (BaseConfigManager): The configuration object.
+            logger (BaseAppLogger): The logger object.
 
         Raises:
             ConfigurationError: If there's an issue with the configuration.
         """
         try:
             self.config = config
-            structured_log(logger, logging.INFO, "DataAccess initialized successfully",
+            self.logger = logger
+            self.logger.structured_log(logging.INFO, "DataAccess initialized successfully",
                            config_type=type(config).__name__)
         except AttributeError as e:
             raise ConfigurationError(f"Missing required configuration: {str(e)}")
