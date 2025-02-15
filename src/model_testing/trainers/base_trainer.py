@@ -1,16 +1,24 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 import pandas as pd
-from ...common.data_classes.data_classes import ModelTrainingResults
+from ...common.data_classes import ModelTrainingResults
+from ...common.config_management.base_config_manager import BaseConfigManager
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
 import logging
-from ...config.config import AbstractConfig
-
-logger = logging.getLogger(__name__)
 
 class BaseTrainer(ABC):
-    def __init__(self, config: AbstractConfig):
-        """Initialize trainer with configuration."""
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, error_handler: BaseErrorHandler):
+        """Initialize trainer with configuration and logging."""
         self.config = config
+        self.app_logger = app_logger
+        self.error_handler = error_handler
+        self.app_logger.structured_log(logging.INFO, "BaseTrainer initialized successfully",
+                                     trainer_type=type(self).__name__)
+
+    @property
+    def log_performance(self):
+        return self.app_logger.log_performance
 
     @abstractmethod
     def train(self, X_train: pd.DataFrame, y_train: pd.Series, 

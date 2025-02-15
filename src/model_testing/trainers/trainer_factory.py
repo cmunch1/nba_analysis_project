@@ -1,12 +1,15 @@
 from enum import Enum
 from typing import Dict, Type
-from .trainers import (
+from . import (
     BaseTrainer,
     XGBoostTrainer,
     LightGBMTrainer,
     SKLearnTrainer,
     CatBoostTrainer
 )
+from ...common.config_management.base_config_manager import BaseConfigManager
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
 
 
 class TrainerType(Enum):
@@ -24,7 +27,7 @@ class TrainerFactory:
     }
 
     @classmethod
-    def create_trainers(cls, config) -> Dict[str, BaseTrainer]:
+    def create_trainers(cls, config: BaseConfigManager, app_logger: BaseAppLogger, error_handler: BaseErrorHandler) -> Dict[str, BaseTrainer]:
         """Creates trainers based on models specified in configuration."""
         trainers = {}
         
@@ -39,13 +42,13 @@ class TrainerFactory:
                         if is_enabled:
                             trainer_type = TrainerType.SKLEARN
                             trainer_class = cls._trainer_map[trainer_type]
-                            trainers[f"SKLearn_{sklearn_model}"] = trainer_class(config, sklearn_model)
+                            trainers[f"SKLearn_{sklearn_model}"] = trainer_class(config, app_logger, error_handler)
             # Handle other model types
             elif enabled:
                 try:
                     trainer_type = TrainerType[model_name.upper()]
                     trainer_class = cls._trainer_map[trainer_type]
-                    trainers[model_name] = trainer_class(config)
+                    trainers[model_name] = trainer_class(config, app_logger, error_handler)
                 except KeyError:
                     raise ValueError(f"Unsupported model type: {model_name}")
         

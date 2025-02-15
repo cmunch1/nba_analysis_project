@@ -9,8 +9,7 @@ from ..logging.logging_setup import setup_logging
 from ..logging.logging_utils import log_performance, log_context, structured_log
 from ..common.data_classes.data_classes import ClassificationMetrics, ModelTrainingResults, PreprocessingResults
 
-
-from .di_container import DIContainer
+from .di_container import ModelTestingDIContainer
 from ..error_handling.custom_exceptions import (
     ConfigurationError,
     DataValidationError,
@@ -26,14 +25,17 @@ def main() -> None:
     Main function to perform model testing on engineered data.
     """
 
-    container = DIContainer()
+    # Initialize containers
+    container = ModelTestingDIContainer()
+    
+    # Get dependencies
     config = container.config()
     data_access = container.data_access()
     data_validator = container.data_validator()
     model_tester = container.model_tester()
     experiment_logger = container.experiment_logger()
     optimizer = container.optimizer()
-    
+    app_logger = container.app_logger()
     
     try:
         error_logger = setup_logging(config, LOG_FILE)
@@ -46,7 +48,6 @@ def main() -> None:
                        config_summary=str(config.__dict__))
 
         with log_context(app_version=config.app_version, environment=config.environment):
-
 
             training_dataframe = data_access.load_dataframe(config.training_data_file)
             validation_dataframe = data_access.load_dataframe(config.validation_data_file)

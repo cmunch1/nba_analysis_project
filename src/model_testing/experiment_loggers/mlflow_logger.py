@@ -12,11 +12,11 @@ import numpy as np
 import pandas as pd
 import json
 
-from ..abstract_model_testing import AbstractExperimentLogger
+from ..base_model_testing import AbstractExperimentLogger
 from ...config.config import AbstractConfig
 from ...logging.logging_utils import log_performance, structured_log
 from ...error_handling.custom_exceptions import ChartCreationError, ModelTestingError
-from ..chart_functions import ChartFunctions
+from ...visualization.chart_functions import ChartFunctions
 from ...common.data_classes.data_classes import ModelTrainingResults
 
 logger = logging.getLogger(__name__)

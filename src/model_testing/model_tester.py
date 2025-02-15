@@ -14,12 +14,12 @@ import mlflow.sklearn
 from ..config.config import AbstractConfig
 from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import ModelTestingError
-from .abstract_model_testing import AbstractModelTester
+from .base_model_testing import AbstractModelTester
 from ..data_access.data_access import AbstractDataAccess
 from ..common.data_classes.data_classes import ModelTrainingResults, ClassificationMetrics, PreprocessingResults
-from .modular_preprocessor import ModularPreprocessor
+from ..preprocessing.preprocessor import ModularPreprocessor
 import lightgbm as lgb
-from .hyperparameter_manager import HyperparameterManager
+from .hyperparams_managers.hyperparams_manager import HyperparameterManager
 from .trainers.base_trainer import BaseTrainer
 
 

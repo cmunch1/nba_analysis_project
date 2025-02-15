@@ -10,7 +10,7 @@ import lightgbm as lgb
 from ...config.config import AbstractConfig
 from ...logging.logging_utils import log_performance, structured_log
 from ...error_handling.custom_exceptions import OptimizationError
-from ..abstract_model_testing import AbstractHyperparameterManager
+from ..base_model_testing import AbstractHyperparameterManager
 from datetime import datetime
 from types import SimpleNamespace
 

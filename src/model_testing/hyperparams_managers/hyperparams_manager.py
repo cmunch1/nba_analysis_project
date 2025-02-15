@@ -5,12 +5,15 @@ from typing import Dict, Any, Optional, List
 import mlflow
 import logging
 from dataclasses import dataclass, asdict
-from src.logging.logging_utils import structured_log
-from .abstract_model_testing import AbstractHyperparameterManager
-from ..config.config import AbstractConfig
-from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
 
-logger = logging.getLogger(__name__)
+
+from ...common.config_management.base_config_manager import BaseConfigManager
+from ...common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
+
+from .base_hyperparams_manager import BaseHyperparamsManager
+
 
 @dataclass
 class HyperparameterSet:
@@ -32,8 +35,9 @@ class HyperparameterSet:
     def from_dict(cls, data: Dict) -> 'HyperparameterSet':
         return cls(**data)
 
-class HyperparameterManager(AbstractHyperparameterManager):
-    def __init__(self, config: AbstractConfig, app_file_handler: BaseAppFileHandler):
+class HyperparamsManager(BaseHyperparamsManager):
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, 
+                 app_file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler):
         """
         Initialize the hyperparameter manager.
         
@@ -41,18 +45,25 @@ class HyperparameterManager(AbstractHyperparameterManager):
             config_path: Path to the hyperparameters JSON file
             storage_dir: Directory to store hyperparameter history
         """
+        self.config = config
+        self.app_logger = app_logger
+        self.app_file_handler = app_file_handler
+        self.error_handler = error_handler
+        self.app_logger.structured_log(logging.INFO, "HyperparamsManager initialized successfully")
+        
         self.config_path = config.current_hyperparameters
         self.storage_dir = config.hyperparameter_history_dir
-        self.logger = logging.getLogger(__name__)
-        self.config = config
-        self.app_file_handler = app_file_handler
         
         self.app_file_handler.ensure_directory(self.storage_dir)
         self.current_params = self.app_file_handler.read_json(self.config_path)
         
+    @property
+    def log_performance(self):
+        return self.app_logger.log_performance
+
     def _load_json(self, path: str) -> Dict:
         """Load JSON configuration file."""
-        structured_log(self.logger, logging.INFO, "Loading Hyperparameter JSON configuration file",
+        self.app_logger.structured_log(logging.INFO, "Loading Hyperparameter JSON configuration file",
                       config_path=path)
         try:
             return self.app_file_handler.read_json(path)
@@ -61,15 +72,15 @@ class HyperparameterManager(AbstractHyperparameterManager):
             
     def _save_json(self, data: Dict, path: str) -> None:
         """Save configuration to JSON file."""
-        structured_log(self.logger, logging.INFO, "Saving JSON configuration file",
+        self.app_logger.structured_log(logging.INFO, "Saving JSON configuration file",
                     config_path=path,
                     data=data)  
         self.app_file_handler.write_json(data, path)
-        structured_log(self.logger, logging.INFO, "Successfully saved JSON configuration")
+        self.app_logger.structured_log(logging.INFO, "Successfully saved JSON configuration")
             
     def get_current_params(self, model_name: str, param_name: str = 'current_best') -> Dict[str, Any]:
         """Get current best hyperparameters for a model."""
-        structured_log(self.logger, logging.INFO, "Getting current best hyperparameters for a model",
+        self.app_logger.structured_log(logging.INFO, "Getting current best hyperparameters for a model",
                       model_name=model_name)
         
         if self.config.use_baseline_hyperparameters and self.config.perform_hyperparameter_optimization == False:
@@ -84,9 +95,11 @@ class HyperparameterManager(AbstractHyperparameterManager):
                 raise ValueError(f"No {param_name} parameters found for {model_name}")
             return current_params
         except Exception as e:
-            structured_log(self.logger, logging.ERROR, f"Error getting {param_name} hyperparameters",
-                          error=str(e))
-            raise e
+            raise self.error_handler.create_error_handler(
+                'hyperparameter_management',
+                f"Error getting current parameters for {model_name}",
+                original_error=str(e)
+            )
         
     def update_best_params(self, model_name: str, new_params: Dict[str, Any],
                           metrics: Dict[str, float], experiment_id: str,
@@ -102,7 +115,7 @@ class HyperparameterManager(AbstractHyperparameterManager):
             run_id: MLflow run ID
             description: Optional description of the parameter set
         """
-        structured_log(self.logger, logging.INFO, 
+        self.app_logger.structured_log(logging.INFO, 
                       "Updating best parameters",
                       model_name=model_name,
                       metrics=metrics,
@@ -150,11 +163,11 @@ class HyperparameterManager(AbstractHyperparameterManager):
         # Save to history with logging
         try:
             self._save_to_history(model_name, new_set)
-            structured_log(self.logger, logging.INFO, 
+            self.app_logger.structured_log(logging.INFO, 
                           "Saved parameters to history",
                           model_name=model_name)
         except Exception as e:
-            structured_log(self.logger, logging.ERROR, 
+            self.app_logger.structured_log(logging.ERROR, 
                           "Failed to save parameters to history",
                           model_name=model_name,
                           error=str(e))
@@ -163,11 +176,11 @@ class HyperparameterManager(AbstractHyperparameterManager):
         # Update current best if necessary
         try:    
             self._update_current_best(model_name, new_set)
-            structured_log(self.logger, logging.INFO, 
+            self.app_logger.structured_log(logging.INFO, 
                             "Updated current best parameters",
                             model_name=model_name)
         except Exception as e:
-            structured_log(self.logger, logging.ERROR, 
+            self.app_logger.structured_log(logging.ERROR, 
                           "Failed to update current best parameters",
                           model_name=model_name,
                           error=str(e))

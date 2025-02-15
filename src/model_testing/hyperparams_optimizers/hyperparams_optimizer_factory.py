@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import Type
 from ..config.config import AbstractConfig
-from .abstract_model_testing import AbstractHyperparameterOptimizer, AbstractHyperparameterManager
-from .optimizers.optuna_optimizer import OptunaOptimizer
+from ..base_model_testing import AbstractHyperparameterOptimizer, AbstractHyperparameterManager
+from .optuna_optimizer import OptunaOptimizer
 
 class OptimizerType(Enum):
     OPTUNA = "optuna"

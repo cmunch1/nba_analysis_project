@@ -34,7 +34,7 @@ from typing import List, Dict, Optional, Tuple
 import logging
 from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import PreprocessingError
-from ..common.data_classes.data_classes import PreprocessingResults, PreprocessingStep
+from ..common.data_classes import PreprocessingResults, PreprocessingStep
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import Type
 from ..config.config import AbstractConfig
-from .abstract_model_testing import AbstractExperimentLogger
-from .loggers.mlflow_logger import MLFlowLogger
+from ..base_model_testing import AbstractExperimentLogger
+from .mlflow_logger import MLFlowLogger
 
 class LoggerType(Enum):
     MLFLOW = "mlflow"
