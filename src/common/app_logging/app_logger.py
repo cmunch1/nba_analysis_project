@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from contextvars import ContextVar
 from src.common.config_management.config_manager import AbstractConfig
 from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.app_logging.abstract_app_logger import AbstractAppLogger
+
 
 # Context variable to store logging context
 _log_context: ContextVar[Dict[str, Any]] = ContextVar('log_context', default={})
@@ -20,8 +20,8 @@ class LogContext:
     additional_context: Dict[str, Any] = None
 
 
-class AppLogger(AbstractAppLogger):
-    """Concrete implementation of AbstractAppLogger"""
+class AppLogger(BaseAppLogger):
+    """Concrete implementation of BaseAppLogger"""
     
     def __init__(self, config: AbstractConfig):
         self.config = config
@@ -49,9 +49,9 @@ class AppLogger(AbstractAppLogger):
         )
         
         # File handler
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
+        log_file_handler = logging.FileHandler(log_file)
+        log_file_handler.setFormatter(file_formatter)
+        logger.addHandler(log_file_handler)
         
         # Console handler
         console_handler = logging.StreamHandler()

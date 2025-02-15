@@ -25,36 +25,34 @@ import unicodedata
 import logging
 import os
 from yaml.constructor import Constructor, ConstructorError
+from common.app_file_handling.base_app_file_handler import BaseAppFileHandler
 
 logger = logging.getLogger(__name__)
 
 from .base_config_manager import BaseConfigManager
 
+DEFAULT_CONFIG_DIR = Path('..') / 'configs'
+
 class ConfigManager(BaseConfigManager):
-    def __init__(self, config_dir: Path = None):
-        self.config_dir = config_dir or Path('..') / 'configs'
+    def __init__(self, config_dir: Path = None, app_file_handler: BaseAppFileHandler = None):
+        self.config_dir = config_dir or DEFAULT_CONFIG_DIR
+        self.app_file_handler = app_file_handler 
         self._load_configurations()
 
     def get_config(self) -> SimpleNamespace:
         return self
 
     def _load_configurations(self):
-        # Create a custom SafeLoader class with our constructors
-        class CustomSafeLoader(yaml.SafeLoader):
-            pass
-        
-        CustomSafeLoader.add_constructor('!suggest_int', self._construct_suggestion)
-        CustomSafeLoader.add_constructor('!suggest_float', self._construct_suggestion)
-        
-        config_dict = {}
-        for config_file in self.config_dir.glob('*.yaml'):
-            with open(config_file, 'r', encoding='utf-8') as yaml_file:
-                config_dict.update(yaml.load(yaml_file, Loader=CustomSafeLoader))
+        # Load all YAML files in directory, requiring app_config.yaml
+        config_dict = self.app_file_handler.load_yaml_files_in_directory(
+            self.config_dir,
+            required_files=['app_config.yaml']
+        )
 
         # Convert nested dictionaries to SimpleNamespace recursively
         def dict_to_namespace(d):
             if isinstance(d, str):
-                return self.resolve_project_root_path(d)
+                return self.app_file_handler.resolve_project_root_path(d)
             if not isinstance(d, dict):
                 return d
             return SimpleNamespace(**{k: dict_to_namespace(v) for k, v in d.items()})
@@ -64,25 +62,6 @@ class ConfigManager(BaseConfigManager):
         # Set all config parameters as attributes of this instance
         for key, value in vars(config_obj).items():
             setattr(self, key, value)
-        
-        app_config_path = self.config_dir / 'app_config.yaml'
-        if app_config_path.exists():
-            with open(app_config_path) as yaml_file:
-                app_config = yaml.safe_load(yaml_file)
-                for key, value in app_config.items():
-                    if isinstance(value, str):
-                        value = self.resolve_project_root_path(value)
-                    setattr(self, key, value)
-        else:
-            raise FileNotFoundError(f"app_config.yaml not found in {self.config_dir}")
-
-    def resolve_project_root_path(self, path: str) -> str:
-        """Resolves paths that contain ${PROJECT_ROOT} to absolute paths"""
-        if "${PROJECT_ROOT}" in path:
-            # Get project root (assuming configs dir is in project root)
-            project_root = Path(__file__).parent.parent.parent
-            return path.replace("${PROJECT_ROOT}", str(project_root))
-        return path
 
     @staticmethod
     def _construct_suggestion(loader: yaml.Loader, node: yaml.Node) -> dict:
