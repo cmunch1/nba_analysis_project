@@ -9,6 +9,7 @@ from src.common.app_logging.app_logger_factory import AppLoggerFactory
 from src.common.data_access.data_access_factory import DataAccessFactory
 from src.common.error_handling.error_handler_factory import ErrorHandlerFactory
 from src.common.app_file_handling.app_file_handler import LocalAppFileHandler
+from src.common.data_validation.data_validator import DataValidator
 
 CONFIG_DIR = Path('..') / 'configs'
 
@@ -45,4 +46,14 @@ class CommonDIContainer(containers.DeclarativeContainer):
         config=config,
         logger=logger,
         app_file_handler=app_file_handler
+    )
+
+    
+    data_validator = providers.Singleton(
+        DataValidator,
+        config=config,
+        data_access=data_access,
+        app_logger=logger,
+        app_file_handler=app_file_handler,
+        error_handler=error_handler_factory
     )
