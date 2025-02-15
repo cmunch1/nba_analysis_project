@@ -5,7 +5,7 @@ from sklearn.base import BaseEstimator
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.inspection import permutation_importance
 from .base_trainer import BaseTrainer
-from ..data_classes import ModelTrainingResults, LearningCurveData
+from ...common.data_classes.data_classes import ModelTrainingResults, LearningCurveData
 from ...logging.logging_utils import structured_log
 from ...error_handling.custom_exceptions import ModelTestingError
 from ...config.config import AbstractConfig

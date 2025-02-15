@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 import pandas as pd
-from ..data_classes import ModelTrainingResults
+from ...common.data_classes.data_classes import ModelTrainingResults
 import logging
 from ...config.config import AbstractConfig
 

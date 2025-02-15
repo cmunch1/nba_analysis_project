@@ -17,7 +17,7 @@ from ...config.config import AbstractConfig
 from ...logging.logging_utils import log_performance, structured_log
 from ...error_handling.custom_exceptions import ChartCreationError, ModelTestingError
 from ..chart_functions import ChartFunctions
-from ..data_classes import ModelTrainingResults
+from ...common.data_classes.data_classes import ModelTrainingResults
 
 logger = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import ModelTestingError
 from .abstract_model_testing import AbstractModelTester
 from ..data_access.data_access import AbstractDataAccess
-from .data_classes import ModelTrainingResults, ClassificationMetrics, PreprocessingResults
+from ..common.data_classes.data_classes import ModelTrainingResults, ClassificationMetrics, PreprocessingResults
 from .modular_preprocessor import ModularPreprocessor
 import lightgbm as lgb
 from .hyperparameter_manager import HyperparameterManager

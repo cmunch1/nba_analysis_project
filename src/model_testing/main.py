@@ -7,7 +7,7 @@ from datetime import datetime
 
 from ..logging.logging_setup import setup_logging
 from ..logging.logging_utils import log_performance, log_context, structured_log
-from .data_classes import ClassificationMetrics, ModelTrainingResults, PreprocessingResults
+from ..common.data_classes.data_classes import ClassificationMetrics, ModelTrainingResults, PreprocessingResults
 
 
 from .di_container import DIContainer

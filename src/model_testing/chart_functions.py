@@ -8,7 +8,7 @@ import shap
 from ..logging.logging_utils import log_performance, structured_log
 from ..error_handling.custom_exceptions import ChartCreationError
 from sklearn.inspection import partial_dependence
-from .data_classes import ModelTrainingResults
+from ..common.data_classes.data_classes import ModelTrainingResults
 import xgboost as xgb
 
 logger = logging.getLogger(__name__)

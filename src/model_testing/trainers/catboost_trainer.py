@@ -6,7 +6,7 @@ from typing import Dict, List
 import shutil
 from pathlib import Path
 from .base_trainer import BaseTrainer
-from ..data_classes import ModelTrainingResults
+from ...common.data_classes.data_classes import ModelTrainingResults
 from ...logging.logging_utils import structured_log
 from ...error_handling.custom_exceptions import ModelTestingError
 from ...config.config import AbstractConfig
