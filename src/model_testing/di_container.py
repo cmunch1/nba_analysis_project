@@ -1,37 +1,61 @@
 from dependency_injector import containers, providers
-
-from ..config.config import Config
-from ..data_access.data_access import DataAccess
-from ..data_validation.data_validator import DataValidator
+from ..common.common_di_container import CommonDIContainer
 from .model_tester import ModelTester
-from .hyperparameter_manager import HyperparameterManager
-from .experiment_logger_factory import ExperimentLoggerFactory, LoggerType
-from .optimizer_factory import OptimizerFactory, OptimizerType
-from .trainer_factory import TrainerFactory
+from .hyperparams_managers.hyperparams_manager import HyperparameterManager
+from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType
+from .hyperparams_optimizers.optuna_optimizer import OptunaOptimizer
+from .trainers.trainer_factory import TrainerFactory
 
-class DIContainer(containers.DeclarativeContainer):
-    config = providers.Singleton(Config)
-    data_access = providers.Factory(DataAccess, config=config)
-    data_validator = providers.Factory(DataValidator, config=config)
-    hyperparameter_manager = providers.Factory(HyperparameterManager, config=config)
+class ModelTestingDIContainer(containers.DeclarativeContainer):
+    # Import common container
+    common = providers.Container(CommonDIContainer)
+    
+    # Use common container's components
+    config = common.config
+    app_logger = common.logger
+    app_file_handler = common.app_file_handler
+    error_handler = common.error_handler_factory
+    data_access = common.data_access
+    data_validator = common.data_validator
+
+    # Model testing specific components
+    hyperparameter_manager = providers.Factory(
+        HyperparameterManager,
+        config=config,
+        app_logger=app_logger,
+        app_file_handler=app_file_handler,
+        error_handler=error_handler
+    )
+
     trainers = providers.Factory(
         TrainerFactory.create_trainers,
-        config=config
+        config=config,
+        app_logger=app_logger,
+        error_handler=error_handler
     )
+
     model_tester = providers.Factory(
-        ModelTester, 
+        ModelTester,
         config=config,
         hyperparameter_manager=hyperparameter_manager,
-        trainers=trainers
+        trainers=trainers,
+        app_logger=app_logger,
+        error_handler=error_handler
     )
+
     experiment_logger = providers.Factory(
-        ExperimentLoggerFactory.create_logger, 
-        logger_type=LoggerType.MLFLOW, 
-        config=config
-    )
-    optimizer = providers.Factory(
-        OptimizerFactory.create_optimizer, 
-        optimizer_type=OptimizerType.OPTUNA, 
+        ExperimentLoggerFactory.create_logger,
+        logger_type=LoggerType.MLFLOW,
         config=config,
-        hyperparameter_manager=hyperparameter_manager
+        app_logger=app_logger,
+        error_handler=error_handler
+    )
+
+    optimizer = providers.Factory(
+        OptimizerFactory.create_optimizer,
+        optimizer_type=OptimizerType.OPTUNA,
+        config=config,
+        hyperparameter_manager=hyperparameter_manager,
+        app_logger=app_logger,
+        error_handler=error_handler
     )
