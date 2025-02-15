@@ -20,18 +20,21 @@ from ..error_handling.error_handler import (
 )
 from ..app_logging import log_performance, structured_log
 from ..app_logging.base_app_logger import BaseAppLogger
+from ..app_file_handling.base_app_file_handler import BaseAppFileHandler
 
 logger = logging.getLogger(__name__)
 
 class CSVDataAccess(BaseDataAccess):
     @log_performance
-    def __init__(self, config: BaseConfigManager, logger: BaseAppLogger):
+    def __init__(self, config: BaseConfigManager, logger: BaseAppLogger, 
+                 app_file_handler: BaseAppFileHandler):
         """
         Initialize the DataAccess object with the given configuration and logger.
 
         Args:
             config (BaseConfigManager): The configuration object.
             logger (BaseAppLogger): The logger object.
+            file_handler (BaseFileHandler): The file handler object.
 
         Raises:
             ConfigurationError: If there's an issue with the configuration.
@@ -39,6 +42,7 @@ class CSVDataAccess(BaseDataAccess):
         try:
             self.config = config
             self.logger = logger
+            self.app_file_handler = app_file_handler
             self.logger.structured_log(logging.INFO, "DataAccess initialized successfully",
                            config_type=type(config).__name__)
         except AttributeError as e:
@@ -58,7 +62,9 @@ class CSVDataAccess(BaseDataAccess):
         """         
         try:
             for df, file_name in zip(dataframes, file_names):
-                self._save_dataframe_csv(df, file_name, cumulative=cumulative)
+                save_path = self._get_save_directory(cumulative, file_name)
+                self.app_file_handler.ensure_directory(save_path)
+                self.app_file_handler.write_csv(df, save_path / file_name)
             structured_log(logger, logging.INFO, "Dataframes saved successfully")
         except Exception as e:
             raise DataStorageError(f"Error saving dataframes: {str(e)}")
@@ -108,8 +114,7 @@ class CSVDataAccess(BaseDataAccess):
         """
         try:
             file_path = self._get_save_directory(cumulative=True, file_name=file_name)
-            with open(file_path / file_name, 'w') as f:
-                json.dump(column_mapping, f, indent=4, sort_keys=True)
+            self.app_file_handler.write_json(column_mapping, file_path / file_name)
             structured_log(logger, logging.INFO, "Column mapping saved successfully",
                            file_path=str(file_path / file_name))
             return True
@@ -135,9 +140,8 @@ class CSVDataAccess(BaseDataAccess):
             file_path = self._get_load_directory(cumulative=True, file_name=file_name)
             file_path = file_path / file_name
             if not file_path.exists():
-
                 raise DataStorageError(f"File {file_name} not found in {file_path}")
-            df = pd.read_csv(file_path)
+            df = self.app_file_handler.read_csv(file_path)
             if df.empty:
                 raise DataValidationError(f"Loaded DataFrame from {file_name} is empty")
             structured_log(logger, logging.INFO, "Data loaded successfully",
@@ -151,7 +155,6 @@ class CSVDataAccess(BaseDataAccess):
     @log_performance
     def _save_dataframe_csv(self, df: pd.DataFrame, file_name: str, cumulative: bool = False) -> None:
         """
-
         Save the dataframe to a CSV file in the appropriate directory.
 
         Args:
@@ -164,8 +167,7 @@ class CSVDataAccess(BaseDataAccess):
         """
         try:
             file_path = self._get_save_directory(cumulative, file_name)
-                        
-            df.to_csv(file_path / file_name, index=False)
+            self.app_file_handler.write_csv(df, file_path / file_name)
             structured_log(logger, logging.INFO, "Data saved successfully",
                            file_path=str(file_path / file_name))
         except Exception as e:

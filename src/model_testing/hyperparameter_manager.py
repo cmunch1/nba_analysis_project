@@ -8,6 +8,7 @@ from dataclasses import dataclass, asdict
 from src.logging.logging_utils import structured_log
 from .abstract_model_testing import AbstractHyperparameterManager
 from ..config.config import AbstractConfig
+from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class HyperparameterSet:
         return cls(**data)
 
 class HyperparameterManager(AbstractHyperparameterManager):
-    def __init__(self, config: AbstractConfig):
+    def __init__(self, config: AbstractConfig, app_file_handler: BaseAppFileHandler):
         """
         Initialize the hyperparameter manager.
         
@@ -44,21 +45,17 @@ class HyperparameterManager(AbstractHyperparameterManager):
         self.storage_dir = config.hyperparameter_history_dir
         self.logger = logging.getLogger(__name__)
         self.config = config
+        self.app_file_handler = app_file_handler
         
-        # Create storage directory if it doesn't exist
-        os.makedirs(self.storage_dir, exist_ok=True)
-        
-        # Load current hyperparameters
-        self.current_params = self._load_json(self.config_path)
+        self.app_file_handler.ensure_directory(self.storage_dir)
+        self.current_params = self.app_file_handler.read_json(self.config_path)
         
     def _load_json(self, path: str) -> Dict:
         """Load JSON configuration file."""
-
         structured_log(self.logger, logging.INFO, "Loading Hyperparameter JSON configuration file",
                       config_path=path)
         try:
-            with open(path, 'r') as f:
-                return json.load(f)
+            return self.app_file_handler.read_json(path)
         except FileNotFoundError:
             return {'model_hyperparameters': {}}
             
@@ -67,8 +64,7 @@ class HyperparameterManager(AbstractHyperparameterManager):
         structured_log(self.logger, logging.INFO, "Saving JSON configuration file",
                     config_path=path,
                     data=data)  
-        with open(path, 'w') as f:
-            json.dump(data, f, indent=2)
+        self.app_file_handler.write_json(data, path)
         structured_log(self.logger, logging.INFO, "Successfully saved JSON configuration")
             
     def get_current_params(self, model_name: str, param_name: str = 'current_best') -> Dict[str, Any]:
@@ -80,7 +76,7 @@ class HyperparameterManager(AbstractHyperparameterManager):
             param_name = 'baseline'
         
         try:
-            self.current_params = self._load_json(self.config_path)
+            self.current_params = self.app_file_handler.read_json(self.config_path)
             model_params = self.current_params.get('model_hyperparameters', {}).get(model_name, [])
             current_params = next((config['params'] for config in model_params 
                                if config['name'] == param_name), None)
@@ -246,30 +242,26 @@ class HyperparameterManager(AbstractHyperparameterManager):
         else:
             model_params.append(new_config)
             
-        self._save_json(self.current_params, self.config_path)
+        self.file_handler.write_json(self.current_params, self.config_path)
         
     def _save_to_history(self, model_name: str, param_set: HyperparameterSet) -> None:
         """Save hyperparameter set to history."""
-        history_file = os.path.join(self.storage_dir, f"{model_name}_history.json")
+        history_file = self.app_file_handler.join_paths(self.storage_dir, f"{model_name}_history.json")
         
         try:
-            with open(history_file, 'r') as f:
-                history = json.load(f)
+            history = self.app_file_handler.read_json(history_file)
         except FileNotFoundError:
             history = []
             
         history.append(asdict(param_set))
-        
-        with open(history_file, 'w') as f:
-            json.dump(history, f, indent=2)
+        self.app_file_handler.write_json(history, history_file)
             
     def _load_history(self, model_name: str) -> List[HyperparameterSet]:
         """Load hyperparameter history for a model."""
-        history_file = os.path.join(self.storage_dir, f"{model_name}_history.json")
+        history_file = self.app_file_handler.join_paths(self.storage_dir, f"{model_name}_history.json")
         
         try:
-            with open(history_file, 'r') as f:
-                history_data = json.load(f)
+            history_data = self.app_file_handler.read_json(history_file)
             return [HyperparameterSet.from_dict(item) for item in history_data]
         except FileNotFoundError:
             return []
