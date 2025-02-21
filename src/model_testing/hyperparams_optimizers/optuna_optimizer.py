@@ -1,36 +1,45 @@
-from abc import ABC, abstractmethod
 import logging
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any, Optional, Callable
+from datetime import datetime
 import optuna
 from optuna.trial import Trial
 import numpy as np
 from sklearn.model_selection import cross_val_score, StratifiedKFold, TimeSeriesSplit
 import xgboost as xgb
 import lightgbm as lgb
-from ...config.config import AbstractConfig
-from ...logging.logging_utils import log_performance, structured_log
-from ...error_handling.custom_exceptions import OptimizationError
-from ..base_model_testing import AbstractHyperparameterManager
-from datetime import datetime
-from types import SimpleNamespace
 
+from .base_hyperparams_optimizer import BaseHyperparamsOptimizer
+from ...common.config_management.base_config_manager import BaseConfigManager
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
+from ..hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
 
-logger = logging.getLogger(__name__)
-
-class OptunaOptimizer:
-    """
-    Optuna-based hyperparameter optimizer.
-    Uses configuration from model_testing_config for consistent settings.
-    """
+class OptunaOptimizer(BaseHyperparamsOptimizer):
+    """Optuna-based hyperparameter optimizer."""
     
-    @log_performance
-    def __init__(self, config: AbstractConfig, hyperparameter_manager: AbstractHyperparameterManager):
+    def __init__(self,
+                 config: BaseConfigManager,
+                 hyperparameter_manager: BaseHyperparamsManager,
+                 app_logger: BaseAppLogger,
+                 error_handler: BaseErrorHandler):
+        """Initialize Optuna optimizer with dependencies."""
         self.config = config
+        self.hyperparameter_manager = hyperparameter_manager
+        self.app_logger = app_logger
+        self.error_handler = error_handler
         self.study = None
         self.best_params = None
-        self.param_manager = hyperparameter_manager
-        structured_log(logger, logging.INFO, "OptunaOptimizer initialized")
-    
+        
+        self.app_logger.structured_log(
+            logging.INFO, 
+            "OptunaOptimizer initialized"
+        )
+
+    @property
+    def log_performance(self):
+        """Get the performance logging decorator from app_logger."""
+        return self.app_logger.log_performance
+
     def _create_study(self, direction: str) -> None:
         """Create a new Optuna study."""
         try:
@@ -39,21 +48,14 @@ class OptunaOptimizer:
                 sampler=optuna.samplers.TPESampler(seed=self.config.random_state)
             )
         except Exception as e:
-            raise OptimizationError("Failed to create Optuna study", 
-                                  error_message=str(e))
-    
-    def _namespace_to_dict(self, namespace):
-        """Recursively convert SimpleNamespace to dict"""
-        if isinstance(namespace, SimpleNamespace):
-            return {k: self._namespace_to_dict(v) for k, v in vars(namespace).items()}
-        elif isinstance(namespace, (list, tuple)):
-            return type(namespace)(self._namespace_to_dict(x) for x in namespace)
-        elif isinstance(namespace, dict):
-            return {k: self._namespace_to_dict(v) for k, v in namespace.items()}
-        return namespace
+            raise self.error_handler.create_error_handler(
+                'hyperparameter_optimization',
+                "Failed to create Optuna study",
+                error_message=str(e)
+            )
 
     @log_performance
-    def optimize(self, 
+    def optimize(self,
                 objective_func: Optional[Callable] = None,
                 X = None,
                 y = None,
@@ -61,108 +63,204 @@ class OptunaOptimizer:
                 n_splits: int = None) -> Dict[str, Any]:
         """
         Optimize hyperparameters using Optuna and model_testing_config settings.
-        """
-        # Get parameter space from config based on model type and convert to dict
-        param_space = None
-        if model_type:
-            if model_type.lower() == "xgboost":
-                param_space = self._namespace_to_dict(self.config.xgb_param_space)
-            elif model_type.lower() == "lightgbm":
-                param_space = self._namespace_to_dict(self.config.lgbm_param_space)
-            else:
-                raise ValueError(f"Unsupported model type: {model_type}")
-
-
-
-        # Get optimization settings from config
-        n_trials = self.config.optuna.n_trials
-        scoring = self.config.optuna.scoring
-        direction = self.config.optuna.direction
-        n_splits = n_splits or self.config.n_splits
-        cv_type = self.config.cross_validation_type
-
-        structured_log(logger, logging.INFO, 
-                    "Starting optimization",
-                    model_type=model_type,
-                    n_trials=n_trials,
-                    scoring=scoring,
-                    direction=direction)
         
+        Args:
+            objective_func: Optional custom objective function
+            X: Training data
+            y: Target data
+            model_type: Type of model to optimize
+            n_splits: Number of cross-validation splits
+            
+        Returns:
+            Dictionary of optimized parameters
+        """
         try:
+            # Get parameter space based on model type
+            param_space = self._get_param_space(model_type)
+
+            # Get optimization settings from config
+            n_trials = self.config.optuna.n_trials
+            scoring = self.config.optuna.scoring
+            direction = self.config.optuna.direction
+            n_splits = n_splits or self.config.n_splits
+            cv_type = self.config.cross_validation_type
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Starting optimization",
+                model_type=model_type,
+                n_trials=n_trials,
+                scoring=scoring,
+                direction=direction
+            )
+            
             self._create_study(direction)
             
-            result = None
+            # Choose appropriate optimization method based on model type
             if model_type.lower() == "xgboost":
                 self.study = self._optimize_xgboost(X, y, param_space, n_trials, n_splits, cv_type, scoring)
             elif model_type.lower() == "lightgbm":
                 self.study = self._optimize_lightgbm(X, y, param_space, n_trials, n_splits, cv_type, scoring)
             else:
                 raise ValueError(f"Unsupported model type: {model_type}")
- 
-                
 
+            # Create unique run ID and merge parameters
             run_id = f"optuna_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            final_best_params = self._merge_parameters(param_space, self.study.best_params)
             
-            # Merge static parameters with best parameters from study
-            final_best_params = param_space.get('static_params', {}).copy()
-            final_best_params.update(self.study.best_params)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Optimization complete",
+                model_type=model_type,
+                best_value=self.study.best_value,
+                run_id=run_id
+            )
             
-            structured_log(logger, logging.INFO, 
-                        "Optimization complete, updating best parameters",
-                        model_type=model_type,
-                        best_value=self.study.best_value,
-                        run_id=run_id)
-            
-            # Create a HyperparameterSet instance for the new parameters
-            self.param_manager.update_best_params(
+            # Update hyperparameter manager with new best parameters
+            self.hyperparameter_manager.update_best_params(
                 model_name=model_type,
-                new_params=final_best_params,  # Using merged parameters
+                new_params=final_best_params,
                 metrics={scoring: self.study.best_value},
                 experiment_id="Optuna",
                 run_id=run_id,
                 description="Optuna optimization"
             )
             
-            if self.config.always_use_new_hyperparameters:
-                return final_best_params
-            else:
-                return self.param_manager.get_current_params(model_name=model_type)
+            return (final_best_params if self.config.always_use_new_hyperparameters 
+                   else self.hyperparameter_manager.get_current_params(model_name=model_type))
         
         except Exception as e:
-            raise OptimizationError("Error during optimization",
-                                error_message=str(e))
-    
-    @log_performance
-    def _optimize_xgboost(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
-        """Optimize XGBoost model hyperparameters using config settings."""
-        def objective(trial):
-            # Process parameters using the new method
-            params = self._process_parameters(trial, param_space)
-            
-            structured_log(logger, logging.INFO, 
-                          "Final parameters for trial", 
-                          trial_number=trial.number, 
-                          params=params)
+            raise self.error_handler.create_error_handler(
+                'hyperparameter_optimization',
+                "Error during optimization",
+                error_message=str(e)
+            )
 
+    def _get_param_space(self, model_type: str) -> Dict[str, Any]:
+        """Get parameter space configuration for model type."""
+        if model_type.lower() == "xgboost":
+            return self._namespace_to_dict(self.config.xgb_param_space)
+        elif model_type.lower() == "lightgbm":
+            return self._namespace_to_dict(self.config.lgbm_param_space)
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
+
+    def _namespace_to_dict(self, namespace: Any) -> Dict:
+        """Recursively convert SimpleNamespace to dict."""
+        if hasattr(namespace, '__dict__'):
+            return {k: self._namespace_to_dict(v) for k, v in vars(namespace).items()}
+        elif isinstance(namespace, (list, tuple)):
+            return type(namespace)(self._namespace_to_dict(x) for x in namespace)
+        elif isinstance(namespace, dict):
+            return {k: self._namespace_to_dict(v) for k, v in namespace.items()}
+        return namespace
+
+    def _merge_parameters(self, param_space: Dict, best_params: Dict) -> Dict:
+        """Merge static parameters with optimized parameters."""
+        final_params = param_space.get('static_params', {}).copy()
+        final_params.update(best_params)
+        return final_params
+
+    def _optimization_callback(self, study: optuna.Study, trial: optuna.Trial) -> None:
+        """Callback to log optimization progress."""
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Trial completed",
+            trial_number=trial.number,
+            value=trial.value,
+            params=trial.params
+        )
+
+    def _process_parameters(self, trial: optuna.Trial, param_space: Dict) -> Dict:
+        """Process both static and dynamic parameters from parameter space."""
+        try:
+            # Start with static parameters
+            params = param_space.get('static_params', {}).copy()
+            
+            # Process dynamic parameters
+            dynamic_params = param_space.get('dynamic_params', {})
+            for param_name, config in dynamic_params.items():
+                try:
+                    if not isinstance(config, list):
+                        params[param_name] = config
+                        continue
+                    
+                    # Config format: [low, high, type, log(optional)]
+                    param_type = config[2]
+                    if param_type == "int":
+                        params[param_name] = trial.suggest_int(param_name, config[0], config[1])
+                    elif param_type == "float":
+                        log = config[3] if len(config) > 3 else False
+                        low = float(config[0])
+                        high = float(config[1])
+                        params[param_name] = trial.suggest_float(param_name, low, high, log=log)
+                    elif param_type == "categorical":
+                        params[param_name] = trial.suggest_categorical(param_name, config[0])
+                    
+                    self.app_logger.structured_log(
+                        logging.DEBUG,
+                        "Processed parameter",
+                        param_name=param_name,
+                        value=params[param_name],
+                        param_type=param_type
+                    )
+                        
+                except Exception as e:
+                    raise self.error_handler.create_error_handler(
+                        'hyperparameter_optimization',
+                        f"Error processing parameter {param_name}",
+                        error_message=f"Config: {config}. Error: {str(e)}"
+                    )
+            
+            return params
+            
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'hyperparameter_optimization',
+                "Error processing parameters",
+                error_message=str(e)
+            )
+
+    def get_best_params(self) -> Dict[str, Any]:
+        """Return the best parameters found during optimization."""
+        if self.best_params is None:
+            raise self.error_handler.create_error_handler(
+                'hyperparameter_optimization',
+                "No optimization has been performed yet"
+            )
+        return self.best_params
+
+    def _optimize_xgboost(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
+        """Optimize XGBoost model hyperparameters."""
+        def objective(trial):
+            params = self._process_parameters(trial, param_space)
             scores = []
             
-            # Use appropriate cross-validation strategy from config
+            # Use appropriate cross-validation strategy
             if cv_type == "TimeSeriesSplit":
                 kf = TimeSeriesSplit(n_splits=n_splits)
-            else:  
-                kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.config.random_state)
+            else:
+                kf = StratifiedKFold(
+                    n_splits=n_splits,
+                    shuffle=True,
+                    random_state=self.config.random_state
+                )
             
             for train_idx, val_idx in kf.split(X, y):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
                 
-                dtrain = xgb.DMatrix(X_train, label=y_train,
-                                   enable_categorical=self.config.XGBoost.enable_categorical)
-                dval = xgb.DMatrix(X_val, label=y_val,
-                                 enable_categorical=self.config.XGBoost.enable_categorical)
+                dtrain = xgb.DMatrix(
+                    X_train,
+                    label=y_train,
+                    enable_categorical=self.config.XGBoost.enable_categorical
+                )
+                dval = xgb.DMatrix(
+                    X_val,
+                    label=y_val,
+                    enable_categorical=self.config.XGBoost.enable_categorical
+                )
                 
-
-                # Train model using config settings
                 model = xgb.train(
                     params,
                     dtrain,
@@ -170,20 +268,10 @@ class OptunaOptimizer:
                     evals=[(dval, 'val')],
                     early_stopping_rounds=self.config.XGBoost.early_stopping_rounds,
                     verbose_eval=False
-
                 )
                 
-                # Get predictions
                 y_pred = model.predict(dval)
-                
-                # Calculate score
-                if scoring == 'auc':
-                    from sklearn.metrics import roc_auc_score
-                    score = roc_auc_score(y_val, y_pred)
-                else:
-                    raise ValueError(f"Unsupported scoring metric: {scoring}")
-                
-                scores.append(score)
+                scores.append(self._calculate_score(y_val, y_pred, scoring))
             
             return np.mean(scores)
         
@@ -193,40 +281,41 @@ class OptunaOptimizer:
             n_trials=n_trials,
             callbacks=[self._optimization_callback]
         )
-               
+        
         return self.study
-    
-    @log_performance
-    def _optimize_lightgbm(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
-        """Optimize LightGBM model hyperparameters using config settings."""
-        def objective(trial):
-            # Process parameters using the new method
-            params = self._process_parameters(trial, param_space)
-            
-            structured_log(logger, logging.INFO, 
-                          "Final parameters for trial", 
-                          trial_number=trial.number, 
-                          params=params)
 
+    def _optimize_lightgbm(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
+        """Optimize LightGBM model hyperparameters."""
+        def objective(trial):
+            params = self._process_parameters(trial, param_space)
             scores = []
             
-            # Use appropriate cross-validation strategy from config
+            # Use appropriate cross-validation strategy
             if cv_type == "TimeSeriesSplit":
                 kf = TimeSeriesSplit(n_splits=n_splits)
-            else:  # Default to StratifiedKFold
-                kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=self.config.random_state)
+            else:
+                kf = StratifiedKFold(
+                    n_splits=n_splits,
+                    shuffle=True,
+                    random_state=self.config.random_state
+                )
             
             for train_idx, val_idx in kf.split(X, y):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
                 
-                train_data = lgb.Dataset(X_train, label=y_train,
-                                       categorical_feature=self.config.categorical_features)
-                val_data = lgb.Dataset(X_val, label=y_val,
-                                     categorical_feature=self.config.categorical_features,
-                                     reference=train_data)
+                train_data = lgb.Dataset(
+                    X_train,
+                    label=y_train,
+                    categorical_feature=self.config.categorical_features
+                )
+                val_data = lgb.Dataset(
+                    X_val,
+                    label=y_val,
+                    categorical_feature=self.config.categorical_features,
+                    reference=train_data
+                )
                 
-                # Train model using config settings
                 model = lgb.train(
                     params,
                     train_data,
@@ -236,20 +325,10 @@ class OptunaOptimizer:
                         lgb.early_stopping(self.config.LightGBM.early_stopping),
                         lgb.log_evaluation(0)
                     ]
-
                 )
                 
-                # Get predictions
                 y_pred = model.predict(X_val)
-                
-                # Calculate score
-                if scoring == 'auc':
-                    from sklearn.metrics import roc_auc_score
-                    score = roc_auc_score(y_val, y_pred)
-                else:
-                    raise ValueError(f"Unsupported scoring metric: {scoring}")
-                
-                scores.append(score)
+                scores.append(self._calculate_score(y_val, y_pred, scoring))
             
             return np.mean(scores)
         
@@ -262,65 +341,11 @@ class OptunaOptimizer:
         
         return self.study
 
-    def _optimization_callback(self, study: optuna.Study, trial: optuna.Trial) -> None:
-        """Callback to log optimization progress."""
-        structured_log(logger, logging.INFO,
-                      "Trial completed",
-                      trial_number=trial.number,
-                      value=trial.value,
-                      params=trial.params)
-    
-    def get_best_params(self) -> Dict[str, Any]:
-        """Return the best parameters found during optimization."""
-        if self.best_params is None:
-            raise OptimizationError("No optimization has been performed yet")
-        return self.best_params
-
-    def _process_parameters(self, trial, param_space: dict) -> dict:
-        """
-        Process both static and dynamic parameters from parameter space.
+    def _calculate_score(self, y_true: np.ndarray, y_pred: np.ndarray, scoring: str) -> float:
+        """Calculate the score for a prediction using the specified metric."""
+        from sklearn.metrics import roc_auc_score
         
-        Args:
-            trial: Optuna trial object
-            param_space: Dictionary containing parameters configuration
-                Format matches config YAML structure with static_params and dynamic_params
-        Returns:
-            dict: Combined parameters dictionary for model training
-        """
-        # Start with static parameters if they exist
-        params = param_space.get('static_params', {}).copy()
-        
-        # Process dynamic parameters
-        dynamic_params = param_space.get('dynamic_params', {})
-        for param_name, config in dynamic_params.items():
-            try:
-                if not isinstance(config, list):
-                    params[param_name] = config
-                    continue
-                
-                # Config format: [low, high, type, log(optional)]
-                param_type = config[2]
-                if param_type == "int":
-                    params[param_name] = trial.suggest_int(param_name, config[0], config[1])
-                elif param_type == "float":
-                    log = config[3] if len(config) > 3 else False
-                    # Convert string values to float if necessary
-                    low = float(config[0])
-                    high = float(config[1])
-                    params[param_name] = trial.suggest_float(param_name, low, high, log=log)
-                elif param_type == "categorical":
-                    params[param_name] = trial.suggest_categorical(param_name, config[0])
-                
-                structured_log(logger, logging.DEBUG,
-                             "Processed parameter",
-                             param_name=param_name,
-                             value=params[param_name],
-                             param_type=param_type)
-                    
-            except Exception as e:
-                raise OptimizationError(
-                    f"Error processing parameter {param_name}",
-                    error_message=f"Config: {config}. Error: {str(e)}"
-                )
-        
-        return params
+        if scoring == 'auc':
+            return roc_auc_score(y_true, y_pred)
+        else:
+            raise ValueError(f"Unsupported scoring metric: {scoring}")

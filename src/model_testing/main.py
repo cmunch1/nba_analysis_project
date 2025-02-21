@@ -50,9 +50,12 @@ def main() -> None:
         with log_context(app_version=config.app_version, environment=config.environment):
 
             training_dataframe = data_access.load_dataframe(config.training_data_file)
-            validation_dataframe = data_access.load_dataframe(config.validation_data_file)
+
+            if config.perform_validation_set_testing:
+                validation_dataframe = data_access.load_dataframe(config.validation_data_file)
+            else:
+                validation_dataframe = None 
             
-            # Update: Iterate over models using vars() for SimpleNamespace
             for model_name in vars(config.models):
                 enabled = getattr(config.models, model_name)
                 

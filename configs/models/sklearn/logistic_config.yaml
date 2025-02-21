@@ -1,0 +1,22 @@
+# No Training Settings
+
+# Hyperparameter Settings
+perform_hyperparameter_optimization: false 
+use_baseline_hyperparameters: true # false = use current best hyperparameters
+
+# Hyperparameter Optimization
+optimizer: Optuna   #only Optuna is supported currently
+
+static_params:
+  random_state: 42
+  n_jobs: -1
+  verbose: 0
+  max_iter: 1000
+
+optimization:
+  n_trials: 100
+  param_space:
+    C: [1.0e-4, 1.0e4, float, true]
+    penalty: ["l1", "l2", categorical]
+    solver: ["saga", "liblinear", categorical]
+    class_weight: [null, "balanced", categorical] 

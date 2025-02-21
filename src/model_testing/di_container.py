@@ -1,9 +1,14 @@
+"""
+Dependency Injection container for model testing with enhanced nested configuration support
+and proper logging/error handling injection.
+"""
+
 from dependency_injector import containers, providers
 from ..common.common_di_container import CommonDIContainer
 from .model_tester import ModelTester
 from .hyperparams_managers.hyperparams_manager import HyperparameterManager
 from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType
-from .hyperparams_optimizers.optuna_optimizer import OptunaOptimizer
+from .hyperparams_optimizers.hyperparams_optimizer_factory import OptimizerFactory, OptimizerType
 from .trainers.trainer_factory import TrainerFactory
 
 class ModelTestingDIContainer(containers.DeclarativeContainer):
@@ -18,7 +23,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
     data_access = common.data_access
     data_validator = common.data_validator
 
-    # Model testing specific components
+    # Hyperparameter management with proper injection
     hyperparameter_manager = providers.Factory(
         HyperparameterManager,
         config=config,
@@ -27,6 +32,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         error_handler=error_handler
     )
 
+    # Trainers factory with proper dependency injection
     trainers = providers.Factory(
         TrainerFactory.create_trainers,
         config=config,
@@ -34,6 +40,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         error_handler=error_handler
     )
 
+    # Model tester with injected dependencies
     model_tester = providers.Factory(
         ModelTester,
         config=config,
@@ -43,6 +50,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         error_handler=error_handler
     )
 
+    # Experiment logger with proper injection
     experiment_logger = providers.Factory(
         ExperimentLoggerFactory.create_logger,
         logger_type=LoggerType.MLFLOW,
@@ -51,6 +59,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         error_handler=error_handler
     )
 
+    # Hyperparameter optimizer with proper injection
     optimizer = providers.Factory(
         OptimizerFactory.create_optimizer,
         optimizer_type=OptimizerType.OPTUNA,
@@ -59,3 +68,30 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         app_logger=app_logger,
         error_handler=error_handler
     )
+
+    @classmethod
+    def configure_optimizer(cls, optimizer_type: OptimizerType) -> None:
+        """Configure the container to use a different optimizer implementation."""
+        cls.optimizer.override(
+            providers.Factory(
+                OptimizerFactory.create_optimizer,
+                optimizer_type=optimizer_type,
+                config=cls.config,
+                hyperparameter_manager=cls.hyperparameter_manager,
+                app_logger=cls.app_logger,
+                error_handler=cls.error_handler
+            )
+        )
+
+    @classmethod
+    def configure_experiment_logger(cls, logger_type: LoggerType) -> None:
+        """Configure the container to use a different experiment logger."""
+        cls.experiment_logger.override(
+            providers.Factory(
+                ExperimentLoggerFactory.create_logger,
+                logger_type=logger_type,
+                config=cls.config,
+                app_logger=cls.app_logger,
+                error_handler=cls.error_handler
+            )
+        )
