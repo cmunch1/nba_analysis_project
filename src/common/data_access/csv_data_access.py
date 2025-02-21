@@ -22,7 +22,7 @@ from ..app_logging import log_performance, structured_log
 from ..app_logging.base_app_logger import BaseAppLogger
 from ..app_file_handling.base_app_file_handler import BaseAppFileHandler
 
-logger = logging.getLogger(__name__)
+
 
 class CSVDataAccess(BaseDataAccess):
     @log_performance

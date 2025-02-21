@@ -1,0 +1,33 @@
+# Training Settings
+num_boost_round: 10000
+early_stopping_rounds: 100
+verbose_eval: 100
+
+# Hyperparameter Settings
+perform_hyperparameter_optimization: false 
+use_baseline_hyperparameters: true # false = use current best hyperparameters
+
+# Hyperparameter Optimization
+optimizer: Optuna   #only Optuna is supported currently
+
+static_params:
+  device: cuda
+  random_state: 42
+  objective: binary
+  metric: auc
+  verbose: -1
+  force_col_wise: true
+
+optimization:
+  n_trials: 100
+  param_space:
+    learning_rate: [1.0e-3, 1.0, float, true]
+    num_leaves: [2, 256, int]
+    max_depth: [1, 15, int]
+    min_data_in_leaf: [1, 100, int]
+    lambda_l1: [1.0e-16, 12, float, true]
+    lambda_l2: [1.0e-16, 12, float, true]
+    feature_fraction: [1.0e-16, 1.0, float, true]
+    bagging_fraction: [1.0e-16, 1.0, float, true]
+    bagging_freq: [1, 10, int]
+    min_gain_to_split: [1.0e-16, 12, float, true] 

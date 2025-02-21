@@ -1,0 +1,34 @@
+
+# Training Settings
+num_boost_round: 10000
+early_stopping_rounds: 100
+verbose_eval: 100
+enable_categorical: false
+
+# Hyperparameter Settings
+perform_hyperparameter_optimization: false 
+use_baseline_hyperparameters: true # false = use current best hyperparameters
+
+# Hyperparameter Optimization
+optimizer: Optuna   #only Optuna is supported currently
+
+static_params:
+  device: cuda
+  random_state: 42
+  objective: binary:logistic
+  eval_metric: auc
+  tree_method: hist
+
+optimization:
+  n_trials: 100
+  param_space:
+    learning_rate: [1.0e-3, 1.0, float, true]
+    max_bin: [2, 256, int]
+    max_depth: [1, 15, int]
+    alpha: [1.0e-16, 12, float, true]
+    gamma: [1.0e-16, 12, float, true]
+    reg_lambda: [1.0e-16, 12, float, true]
+    colsample_bytree: [1.0e-16, 1.0, float, true]
+    subsample: [1.0e-16, 1.0, float, true]
+    min_child_weight: [1.0e-16, 12, float, true]
+    scale_pos_weight: [1, 15, int] 

@@ -1,0 +1,23 @@
+
+# No Training Settings
+
+# Hyperparameter Settings
+perform_hyperparameter_optimization: false 
+use_baseline_hyperparameters: true # false = use current best hyperparameters
+
+# Hyperparameter Optimization
+optimizer: Optuna   #only Optuna is supported currently
+
+static_params:
+  random_state: 42
+  verbose: 0
+
+optimization:
+  n_trials: 100
+  param_space:
+    learning_rate: [1.0e-3, 1.0, float, true]
+    max_iter: [10, 1000, int]
+    max_depth: [1, 20, int]
+    min_samples_leaf: [1, 100, int]
+    l2_regularization: [1.0e-16, 12, float, true]
+    max_bins: [2, 255, int] 

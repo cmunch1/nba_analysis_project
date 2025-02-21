@@ -1,5 +1,5 @@
 from dependency_injector import containers, providers
-from typing import Type
+from typing import Type, Any
 from pathlib import Path
 
 # concrete classes
@@ -11,45 +11,56 @@ from src.common.error_handling.error_handler_factory import ErrorHandlerFactory
 from src.common.app_file_handling.app_file_handler import LocalAppFileHandler
 from src.common.data_validation.data_validator import DataValidator
 
-CONFIG_DIR = Path('..') / 'configs'
-
 class CommonDIContainer(containers.DeclarativeContainer):
+    """Container for common application dependencies."""
     
-    app_file_handler = providers.Singleton(LocalAppFileHandler)
+    # Use __file__ to make path resolution more robust
+    CONFIG_DIR: Path = Path(__file__).parent.parent / 'configs'
     
-    config = providers.Singleton(ConfigManager, config_dir=CONFIG_DIR, app_file_handler=app_file_handler)
+    # Core file handling
+    app_file_handler: providers.Provider[LocalAppFileHandler] = providers.Singleton(
+        LocalAppFileHandler
+    )
     
-    # Logger setup
-    app_logger_factory = providers.Factory(AppLoggerFactory)
+    # Configuration management
+    config: providers.Provider[ConfigManager] = providers.Singleton(
+        ConfigManager,
+        config_dir=CONFIG_DIR,
+        app_file_handler=app_file_handler
+    )
+    
+    # Logging setup
+    app_logger_factory: providers.Provider[AppLoggerFactory] = providers.Factory(
+        AppLoggerFactory
+    )
+    
     logger = providers.Factory(
-        lambda factory, config: factory.create_app_logger(config),
-        factory=app_logger_factory,
+        app_logger_factory.provided.create_app_logger,
         config=config
     )
     
-    # Error handler setup
-    error_handler_factory = providers.Factory(
+    # Error handling setup
+    error_handler_factory: providers.Provider[ErrorHandlerFactory] = providers.Singleton(
         ErrorHandlerFactory,
         logger=logger
     )
     
-    # Data access setup
-    data_access_factory = providers.Factory(
+    # Data access setup - flexible for future data access types
+    data_access_factory: providers.Provider[DataAccessFactory] = providers.Factory(
         DataAccessFactory,
-        data_access_class=CSVDataAccess,
+        data_access_class=CSVDataAccess,  # This can be changed or made configurable
         app_file_handler=app_file_handler
     )
     
     data_access = providers.Singleton(
-        lambda factory, config, logger, app_file_handler: factory.create_data_access(config, logger, app_file_handler),
-        factory=data_access_factory,
+        data_access_factory.provided.create_data_access,
         config=config,
         logger=logger,
         app_file_handler=app_file_handler
     )
-
     
-    data_validator = providers.Singleton(
+    # Data validation
+    data_validator: providers.Provider[DataValidator] = providers.Singleton(
         DataValidator,
         config=config,
         data_access=data_access,
@@ -57,3 +68,19 @@ class CommonDIContainer(containers.DeclarativeContainer):
         app_file_handler=app_file_handler,
         error_handler=error_handler_factory
     )
+
+    @classmethod
+    def configure_data_access(cls, data_access_class: Type[Any]) -> None:
+        """
+        Configure the container to use a different data access implementation.
+        
+        Args:
+            data_access_class: The data access class to use
+        """
+        cls.data_access_factory.override(
+            providers.Factory(
+                DataAccessFactory,
+                data_access_class=data_access_class,
+                app_file_handler=cls.app_file_handler
+            )
+        )

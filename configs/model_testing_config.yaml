@@ -12,35 +12,6 @@ sort_order:
   - true
   - true
 
-# perform preprocessing - particularly for non-GBT models that require scaling and standardization
-# the settings are in the preprocessing_config.yaml file
-perform_preprocessing: false
-
-# hyperparameters path (${PROJECT_ROOT} is the root directory of the project and is parsed from the environment variable in config.py)
-current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
-
-# hyperparameters storage directory
-hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
-
-# true = use baseline hyperparameters, false = use current best hyperparameters in config/hyperparameters.json
-use_baseline_hyperparameters: true
-
-# perform hyperparameter optimization 
-perform_hyperparameter_optimization: false
-always_use_new_hyperparameters: false # false = use the best hyperparameters from the hyperparameter_history directory
-
-# optimizer
-optimizer: #(Optuna is currently the only optimizer supported)
-  - Optuna
-
-
-# model testing options
-perform_oof_cross_validation: true
-perform_validation_set_testing: true
-save_oof_predictions: false # save the predictions for the out of fold cross validation to a csv file
-save_validation_predictions: true # save the predictions for the validation set to a csv file
-log_experiment: true
-
 # primary id for the dataframe - not used for modeling, but useful for analyzing predictions
 primary_id_column: game_id
 
@@ -53,10 +24,29 @@ non_useful_columns:
 categorical_features:
   - h_team_id
   - v_team_id
- 
-# random state for cross validation and other random operations (each model has its own random state in hyperparameter.json)
-random_state: 42
 
+# this allows you to skip preprocessing for all models without having to disable all the settings in the preprocessing_config.yaml file
+# the individual settings are in the preprocessing_config.yaml file
+perform_preprocessing: false
+
+# hyperparameters path (${PROJECT_ROOT} is the root directory of the project and is parsed from the environment variable in config.py)
+current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
+
+# hyperparameters storage directory
+hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
+
+# model testing options
+perform_oof_cross_validation: true
+perform_validation_set_testing: true
+save_oof_predictions: false # save the predictions for the out of fold cross validation to a csv file
+save_validation_predictions: true # save the predictions for the validation set to a csv file
+log_experiment: true
+
+
+# Cross validation settings (only TimeSeriesSplit or StratifiedKFold are supported currently)
+cross_validation_type: TimeSeriesSplit
+n_splits: 5
+random_state: 42
 
 # models to use in this experiment run
 models:
@@ -69,47 +59,6 @@ models:
     HistGradientBoosting: true
 
 
-
-# model specific static settings - tunable hyperparameters are in the hyperparameters.json file
-# XGBoost settings
-XGBoost:
-  num_boost_round: 10000
-  early_stopping_rounds: 100
-  verbose_eval: 100
-  enable_categorical: false
-
-# LGBM settings
-LightGBM:
-  num_boost_round: 10000
-  early_stopping: 100
-  log_evaluation: 100
-
-# CatBoost settings
-CatBoost:
-  num_boost_round: 10000
-  early_stopping_rounds: 100
-  verbose_eval: 100
-
-# SKLearn settings
-SKLearn:
-  #RandomForest:    all settings are tunable and found in hyperparameters.json
-
-  LogisticRegression:
-    max_iter: 1000     
-    
-  HistGradientBoosting:
-    max_iter: 1000     
-    early_stopping: true  
-
-
-# cross validation type (only TimeSeriesSplit and StratifiedKFold are supported currently)
-cross_validation_type: TimeSeriesSplit
-#cross_validation_type: StratifiedKFold
-
-
-# number of cross validation splits
-n_splits: 5
-
 # learning curve settings
 generate_learning_curve_data: true 
 
@@ -117,7 +66,6 @@ generate_learning_curve_data: true
 calculate_shap_values: true
 max_shap_interaction_memory_gb: 256.0
 calculate_shap_interactions: false
-
 
 # chart options
 chart_options:

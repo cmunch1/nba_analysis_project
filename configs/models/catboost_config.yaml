@@ -1,0 +1,30 @@
+
+# Training Settings
+num_boost_round: 10000
+early_stopping_rounds: 100
+verbose_eval: 100
+
+# Hyperparameter Settings
+perform_hyperparameter_optimization: false 
+use_baseline_hyperparameters: true # false = use current best hyperparameters
+
+# Hyperparameter Optimization
+optimizer: Optuna   #only Optuna is supported currently
+
+static_params:
+  random_seed: 42
+  eval_metric: AUC
+  loss_function: Logloss
+  task_type: GPU
+  verbose: False
+
+optimization:
+  n_trials: 100
+  param_space:
+    learning_rate: [1.0e-3, 1.0, float, true]
+    depth: [1, 12, int]
+    l2_leaf_reg: [1.0e-16, 12, float, true]
+    random_strength: [1.0e-16, 12, float, true]
+    bagging_temperature: [0.0, 1.0, float]
+    leaf_estimation_iterations: [1, 10, int]
+    min_data_in_leaf: [1, 100, int] 

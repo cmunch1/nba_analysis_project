@@ -2,5 +2,6 @@
 avgs
 boxscore
 boxscores
+hyperparams
 webelement
 webscraping
