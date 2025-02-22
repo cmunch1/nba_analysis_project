@@ -10,6 +10,7 @@ from .hyperparams_managers.hyperparams_manager import HyperparameterManager
 from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType
 from .hyperparams_optimizers.hyperparams_optimizer_factory import OptimizerFactory, OptimizerType
 from .trainers.trainer_factory import TrainerFactory
+from ..visualization.orchestration.chart_orchestrator import ChartOrchestrator
 
 class ModelTestingDIContainer(containers.DeclarativeContainer):
     # Import common container
@@ -22,6 +23,14 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
     error_handler = common.error_handler_factory
     data_access = common.data_access
     data_validator = common.data_validator
+
+    # Chart orchestrator with proper injection
+    chart_orchestrator = providers.Singleton(
+        ChartOrchestrator,
+        config=config,
+        app_logger=app_logger,
+        error_handler=error_handler
+    )
 
     # Hyperparameter management with proper injection
     hyperparameter_manager = providers.Factory(
@@ -56,7 +65,8 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         logger_type=LoggerType.MLFLOW,
         config=config,
         app_logger=app_logger,
-        error_handler=error_handler
+        error_handler=error_handler,
+        chart_orchestrator=chart_orchestrator
     )
 
     # Hyperparameter optimizer with proper injection
@@ -92,6 +102,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
                 logger_type=logger_type,
                 config=cls.config,
                 app_logger=cls.app_logger,
-                error_handler=cls.error_handler
+                error_handler=cls.error_handler,
+                chart_orchestrator=cls.chart_orchestrator
             )
         )

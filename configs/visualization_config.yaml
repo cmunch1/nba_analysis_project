@@ -1,0 +1,40 @@
+
+chart_options:
+  feature_importance:
+    enabled: true
+    top_n: 20
+    figure_size: [12, 8]
+    
+  metrics:
+    enabled: true
+    confusion_matrix:
+      enabled: true
+      figure_size: [10, 8]
+      color_map: "Blues"
+    roc_curve:
+      enabled: true
+      figure_size: [10, 8]
+      
+  learning_curve:
+    enabled: true
+    figure_size: [10, 6]
+    n_points: 10  # Number of points on the learning curve
+    
+  shap:
+    enabled: true
+    summary_plot:
+      enabled: true
+      max_display: 20
+      figure_size: [12, 8]
+    dependence_plots:
+      enabled: true
+      features: []  # List of features to create dependence plots for
+      figure_size: [10, 7]
+      
+  model_interpretation:
+    enabled: true
+    force_plot:
+      enabled: true
+      figure_size: [12, 6]
+      force_plot_indices: [0, 1, 2]  # Indices of instances to explain
+    background_samples: 100  # Number of background samples for SHAP explainer

@@ -1,59 +1,51 @@
+from abc import ABC, abstractmethod
 import logging
 import matplotlib.pyplot as plt
-from typing import Any
-from ...logging.logging_utils import log_performance, structured_log
-from ...error_handling.custom_exceptions import ChartCreationError
+from typing import Any, Tuple, Optional
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
+from ...common.config_management.base_config_manager import BaseConfigManager
 
-logger = logging.getLogger(__name__)
-
-class BaseChart:
-    @log_performance
-    def __init__(self):
-        """Initialize base chart class."""
-        structured_log(logger, logging.INFO, "BaseChart initialized")
-
-    def _create_figure(self, figsize=(12, 8)) -> tuple[plt.Figure, plt.Axes]:
+class BaseChart(ABC):
+    @abstractmethod
+    def __init__(self,
+                 config: BaseConfigManager,
+                 app_logger: BaseAppLogger,
+                 error_handler: BaseErrorHandler):
         """
-        Create a new figure and axis with the specified size.
+        Initialize chart with required dependencies.
         
         Args:
-            figsize (tuple): Figure size (width, height)
+            config: Configuration manager
+            app_logger: Application logger for structured logging
+            error_handler: Error handler for standardized error management
+        """
+        self.config = config
+        self.app_logger = app_logger
+        self.error_handler = error_handler
+        
+        self.app_logger.structured_log(
+            logging.INFO,
+            f"{self.__class__.__name__} initialized"
+        )
+
+    @property
+    @abstractmethod
+    def log_performance(self):
+        """Get the performance logging decorator from app_logger."""
+        return self.app_logger.log_performance
+
+    @abstractmethod
+    def create_figure(self, **kwargs) -> plt.Figure:
+        """
+        Create and return a figure.
+        
+        Args:
+            **kwargs: Chart-specific parameters
             
         Returns:
-            tuple[plt.Figure, plt.Axes]: Figure and axis objects
+            A matplotlib Figure object
         """
-        fig, ax = plt.subplots(figsize=figsize)
-        return fig, ax
+        pass
 
-    def _handle_error(self, e: Exception, chart_type: str, **kwargs) -> None:
-        """
-        Handle chart creation errors consistently.
-        
-        Args:
-            e (Exception): The exception that occurred
-            chart_type (str): Type of chart being created
-            **kwargs: Additional context to log
-        """
-        structured_log(logger, logging.ERROR, 
-                      f"Error creating {chart_type}",
-                      error_message=str(e),
-                      error_type=type(e).__name__,
-                      **kwargs)
-        raise ChartCreationError(f"Error creating {chart_type}",
-                               error_message=str(e),
-                               **kwargs)
-
-    def _finalize_plot(self, fig: plt.Figure, title: str) -> plt.Figure:
-        """
-        Apply final touches to the plot.
-        
-        Args:
-            fig (plt.Figure): The figure to finalize
-            title (str): Plot title
-            
-        Returns:
-            plt.Figure: The finalized figure
-        """
-        plt.title(title)
-        plt.tight_layout()
-        return fig 
+ 
