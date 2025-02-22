@@ -67,20 +67,7 @@ calculate_shap_values: true
 max_shap_interaction_memory_gb: 256.0
 calculate_shap_interactions: false
 
-# chart options
-chart_options:
-  confusion_matrix: true
-  roc_curve: true
-  feature_importance:
-    enabled: true
-    n_features: 25
-  shap_summary:
-    enabled: true
-    n_features: 25
-  shap_beeswarm:
-    enabled: true
-    n_features: 25
-  learning_curve: true
+
 
 
 

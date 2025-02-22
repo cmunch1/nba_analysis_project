@@ -1,34 +1,69 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from typing import List, Any, Optional
-import shap
-from sklearn.inspection import partial_dependence
+from typing import List, Optional
 from .base_chart import BaseChart
+from .chart_utils import ChartUtils
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
+from ...common.config_management.base_config_manager import BaseConfigManager
+import logging
 
 class FeatureCharts(BaseChart):
-    def create_feature_importance_chart(self, feature_importance: np.ndarray, 
-                                      feature_names: List[str], 
-                                      top_n: int = 20) -> plt.Figure:
+    def __init__(self,
+                 config: BaseConfigManager,
+                 app_logger: BaseAppLogger,
+                 error_handler: BaseErrorHandler):
+        """
+        Initialize feature charts with dependencies.
+        
+        Args:
+            config: Configuration manager
+            app_logger: Application logger
+            error_handler: Error handler
+        """
+        super().__init__(config, app_logger, error_handler)
+        self.chart_utils = ChartUtils(app_logger, error_handler)
+        self.chart_config = config.get('chart_options', {}).get('feature_importance', {})
+
+    @property
+    def log_performance(self):
+        return self.app_logger.log_performance
+
+    @log_performance
+    def create_figure(self, 
+                     feature_importance: np.ndarray,
+                     feature_names: List[str],
+                     top_n: Optional[int] = None,
+                     **kwargs) -> plt.Figure:
         """
         Create a feature importance chart.
 
         Args:
-            feature_importance (np.ndarray): Array of feature importance scores
-            feature_names (List[str]): List of feature names
-            top_n (int): Number of top features to display
+            feature_importance: Array of feature importance scores
+            feature_names: List of feature names
+            top_n: Number of top features to display (overrides config)
+            **kwargs: Additional chart parameters
 
         Returns:
-            plt.Figure: Feature importance chart
+            Feature importance chart figure
         """
         try:
+            # Input validation
+            if len(feature_importance) != len(feature_names):
+                raise ValueError("Feature importance and names must have same length")
+            
+            # Get configuration values with defaults
+            top_n = top_n or self.chart_config.get('top_n', 20)
+            figure_size = self.chart_config.get('figure_size', [12, 8])
+            
             # Sort features by importance and get top_n features
             indices = np.argsort(np.abs(feature_importance))[-top_n:]
             top_importance = feature_importance[indices]
             top_names = [feature_names[i] for i in indices]
 
             # Create figure and plot
-            fig, ax = self._create_figure()
+            fig, ax = self.chart_utils.create_figure(figsize=figure_size)
             y_pos = np.arange(len(top_importance))
             ax.barh(y_pos, np.abs(top_importance))
             
@@ -39,45 +74,67 @@ class FeatureCharts(BaseChart):
             ax.set_xlabel('Feature Importance (absolute value)')
             ax.grid(True, axis='x', linestyle='--', alpha=0.7)
             
-            return self._finalize_plot(fig, f'Top {top_n} Most Important Features')
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Feature importance chart created",
+                feature_count=len(feature_names),
+                top_n=top_n
+            )
+            
+            return self.chart_utils.finalize_plot(fig, f'Top {top_n} Most Important Features')
             
         except Exception as e:
-            self._handle_error(e, "feature importance chart",
-                             feature_importance_shape=feature_importance.shape,
-                             feature_names_length=len(feature_names))
-
-    def create_partial_dependence_plot(self, model: Any, 
-                                     X: pd.DataFrame, 
-                                     feature_names: List[str], 
-                                     target_names: Optional[List[str]] = None) -> plt.Figure:
-        """
-        Create a partial dependence plot for specified features.
-        """
-        try:
-            pdp_results = partial_dependence(
-                model, X, features=feature_names, kind="average", grid_resolution=20
+            self.chart_utils.handle_chart_error(
+                e,
+                "feature importance chart",
+                feature_importance_shape=feature_importance.shape,
+                feature_names_length=len(feature_names),
+                top_n=top_n
             )
 
-            fig, axes = plt.subplots(nrows=1, ncols=len(feature_names), 
-                                   figsize=(6*len(feature_names), 5))
-            if len(feature_names) == 1:
-                axes = [axes]
+    @log_performance
+    def create_feature_distribution(self, 
+                                  feature_data: pd.Series,
+                                  **kwargs) -> plt.Figure:
+        """
+        Create a distribution plot for a single feature.
 
-            for i, (ax, feature_name) in enumerate(zip(axes, feature_names)):
-                pdp_values = pdp_results["average"][i]
-                feature_values = pdp_results["values"][i]
-                
-                ax.plot(feature_values, pdp_values.T)
-                ax.set_xlabel(feature_name)
-                ax.set_ylabel('Partial dependence')
-                
-                if target_names and len(target_names) > 1:
-                    ax.legend(target_names, loc='best')
+        Args:
+            feature_data: Series containing feature values
+            **kwargs: Additional chart parameters
 
-            return self._finalize_plot(fig, 'Partial Dependence Plot')
+        Returns:
+            Feature distribution chart figure
+        """
+        try:
+            fig, ax = self.chart_utils.create_figure()
+            
+            # Create histogram with density plot
+            ax.hist(feature_data.dropna(), bins='auto', density=True, alpha=0.7)
+            feature_data.dropna().plot(kind='kde', ax=ax)
+            
+            # Customize the plot
+            ax.set_xlabel(feature_data.name or 'Feature Value')
+            ax.set_ylabel('Density')
+            ax.grid(True, linestyle='--', alpha=0.7)
+            
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Feature distribution chart created",
+                feature_name=feature_data.name,
+                value_count=len(feature_data),
+                nan_count=feature_data.isna().sum()
+            )
+            
+            return self.chart_utils.finalize_plot(
+                fig,
+                f'Distribution of {feature_data.name or "Feature"}'
+            )
             
         except Exception as e:
-            self._handle_error(e, "partial dependence plot",
-                             model_type=type(model).__name__,
-                             dataframe_shape=X.shape,
-                             feature_names=feature_names) 
+            self.chart_utils.handle_chart_error(
+                e,
+                "feature distribution chart",
+                feature_name=feature_data.name,
+                value_count=len(feature_data)
+            )

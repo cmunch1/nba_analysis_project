@@ -21,76 +21,35 @@ LOG_FILE = "model_testing.log"
 
 @log_performance
 def main() -> None:
-    """
-    Main function to perform model testing on engineered data.
-    """
-
-    # Initialize containers
-    container = ModelTestingDIContainer()
-    
-    # Get dependencies
-    config = container.config()
-    data_access = container.data_access()
-    data_validator = container.data_validator()
-    model_tester = container.model_tester()
-    experiment_logger = container.experiment_logger()
-    optimizer = container.optimizer()
-    app_logger = container.app_logger()
-    
+    """Main function to perform model testing."""
     try:
-        error_logger = setup_logging(config, LOG_FILE)
-        logger = logging.getLogger(__name__)
+        # Initialize container
+        container = ModelTestingDIContainer()
+        
+        # Get dependencies
+        config = container.config()
+        data_access = container.data_access()
+        data_validator = container.data_validator()
+        model_tester = container.model_tester()
+        experiment_logger = container.experiment_logger()
+        optimizer = container.optimizer()
+        app_logger = container.app_logger()
 
-        structured_log(logger, logging.INFO, "Starting model testing", 
-                       app_version=config.app_version, 
-                       environment=config.environment,
-                       log_level=config.log_level,
-                       config_summary=str(config.__dict__))
+        # Load and validate data
+        data = data_access.load_data()
+        data_validator.validate_data(data)
 
-        with log_context(app_version=config.app_version, environment=config.environment):
+        # Train and evaluate model
+        results = model_tester.train_and_evaluate(data)
 
-            training_dataframe = data_access.load_dataframe(config.training_data_file)
+        # Log experiment with visualizations
+        experiment_logger.log_experiment(results)
 
-            if config.perform_validation_set_testing:
-                validation_dataframe = data_access.load_dataframe(config.validation_data_file)
-            else:
-                validation_dataframe = None 
-            
-            for model_name in vars(config.models):
-                enabled = getattr(config.models, model_name)
-                
-                # Skip disabled models
-                if not enabled:
-                    continue
-                    
-                # Handle nested SKLearn models
-                if model_name == "SKLearn" and hasattr(enabled, '__dict__'):
-                    for sklearn_model, is_enabled in vars(enabled).items():
-                        if not is_enabled:
-                            continue
-                        process_single_model(
-                            f"SKLearn_{sklearn_model}",
-                            training_dataframe,
-                            validation_dataframe,
-                            config,
-                            model_tester,
-                            data_access,
-                            experiment_logger,
-                            optimizer,
-                            logger
-                        )
-                else:
-                    process_single_model(
-                        model_name,
-                        training_dataframe,
-                        validation_dataframe,
-                        config,
-                        model_tester,
-                        data_access,
-                        experiment_logger,
-                        optimizer,
-                        logger
-                    )
+        app_logger.structured_log(
+            logging.INFO,
+            "Model testing completed successfully",
+            model_name=results.model_name
+        )
 
             structured_log(logger, logging.INFO, "Model testing completed successfully")
 
@@ -98,7 +57,13 @@ def main() -> None:
             DataStorageError, ModelTestingError) as e:
         _handle_known_error(error_logger, e)
     except Exception as e:
-        _handle_unexpected_error(error_logger, e)
+        app_logger.structured_log(
+            logging.ERROR,
+            "Model testing failed",
+            error=str(e),
+            traceback=traceback.format_exc()
+        )
+        sys.exit(1)
 
 def process_single_model(
     model_name: str,

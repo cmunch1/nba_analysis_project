@@ -9,13 +9,18 @@ import os
 import json
 import numpy as np
 from mlflow.models.signature import infer_signature
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from pathlib import Path
+import matplotlib.pyplot as plt
 
 from .base_experiment_logger import BaseExperimentLogger
 from ...common.config_management.base_config_manager import BaseConfigManager
 from ...common.app_logging.base_app_logger import BaseAppLogger
 from ...common.error_handling.base_error_handler import BaseErrorHandler
-from ...visualization.chart_functions import ChartFunctions
+from ...visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
+from ...common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from ...common.data_classes import ModelTrainingResults
+
 
 class MLflowChartLogger:
     """Helper class for generating and logging charts to MLflow."""
@@ -25,8 +30,7 @@ class MLflowChartLogger:
         self.config = config
         self.app_logger = app_logger
         self.error_handler = error_handler
-        self.chart_functions = ChartFunctions()
-        
+               
         self.app_logger.structured_log(
             logging.INFO, 
             "MLflowChartLogger initialized"
@@ -81,142 +85,169 @@ class MLflowChartLogger:
     # ... Additional chart creation methods ...
 
 class MLFlowLogger(BaseExperimentLogger):
-    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, error_handler: BaseErrorHandler):
-        """Initialize MLflow logger with dependencies."""
-        self.config = config
-        self.app_logger = app_logger
-        self.error_handler = error_handler
-        self._chart_logger = MLflowChartLogger(config, app_logger, error_handler)
+    def __init__(self,
+                 config: BaseConfigManager,
+                 app_logger: BaseAppLogger,
+                 error_handler: BaseErrorHandler,
+                 chart_orchestrator: BaseChartOrchestrator,
+                 app_file_handler: BaseAppFileHandler):
+        """
+        Initialize MLflow logger with dependencies.
+        
+        Args:
+            config: Configuration manager
+            app_logger: Application logger
+            error_handler: Error handler
+            chart_orchestrator: Chart orchestrator for visualization
+            app_file_handler: Application file handler for managing files
+        """
+        super().__init__(config, app_logger, error_handler, chart_orchestrator)
+        self.app_file_handler = app_file_handler
+        
+        # Configure MLflow
+        mlflow.set_tracking_uri(self.config.get('mlflow', {}).get('tracking_uri'))
+        mlflow.set_experiment(self.config.get('mlflow', {}).get('experiment_name', 'default'))
         
         self.app_logger.structured_log(
-            logging.INFO, 
-            "MLFlowLogger initialized"
+            logging.INFO,
+            "MLflow logger initialized",
+            tracking_uri=mlflow.get_tracking_uri(),
+            experiment_name=mlflow.get_experiment(mlflow.active_run().info.experiment_id).name if mlflow.active_run() else None
         )
 
     @property
     def log_performance(self):
-        """Get the performance logging decorator from app_logger."""
         return self.app_logger.log_performance
 
     @log_performance
-    def log_experiment(self, results: Any) -> None:
-        """Log an experiment to MLflow with preprocessing tracking."""
-        if results.model is None:
+    def log_experiment(self, results: ModelTrainingResults) -> None:
+        """
+        Log an experiment's results to MLflow.
+        
+        Args:
+            results: Model training results containing all experiment data
+        """
+        try:
+            with mlflow.start_run(run_name=results.model_name):
+                # Log parameters
+                self._log_parameters(results)
+                
+                # Log metrics
+                self._log_metrics(results)
+                
+                # Log model
+                self._log_model(results)
+                
+                # Log charts using the orchestrator
+                self._log_charts(results)
+                
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Experiment logged successfully",
+                    model_name=results.model_name,
+                    run_id=mlflow.active_run().info.run_id
+                )
+                
+        except Exception as e:
             raise self.error_handler.create_error_handler(
                 'experiment_logging',
-                "Cannot log experiment: model object is None"
+                "Error logging experiment to MLflow",
+                original_error=str(e),
+                model_name=results.model_name
             )
 
-        # Set experiment
-        mlflow.set_experiment(self.config.experiment_name)
+    def _log_charts(self, results: ModelTrainingResults) -> None:
+        """
+        Generate and log visualization charts to MLflow.
         
-        # Create run name
-        run_name = f"{results.model_name}_{results.evaluation_type}"
-        
-        with mlflow.start_run(run_name=run_name):
-            try:
-                self._log_experiment_metadata(results)
-                self._log_model_parameters(results)
-                self._log_metrics(results)
-                self._log_preprocessing_info(results)
-                self._log_data_info(results)
-                self._log_model(results)
-                self._chart_logger.log_model_charts(results)
-
-                self.app_logger.structured_log(
-                    logging.INFO, 
-                    "Experiment logged successfully", 
-                    model_name=results.model_name
-                )
-
-            except Exception as e:
-                self.app_logger.structured_log(
-                    logging.ERROR, 
-                    "Failed to log experiment",
-                    error=str(e)
-                )
-                raise
-
-    def _log_experiment_metadata(self, results: Any) -> None:
-        """Log experiment metadata to MLflow."""
-        mlflow.set_tag("description", self.config.experiment_description)
-        mlflow.set_tag("run_type", results.evaluation_type)
-
-    def _log_model_parameters(self, results: Any) -> None:
-        """Log model parameters to MLflow."""
-        mlflow.log_params(results.model_params)
-        mlflow.log_params({
-            "num_boost_round": results.num_boost_round,
-            "early_stopping": results.early_stopping,
-            "enable_categorical": results.enable_categorical,
-            "categorical_features": results.categorical_features
-        })
-
-    def _log_metrics(self, results: Any) -> None:
-        """Log metrics to MLflow."""
-        if results.metrics:
-            prefix = "val_" if results.is_validation else "oof_"
-            mlflow.log_metrics({
-                f"{prefix}accuracy": results.metrics.accuracy,
-                f"{prefix}precision": results.metrics.precision,
-                f"{prefix}recall": results.metrics.recall,
-                f"{prefix}f1": results.metrics.f1,
-                f"{prefix}auc": results.metrics.auc,
-                f"{prefix}optimal_threshold": results.metrics.optimal_threshold
-            })
-
-    def _log_preprocessing_info(self, results: Any) -> None:
-        """Log preprocessing information to MLflow."""
-        if results.preprocessing_results:
-            preprocessing_summary = results.preprocessing_results.summarize()
-            mlflow.log_params({
-                "n_original_features": preprocessing_summary["n_original_features"],
-                "n_final_features": preprocessing_summary["n_final_features"],
-                "n_preprocessing_steps": preprocessing_summary["n_preprocessing_steps"]
-            })
-
-            with tempfile.TemporaryDirectory() as temp_dir:
-                self._save_preprocessing_artifacts(results, temp_dir)
-
-    def _save_preprocessing_artifacts(self, results: Any, temp_dir: str) -> None:
-        """Save preprocessing artifacts to MLflow."""
-        preproc_path = os.path.join(temp_dir, "preprocessing_info.json")
-        with open(preproc_path, "w") as f:
-            json.dump(results.preprocessing_results.to_dict(), f, indent=2)
-        mlflow.log_artifact(preproc_path, "preprocessing")
-
-        transformations = results.preprocessing_results.feature_transformations
-        trans_path = os.path.join(temp_dir, "feature_transformations.json")
-        with open(trans_path, "w") as f:
-            json.dump(transformations, f, indent=2)
-        mlflow.log_artifact(trans_path, "preprocessing")
-
-    @log_performance
-    def log_model(self, model: Any, model_name: str, model_params: Dict[str, Any]) -> None:
-        """Log a model to MLflow with its parameters."""
+        Args:
+            results: Model training results containing data for charts
+        """
         try:
-            with mlflow.start_run():
-                mlflow.set_experiment(self.config.experiment_name)
-                mlflow.log_params(model_params)
+            # Get all charts from orchestrator
+            charts = self.chart_orchestrator.create_model_evaluation_charts(results)
+            
+            # Use app_file_handler to create and manage temporary directory
+            with self.app_file_handler.create_temp_directory() as temp_dir:
+                temp_dir = Path(temp_dir)
                 
-                # Log model using appropriate MLflow flavor
-                if 'xgboost' in model_name.lower():
-                    mlflow.xgboost.log_model(model, model_name)
-                elif 'lgbm' in model_name.lower():
-                    mlflow.lightgbm.log_model(model, model_name)
-                else:
-                    mlflow.sklearn.log_model(model, model_name)
-                    
+                for chart_name, fig in charts.items():
+                    if fig is not None:
+                        chart_path = temp_dir / f"{chart_name}.png"
+                        # Use app_file_handler to save the figure
+                        self.app_file_handler.save_figure(fig, chart_path)
+                        plt.close(fig)
+                        
+                        mlflow.log_artifact(
+                            str(chart_path),
+                            artifact_path="charts"
+                        )
+                
                 self.app_logger.structured_log(
-                    logging.INFO, 
-                    "Model logged successfully", 
-                    model_name=model_name
+                    logging.INFO,
+                    "Charts logged successfully",
+                    chart_types=list(charts.keys())
                 )
-                             
+                
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'experiment_logging',
+                "Error logging charts to MLflow",
+                original_error=str(e)
+            )
+
+    def _log_parameters(self, results: ModelTrainingResults) -> None:
+        """Log model parameters to MLflow."""
+        try:
+            # Log model parameters
+            mlflow.log_params(results.model_params)
+            
+            # Log training parameters
+            mlflow.log_params({
+                "n_folds": results.n_folds,
+                "feature_count": len(results.feature_names),
+                "sample_count": results.X_train.shape[0]
+            })
+            
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'experiment_logging',
+                "Error logging parameters to MLflow",
+                original_error=str(e)
+            )
+
+    def _log_metrics(self, results: ModelTrainingResults) -> None:
+        """Log model metrics to MLflow."""
+        try:
+            # Log average metrics
+            for metric_name, value in results.metrics.items():
+                mlflow.log_metric(f"avg_{metric_name}", value)
+            
+            # Log fold-specific metrics
+            for fold, fold_metrics in results.fold_metrics.items():
+                for metric_name, value in fold_metrics.items():
+                    mlflow.log_metric(f"{metric_name}_fold_{fold}", value)
+                    
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'experiment_logging',
+                "Error logging metrics to MLflow",
+                original_error=str(e)
+            )
+
+    def _log_model(self, results: ModelTrainingResults) -> None:
+        """Log the trained model to MLflow."""
+        try:
+            mlflow.sklearn.log_model(
+                results.best_model,
+                "model",
+                registered_model_name=results.model_name
+            )
+            
         except Exception as e:
             raise self.error_handler.create_error_handler(
                 'experiment_logging',
                 "Error logging model to MLflow",
-                error_message=str(e),
-                model_name=model_name
+                original_error=str(e),
+                model_name=results.model_name
             )

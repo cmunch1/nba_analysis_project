@@ -1,167 +1,237 @@
 import logging
-from typing import Dict
+from typing import Dict, Optional
 import matplotlib.pyplot as plt
-from ..charts.feature_charts import FeatureCharts
-from ..charts.metrics_charts import MetricsCharts
-from ..charts.learning_curve_charts import LearningCurveCharts
-from ..charts.shap_charts import SHAPCharts
-from ...logging.logging_utils import log_performance, structured_log
-from ...error_handling.custom_exceptions import ChartCreationError
+from ..charts.chart_factory import ChartFactory
+from ..charts.chart_types import ChartType
+from ..charts.base_chart import BaseChart
+from ...common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
+from ...common.config_management.base_config_manager import BaseConfigManager
 from ...common.data_classes import ModelTrainingResults
+from .base_chart_orchestrator import BaseChartOrchestrator
 
-logger = logging.getLogger(__name__)
 
-class ChartOrchestrator:
-    @log_performance
-    def __init__(self, config):
+class ChartOrchestrator(BaseChartOrchestrator):
+    """Concrete implementation of chart orchestration."""
+    
+    def __init__(self,
+                 config: BaseConfigManager,
+                 app_logger: BaseAppLogger,
+                 error_handler: BaseErrorHandler,
+                 app_file_handler: BaseAppFileHandler):
         """
-        Initialize the ChartOrchestrator with configuration.
+        Initialize the ChartOrchestrator with dependencies.
         
         Args:
-            config: Configuration object containing chart flags
+            config: Configuration manager
+            app_logger: Application logger
+            error_handler: Error handler
+            app_file_handler: Application file handler
         """
         self.config = config
-        self.feature_charts = FeatureCharts()
-        self.metrics_charts = MetricsCharts()
-        self.learning_curve_charts = LearningCurveCharts()
-        self.shap_charts = SHAPCharts()
-        structured_log(logger, logging.INFO, "ChartOrchestrator initialized")
+        self.app_logger = app_logger
+        self.error_handler = error_handler
+        self.app_file_handler = app_file_handler
+        
+        # Initialize chart instances based on configuration
+        self.charts: Dict[ChartType, BaseChart] = {}
+        self._initialize_charts()
+        
+        self.app_logger.structured_log(
+            logging.INFO,
+            "ChartOrchestrator initialized",
+            active_charts=list(self.charts.keys())
+        )
+
+    @property
+    def log_performance(self):
+        return self.app_logger.log_performance
+
+    def _initialize_charts(self) -> None:
+        """Initialize enabled chart types based on configuration."""
+        try:
+            chart_options = self.config.get('chart_options', {})
+            
+            if chart_options.get('feature_importance', {}).get('enabled', False):
+                self.charts[ChartType.FEATURE] = ChartFactory.create_chart(
+                    ChartType.FEATURE, self.config, self.app_logger, self.error_handler
+                )
+                
+            if chart_options.get('metrics', {}).get('enabled', False):
+                self.charts[ChartType.METRICS] = ChartFactory.create_chart(
+                    ChartType.METRICS, self.config, self.app_logger, self.error_handler
+                )
+                
+            if chart_options.get('learning_curve', {}).get('enabled', False):
+                self.charts[ChartType.LEARNING_CURVE] = ChartFactory.create_chart(
+                    ChartType.LEARNING_CURVE, self.config, self.app_logger, self.error_handler
+                )
+                
+            if chart_options.get('shap', {}).get('enabled', False):
+                self.charts[ChartType.SHAP] = ChartFactory.create_chart(
+                    ChartType.SHAP, self.config, self.app_logger, self.error_handler
+                )
+
+            if chart_options.get('model_interpretation', {}).get('enabled', False):
+                self.charts[ChartType.MODEL_INTERPRETATION] = ChartFactory.create_chart(
+                    ChartType.MODEL_INTERPRETATION, self.config, self.app_logger, self.error_handler
+                )
+                
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'chart_creation',
+                "Error initializing charts",
+                original_error=str(e)
+            )
 
     @log_performance
-    def generate_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
+    def create_model_evaluation_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
         """
-        Generate all configured charts based on ModelTrainingResults.
+        Create all enabled charts for model evaluation.
         
         Args:
-            results: ModelTrainingResults object containing all necessary data
+            results: Model training results containing data for charts
             
         Returns:
-            Dict[str, plt.Figure]: Dictionary mapping chart names to matplotlib figures
+            Dictionary mapping chart names to figure objects
         """
-        structured_log(logger, logging.INFO, "Starting chart generation")
-        charts = {}
-
         try:
-            chart_data = results.prepare_for_charting()
+            charts_dict = {}
+            
+            # Feature importance chart
+            if ChartType.FEATURE in self.charts and results.feature_importance is not None:
+                charts_dict['feature_importance'] = self.charts[ChartType.FEATURE].create_figure(
+                    feature_importance=results.feature_importance,
+                    feature_names=results.feature_names,
+                    top_n=self.config.chart_options.feature_importance.top_n
+                )
+            
+            # Metrics charts (confusion matrix, ROC curve, etc.)
+            if ChartType.METRICS in self.charts:
+                metrics_charts = self._create_metrics_charts(results)
+                charts_dict.update(metrics_charts)
+            
+            # Learning curve
+            if ChartType.LEARNING_CURVE in self.charts and results.learning_curve_data:
+                charts_dict['learning_curve'] = self.charts[ChartType.LEARNING_CURVE].create_figure(
+                    results=results
+                )
+            
+            # SHAP charts
+            if ChartType.SHAP in self.charts and results.shap_values is not None:
+                shap_charts = self._create_shap_charts(results)
+                charts_dict.update(shap_charts)
 
-            # Feature Importance Chart
-            chart_config = self.config.chart_options.feature_importance_chart
-            if isinstance(chart_config, dict) and chart_config.get('enabled'):
-                try:    
-                    if chart_data["feature_importance"] is not None:
-                        charts['feature_importance'] = self.feature_charts.create_feature_importance_chart(
-                            feature_importance=chart_data["feature_importance"],
-                            feature_names=chart_data["feature_names"],
-                            top_n=chart_config.get('n_features', 20)
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create feature importance chart",
-                                 error=str(e))
-
-            # Confusion Matrix
-            if self.config.chart_options.confusion_matrix:
-                try:
-                    if chart_data["y_true"] is not None and chart_data["y_pred"] is not None:
-                        charts['confusion_matrix'] = self.metrics_charts.create_confusion_matrix(
-                            y_true=chart_data["y_true"],
-                            y_pred=chart_data["y_pred"]
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create confusion matrix",
-                                 error=str(e))
-
-            # ROC Curve
-            if self.config.chart_options.roc_curve:
-                try:
-                    if chart_data["y_true"] is not None and chart_data["y_prob"] is not None:
-                        charts['roc_curve'] = self.metrics_charts.create_roc_curve(
-                            y_true=chart_data["y_true"],
-                            y_score=chart_data["y_prob"]
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create ROC curve",
-                                 error=str(e))
-
-            # Learning Curve
-            if self.config.chart_options.learning_curve:
-                try:
-                    charts['learning_curve'] = self.learning_curve_charts.create_learning_curve(
-                        results=results
-                    )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create learning curve",
-                                 error=str(e))
-
-            # SHAP Summary Plot
-            chart_config = self.config.chart_options.shap_summary_plot
-            if isinstance(chart_config, dict) and chart_config.get('enabled'):
-                try:
-                    if chart_data["model"] is not None and chart_data["X"] is not None:
-                        charts['shap_summary'] = self.shap_charts.create_shap_summary_plot(
-                            model=chart_data["model"],
-                            X=chart_data["X"],
-                            shap_values=results.shap_values,
-                            n_features=chart_config.get('n_features')
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create SHAP summary plot",
-                                 error=str(e))
-
-            # SHAP Beeswarm Plot
-            chart_config = self.config.chart_options.shap_beeswarm_plot
-            if isinstance(chart_config, dict) and chart_config.get('enabled'):
-                try:
-                    if chart_data["model"] is not None and chart_data["X"] is not None:
-                        charts['shap_beeswarm'] = self.shap_charts.create_shap_beeswarm_plot(
-                            model=chart_data["model"],
-                            X=chart_data["X"],
-                            shap_values=results.shap_values,
-                            n_features=chart_config.get('n_features')
-                        )
-                except Exception as e:
-                    structured_log(logger, logging.WARNING, 
-                                 "Failed to create SHAP beeswarm plot",
-                                 error=str(e))
-
-            structured_log(logger, logging.INFO, 
-                         f"Chart generation completed. Generated {len(charts)} charts")
-            return charts
-
+            # Model interpretation charts
+            if ChartType.MODEL_INTERPRETATION in self.charts:
+                interpretation_charts = self._create_interpretation_charts(results)
+                charts_dict.update(interpretation_charts)
+            
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Model evaluation charts created",
+                chart_types=list(charts_dict.keys())
+            )
+            
+            return charts_dict
+            
         except Exception as e:
-            raise ChartCreationError("Error in chart generation",
-                                   error_message=str(e),
-                                   charts_generated=list(charts.keys()))
+            raise self.error_handler.create_error_handler(
+                'chart_creation',
+                "Error creating model evaluation charts",
+                original_error=str(e)
+            )
+
+    def _create_metrics_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
+        """Create all metrics-related charts."""
+        metrics_charts = {}
+        metrics = self.charts[ChartType.METRICS]
+        
+        if hasattr(results, 'confusion_matrix_data'):
+            metrics_charts['confusion_matrix'] = metrics.create_confusion_matrix(
+                results.confusion_matrix_data
+            )
+            
+        if hasattr(results, 'roc_curve_data'):
+            metrics_charts['roc_curve'] = metrics.create_roc_curve(
+                results.roc_curve_data
+            )
+            
+        return metrics_charts
+
+    def _create_shap_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
+        """Create all SHAP-related charts."""
+        shap_charts = {}
+        shap = self.charts[ChartType.SHAP]
+        
+        if results.shap_values is not None:
+            shap_charts['shap_summary'] = shap.create_summary_plot(
+                shap_values=results.shap_values,
+                feature_names=results.feature_names
+            )
+            
+            if self.config.chart_options.shap.dependence_plots:
+                for feature in self.config.chart_options.shap.dependence_features:
+                    shap_charts[f'shap_dependence_{feature}'] = shap.create_dependence_plot(
+                        shap_values=results.shap_values,
+                        features=results.X_val,
+                        feature_name=feature
+                    )
+                    
+        return shap_charts
+
+    def _create_interpretation_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
+        """Create model interpretation charts."""
+        interpretation_charts = {}
+        interpreter = self.charts[ChartType.MODEL_INTERPRETATION]
+        
+        # Create SHAP force plots for configured instances
+        if hasattr(results, 'model') and self.config.chart_options.model_interpretation.force_plot_indices:
+            for idx in self.config.chart_options.model_interpretation.force_plot_indices:
+                interpretation_charts[f'shap_force_plot_{idx}'] = interpreter.create_shap_force_plot(
+                    model=results.model,
+                    X=results.X_val,
+                    index=idx,
+                    shap_values=results.shap_values
+                )
+                    
+        return interpretation_charts
 
     @log_performance
     def save_charts(self, charts: Dict[str, plt.Figure], output_dir: str) -> None:
         """
-        Save generated charts to files.
+        Save generated charts to files using the application's file handler.
         
         Args:
             charts: Dictionary of chart names and their corresponding matplotlib figures
             output_dir: Directory to save the charts
         """
-        import os
-        structured_log(logger, logging.INFO, "Saving charts", output_dir=output_dir)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Saving charts",
+            output_dir=output_dir
+        )
         
         try:
-            os.makedirs(output_dir, exist_ok=True)
+            self.app_file_handler.create_directory(output_dir)
             
             for name, fig in charts.items():
-                output_path = os.path.join(output_dir, f"{name}.png")
+                output_path = self.app_file_handler.join_paths(output_dir, f"{name}.png")
                 fig.savefig(output_path, bbox_inches='tight', dpi=300)
                 plt.close(fig)  # Clean up memory
                 
-            structured_log(logger, logging.INFO, "Charts saved successfully", 
-                         chart_count=len(charts), 
-                         output_dir=output_dir)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Charts saved successfully",
+                chart_count=len(charts),
+                output_dir=output_dir
+            )
                          
         except Exception as e:
-            raise ChartCreationError("Error saving charts",
-                                   error_message=str(e),
-                                   output_dir=output_dir) 
+            raise self.error_handler.create_error_handler(
+                'chart_creation',
+                "Error saving charts",
+                error_message=str(e),
+                output_dir=output_dir
+            ) 

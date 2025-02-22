@@ -1,42 +1,117 @@
+import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, Any
 from .base_chart import BaseChart
+from .chart_utils import ChartUtils
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
+from ...common.config_management.base_config_manager import BaseConfigManager
 from ...common.data_classes import ModelTrainingResults
+import logging
 
 class LearningCurveCharts(BaseChart):
-    def create_learning_curve(self, results: ModelTrainingResults) -> plt.Figure:
+    def __init__(self,
+                 config: BaseConfigManager,
+                 app_logger: BaseAppLogger,
+                 error_handler: BaseErrorHandler):
         """
-        Create learning curve showing average performance across folds.
+        Initialize learning curve charts with dependencies.
         
         Args:
-            results: ModelTrainingResults containing averaged learning curve data
+            config: Configuration manager
+            app_logger: Application logger
+            error_handler: Error handler
+        """
+        super().__init__(config, app_logger, error_handler)
+        self.chart_utils = ChartUtils(app_logger, error_handler)
+        self.chart_config = config.get('chart_options', {}).get('learning_curve', {})
+
+    @property
+    def log_performance(self):
+        return self.app_logger.log_performance
+
+    @log_performance
+    def create_figure(self, results: ModelTrainingResults, **kwargs) -> plt.Figure:
+        """
+        Create learning curve visualization.
+        
+        Args:
+            results: Model training results containing learning curve data
+            **kwargs: Additional chart parameters
             
         Returns:
-            plt.Figure: Learning curve visualization
+            Learning curve figure
         """
         try:
             plot_data = results.learning_curve_data.get_plot_data()
             if not plot_data:
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "No learning curve data available"
+                )
                 return None
 
-            fig, ax = self._create_figure(figsize=(10, 6))
+            # Get configuration values
+            figure_size = self.chart_config.get('figure_size', [10, 6])
+            
+            fig, ax = self.chart_utils.create_figure(figsize=figure_size)
             
             # Plot averaged training and validation scores
-            ax.plot(plot_data['iterations'], plot_data['train_scores'], 
-                   label='Training score', color='blue', alpha=0.8)
-            ax.plot(plot_data['iterations'], plot_data['val_scores'], 
-                   label='Validation score', color='orange', alpha=0.8)
+            ax.plot(
+                plot_data['iterations'],
+                plot_data['train_scores'],
+                label='Training score',
+                color='blue',
+                alpha=0.8
+            )
+            ax.plot(
+                plot_data['iterations'],
+                plot_data['val_scores'],
+                label='Validation score',
+                color='orange',
+                alpha=0.8
+            )
             
-            # Add labels and customize
-            ax.set_xlabel('Iteration')
+            # Add confidence intervals if available
+            if 'train_std' in plot_data and 'val_std' in plot_data:
+                train_std = plot_data['train_std']
+                val_std = plot_data['val_std']
+                iterations = plot_data['iterations']
+                
+                ax.fill_between(
+                    iterations,
+                    plot_data['train_scores'] - train_std,
+                    plot_data['train_scores'] + train_std,
+                    color='blue',
+                    alpha=0.2
+                )
+                ax.fill_between(
+                    iterations,
+                    plot_data['val_scores'] - val_std,
+                    plot_data['val_scores'] + val_std,
+                    color='orange',
+                    alpha=0.2
+                )
+            
+            # Customize the plot
+            ax.set_xlabel('Training examples')
             ax.set_ylabel(f'Score ({results.learning_curve_data.metric_name})')
             ax.grid(True, linestyle='--', alpha=0.7)
             ax.legend(loc='best')
             
-            title = f'Learning Curve - {results.model_name}\nAveraged across {results.n_folds} folds'
-            return self._finalize_plot(fig, title)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Learning curve created",
+                model_name=results.model_name,
+                metric_name=results.learning_curve_data.metric_name
+            )
+            
+            title = f'Learning Curve - {results.model_name}'
+            return self.chart_utils.finalize_plot(fig, title)
             
         except Exception as e:
-            self._handle_error(e, "learning curve",
-                             model_name=results.model_name,
-                             n_folds=results.n_folds) 
+            self.chart_utils.handle_chart_error(
+                e,
+                "learning curve",
+                model_name=results.model_name if results else None
+            ) 

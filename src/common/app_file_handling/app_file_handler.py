@@ -1,9 +1,12 @@
 from pathlib import Path
-from typing import Dict, Any, Union, List
+from typing import Dict, Any, Union, List, ContextManager
 import yaml
 import json
 import pandas as pd
 from common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+import tempfile
+from contextlib import contextmanager
+import matplotlib.pyplot as plt
 
 class LocalAppFileHandler(BaseAppFileHandler):
     def read_yaml(self, path: Union[str, Path]) -> Dict[str, Any]:
@@ -78,5 +81,27 @@ class LocalAppFileHandler(BaseAppFileHandler):
         for config_file in directory.glob('*.yaml'):
             config_dict.update(self.read_yaml(config_file))
         return config_dict
+    
+    @contextmanager
+    def create_temp_directory(self) -> ContextManager[str]:
+        """
+        Create a temporary directory using tempfile.TemporaryDirectory.
+        
+        Returns:
+            Context manager that yields the path to the temporary directory
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield temp_dir
+
+    def save_figure(self, fig: plt.Figure, path: Union[str, Path]) -> None:
+        """
+        Save a matplotlib figure to the specified path.
+        
+        Args:
+            fig: Matplotlib figure to save
+            path: Path where the figure should be saved
+        """
+        path = Path(path)
+        fig.savefig(path, bbox_inches='tight', dpi=300)
     
     

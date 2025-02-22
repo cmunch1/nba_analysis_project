@@ -4,95 +4,152 @@ import pandas as pd
 from typing import Any, Optional, List
 import shap
 from .base_chart import BaseChart
+from .chart_utils import ChartUtils
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
+from ...common.config_management.base_config_manager import BaseConfigManager
+import logging
 
 class SHAPCharts(BaseChart):
-    def create_shap_summary_plot(self, model: Any, X: pd.DataFrame, 
-                               shap_values: Optional[np.ndarray] = None, 
-                               n_features: Optional[int] = None) -> plt.Figure:
+    def __init__(self,
+                 config: BaseConfigManager,
+                 app_logger: BaseAppLogger,
+                 error_handler: BaseErrorHandler):
+        """
+        Initialize SHAP charts with dependencies.
+        
+        Args:
+            config: Configuration manager
+            app_logger: Application logger
+            error_handler: Error handler
+        """
+        super().__init__(config, app_logger, error_handler)
+        self.chart_utils = ChartUtils(app_logger, error_handler)
+        self.chart_config = config.get('chart_options', {}).get('shap', {})
+
+    @property
+    def log_performance(self):
+        return self.app_logger.log_performance
+
+    @log_performance
+    def create_figure(self, 
+                     shap_values: np.ndarray,
+                     feature_names: List[str],
+                     **kwargs) -> plt.Figure:
+        """
+        Create SHAP summary plot.
+        
+        Args:
+            shap_values: SHAP values array
+            feature_names: List of feature names
+            **kwargs: Additional chart parameters
+            
+        Returns:
+            SHAP summary figure
+        """
+        return self.create_summary_plot(shap_values, feature_names, **kwargs)
+
+    @log_performance
+    def create_summary_plot(self,
+                          shap_values: np.ndarray,
+                          feature_names: List[str],
+                          max_display: Optional[int] = None) -> plt.Figure:
         """
         Create a SHAP summary plot.
-
+        
         Args:
-            model: Trained model object
-            X: Feature dataframe
-            shap_values: Pre-calculated SHAP values
-            n_features: Number of top features to display
-
+            shap_values: SHAP values array
+            feature_names: List of feature names
+            max_display: Maximum number of features to display
+            
         Returns:
-            plt.Figure: SHAP summary plot
+            SHAP summary figure
         """
         try:
-            # Calculate SHAP values if not provided
-            if shap_values is None:
-                explainer = shap.TreeExplainer(model)
-                shap_values = explainer.shap_values(X)
+            # Get configuration values
+            summary_config = self.chart_config.get('summary_plot', {})
+            figure_size = summary_config.get('figure_size', [12, 8])
+            max_display = max_display or summary_config.get('max_display', 20)
             
-            # Handle different SHAP value formats
-            if isinstance(shap_values, list):
-                values = shap_values[1]  # For binary classification
-            else:
-                values = shap_values
-
-            # Ensure values is 2D
-            if values.ndim == 1:
-                values = values.reshape(-1, 1)
-
-            # Handle NaN values
-            if np.any(np.isnan(values)):
-                valid_mask = ~np.any(np.isnan(values), axis=1)
-                values = values[valid_mask]
-                X = X.iloc[valid_mask]
-
-            # Limit features if specified
-            if n_features is not None:
-                feature_importance = np.abs(values).mean(0)
-                top_indices = np.argsort(feature_importance)[-n_features:]
-                values = values[:, top_indices]
-                X = X.iloc[:, top_indices]
-
-            fig = plt.figure(figsize=(12, 8))
-            shap.summary_plot(values, X, plot_type="bar", show=False)
+            fig = plt.figure(figsize=figure_size)
+            shap.summary_plot(
+                shap_values,
+                feature_names=feature_names,
+                max_display=max_display,
+                show=False
+            )
             
-            return self._finalize_plot(fig, "SHAP Summary Plot")
+            self.app_logger.structured_log(
+                logging.INFO,
+                "SHAP summary plot created",
+                shap_values_shape=shap_values.shape,
+                feature_count=len(feature_names),
+                max_display=max_display
+            )
+            
+            return self.chart_utils.finalize_plot(fig, 'SHAP Summary Plot')
             
         except Exception as e:
-            self._handle_error(e, "SHAP summary plot",
-                             model_type=type(model).__name__,
-                             dataframe_shape=X.shape)
+            self.chart_utils.handle_chart_error(
+                e,
+                "SHAP summary plot",
+                shap_values_shape=shap_values.shape if 'shap_values' in locals() else None,
+                feature_count=len(feature_names) if 'feature_names' in locals() else None
+            )
 
-    def create_shap_dependence_plot(self, shap_values: np.ndarray, 
-                                  features: pd.DataFrame, 
-                                  feature_name: str, 
-                                  interaction_feature: Optional[str] = None) -> plt.Figure:
+    @log_performance
+    def create_dependence_plot(self,
+                             shap_values: np.ndarray,
+                             features: pd.DataFrame,
+                             feature_name: str,
+                             interaction_feature: Optional[str] = None) -> plt.Figure:
         """
         Create a SHAP dependence plot for a specific feature.
-
+        
         Args:
-            shap_values: SHAP values
+            shap_values: SHAP values array
             features: Feature dataframe
             feature_name: Name of the main feature to plot
-            interaction_feature: Name of the feature to use for coloring
-
+            interaction_feature: Optional name of feature to use for coloring
+            
         Returns:
-            plt.Figure: SHAP dependence plot
+            SHAP dependence figure
         """
         try:
-            fig = plt.figure(figsize=(10, 7))
+            # Get configuration values
+            dependence_config = self.chart_config.get('dependence_plots', {})
+            figure_size = dependence_config.get('figure_size', [10, 7])
+            
+            fig = plt.figure(figsize=figure_size)
             shap.dependence_plot(
-                feature_name, 
-                shap_values, 
-                features, 
+                feature_name,
+                shap_values,
+                features,
                 interaction_index=interaction_feature,
                 ax=plt.gca(),
                 show=False
             )
             
-            return self._finalize_plot(fig, f'SHAP Dependence Plot for {feature_name}')
+            self.app_logger.structured_log(
+                logging.INFO,
+                "SHAP dependence plot created",
+                feature_name=feature_name,
+                interaction_feature=interaction_feature,
+                sample_count=len(features)
+            )
+            
+            title = f'SHAP Dependence Plot for {feature_name}'
+            if interaction_feature:
+                title += f'\nColored by {interaction_feature}'
+            return self.chart_utils.finalize_plot(fig, title)
             
         except Exception as e:
-            self._handle_error(e, "SHAP dependence plot",
-                             feature_name=feature_name,
-                             interaction_feature=interaction_feature)
+            self.chart_utils.handle_chart_error(
+                e,
+                "SHAP dependence plot",
+                feature_name=feature_name,
+                interaction_feature=interaction_feature
+            )
 
     def create_shap_waterfall_plot(self, model: Any, X: pd.DataFrame, 
                                  index: int = 0, 
