@@ -29,10 +29,14 @@ class CatBoostTrainer(BaseTrainer):
             trainer_type=type(self).__name__
         )
 
-    @property
-    def log_performance(self):
-        """Get the performance logging decorator from app_logger."""
-        return self.app_logger.log_performance
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:

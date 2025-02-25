@@ -10,17 +10,17 @@ from typing import Tuple, Dict, Union, Any, List, Optional
 from sklearn.model_selection import TimeSeriesSplit, StratifiedKFold
 
 from .base_model_testing import BaseModelTester
-from ..common.config_management.base_config_manager import BaseConfigManager
-from ..common.app_logging.base_app_logger import BaseAppLogger
-from ..common.error_handling.base_error_handler import BaseErrorHandler
-from ..common.data_classes.data_classes import (
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.data_classes import (
     ModelTrainingResults, 
     ClassificationMetrics, 
     PreprocessingResults
 )
-from ..preprocessing.preprocessor import ModularPreprocessor
-from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
-from .trainers.base_trainer import BaseTrainer
+from src.preprocessing.preprocessor import ModularPreprocessor
+from src.model_testing.hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
+from src.model_testing.trainers.base_trainer import BaseTrainer
 
 class ModelTester(BaseModelTester):
     def __init__(self, 
@@ -50,10 +50,14 @@ class ModelTester(BaseModelTester):
                                      config_type=type(config).__name__,
                                      available_trainers=list(trainers.keys()))
 
-    @property
-    def log_performance(self):
-        """Get the performance logging decorator from app_logger."""
-        return self.app_logger.log_performance
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def get_model_params(self, model_name: str) -> Dict:

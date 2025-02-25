@@ -12,16 +12,9 @@ implemented at "runtime" - this is to allow for easy iteration through a lot of 
 do any work on the data files in-between. E.g. I can script a series of runs that test with StandardScaler, 
 then run a test with MinMaxScaler, then run a test with RobustScaler, etc.
 
-Also, in production, I can use a binary object to store the preprocessor and load it in when needed.
+
 
 """
-
-
-
-
-
-
-
 
 import numpy as np
 import pandas as pd
@@ -32,15 +25,17 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from typing import List, Dict, Optional, Tuple
 import logging
-from ..logging.logging_utils import log_performance, structured_log
-from ..error_handling.custom_exceptions import PreprocessingError
-from ..common.data_classes import PreprocessingResults, PreprocessingStep
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.data_classes import PreprocessingResults, PreprocessingStep
+from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
 
 logger = logging.getLogger(__name__)
 
-class ModularPreprocessor:
-    @log_performance
-    def __init__(self, config):
+class Preprocessor:
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, 
+                 app_file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler):
         """
         Initialize with Config instance.
         
@@ -48,10 +43,23 @@ class ModularPreprocessor:
             config: Config instance containing preprocessing settings
         """
         self.config = config
+        self.app_logger = app_logger
+        self.app_file_handler = app_file_handler
+        self.error_handler = error_handler
         self.fitted_transformers = {}
         self.preprocessor = None
         self._current_results = None
-        structured_log(logger, logging.INFO, "ModularPreprocessor initialized")
+ 
+        self.app_logger.structured_log(logging.INFO, "ModularPreprocessor initialized")
+
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def fit_transform(self, X: pd.DataFrame, y: Optional[pd.Series] = None,
@@ -67,7 +75,7 @@ class ModularPreprocessor:
         Returns:
             Transformed DataFrame with preprocessed features
         """
-        structured_log(logger, logging.INFO, "Starting preprocessing",
+        self.app_logger.structured_log(logging.INFO, "Starting preprocessing",
                       input_shape=X.shape,
                       model_name=model_name)
         
@@ -133,7 +141,7 @@ class ModularPreprocessor:
             # Convert to DataFrame with proper feature names
             transformed_df = pd.DataFrame(transformed, columns=feature_names, index=X.index)
             
-            structured_log(logger, logging.INFO, "Preprocessing completed",
+            self.app_logger.structured_log(logging.INFO, "Preprocessing completed",
                         output_shape=transformed_df.shape,
                         n_features=len(feature_names))
             
@@ -158,7 +166,7 @@ class ModularPreprocessor:
         Returns:
             Transformed DataFrame with preprocessed features
         """
-        structured_log(logger, logging.INFO, "Starting transform of new data",
+        self.app_logger.structured_log(logging.INFO, "Starting transform of new data",
                     input_shape=X.shape)
         
         try:
@@ -174,7 +182,7 @@ class ModularPreprocessor:
             # Convert to DataFrame with proper feature names
             transformed_df = pd.DataFrame(transformed, columns=feature_names, index=X.index)
             
-            structured_log(logger, logging.INFO, "Transform completed",
+            self.app_logger.structured_log(logging.INFO, "Transform completed",
                         output_shape=transformed_df.shape)
             
             return transformed_df
@@ -192,14 +200,14 @@ class ModularPreprocessor:
             model_config = getattr(self.config.preprocessing.model_specific, model_name)
 
             # Convert SimpleNamespace to dict for logging
-            structured_log(logger, logging.INFO, "Model-specific preprocessing config found",
+            self.app_logger.structured_log(logging.INFO, "Model-specific preprocessing config found",
                         model_name=model_name,
                         )
         else:
             model_config = self.config.preprocessing.default
             # Convert SimpleNamespace to dict for logging
             config_dict = vars(model_config) if hasattr(model_config, '__dict__') else str(model_config)
-            structured_log(logger, logging.WARNING, "No model-specific preprocessing config found, using default")
+            self.app_logger.structured_log(logging.WARNING, "No model-specific preprocessing config found, using default")
         
         return model_config
         
