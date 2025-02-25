@@ -13,21 +13,15 @@ from typing import List, Tuple, Dict
 from pathlib import Path
 import json
 
-from ..config_management.base_config_manager import BaseConfigManager
-from .base_data_access import BaseDataAccess
-from ..error_handling.error_handler import (
-    DataStorageError, ConfigurationError, DataValidationError
-)
-from ..app_logging import log_performance, structured_log
-from ..app_logging.base_app_logger import BaseAppLogger
-from ..app_file_handling.base_app_file_handler import BaseAppFileHandler
-
-
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.data_access.base_data_access import BaseDataAccess
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.error_handling.base_error_handler import BaseErrorHandler
 
 class CSVDataAccess(BaseDataAccess):
-    @log_performance
-    def __init__(self, config: BaseConfigManager, logger: BaseAppLogger, 
-                 app_file_handler: BaseAppFileHandler):
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, 
+                 app_file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler):
         """
         Initialize the DataAccess object with the given configuration and logger.
 
@@ -41,15 +35,26 @@ class CSVDataAccess(BaseDataAccess):
         """
         try:
             self.config = config
-            self.logger = logger
+            self.app_logger = app_logger
             self.app_file_handler = app_file_handler
-            self.logger.structured_log(logging.INFO, "DataAccess initialized successfully",
+            self.error_handler = error_handler
+            self.app_logger.structured_log(logging.INFO, "DataAccess initialized successfully",
                            config_type=type(config).__name__)
         except AttributeError as e:
-            raise ConfigurationError(f"Missing required configuration: {str(e)}")
-
-
+            raise self.error_handler.create_error_handler(
+                'configuration',
+                f"Missing required configuration: {str(e)}"
+            )
         
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
+
     @log_performance
     def save_dataframes(self, dataframes: List[pd.DataFrame], file_names: List[str], cumulative: bool = False) -> None:
         """
@@ -65,9 +70,12 @@ class CSVDataAccess(BaseDataAccess):
                 save_path = self._get_save_directory(cumulative, file_name)
                 self.app_file_handler.ensure_directory(save_path)
                 self.app_file_handler.write_csv(df, save_path / file_name)
-            structured_log(logger, logging.INFO, "Dataframes saved successfully")
+            self.app_logger.structured_log(logging.INFO, "Dataframes saved successfully")
         except Exception as e:
-            raise DataStorageError(f"Error saving dataframes: {str(e)}")
+            raise self.error_handler.create_error_handler(
+                'data_storage',
+                f"Error saving dataframes: {str(e)}"
+            )
 
     @log_performance
     def load_scraped_data(self, cumulative: bool = False) -> Tuple[List[pd.DataFrame], List[str]]:
@@ -85,20 +93,20 @@ class CSVDataAccess(BaseDataAccess):
             DataValidationError: If the loaded data is invalid or inconsistent.
         """
         try:
-            structured_log(logger, logging.INFO, "Loading scraped data")
+            self.app_logger.structured_log(logging.INFO, "Loading scraped data")
             scraped_path = self._get_load_directory(cumulative)
             all_dfs, file_names = self._load_dataframes(scraped_path)
-            #self._validate_loaded_data(all_dfs)
             
-            structured_log(logger, logging.INFO, "Data loaded successfully",
+            self.app_logger.structured_log(logging.INFO, "Data loaded successfully",
                            dataframe_count=len(all_dfs), scraped_path=str(scraped_path))
             
             return all_dfs, file_names
 
-        except (DataStorageError, DataValidationError):
-            raise
         except Exception as e:
-            raise DataStorageError(f"Unexpected error loading scraped data: {str(e)}")
+            raise self.error_handler.create_error_handler(
+                'data_storage',
+                f"Unexpected error loading scraped data: {str(e)}"
+            )
         
     @log_performance
     def save_column_mapping(self, column_mapping: Dict[str, str], file_name: str) -> bool:
@@ -115,11 +123,14 @@ class CSVDataAccess(BaseDataAccess):
         try:
             file_path = self._get_save_directory(cumulative=True, file_name=file_name)
             self.app_file_handler.write_json(column_mapping, file_path / file_name)
-            structured_log(logger, logging.INFO, "Column mapping saved successfully",
+            self.app_logger.structured_log(logging.INFO, "Column mapping saved successfully",
                            file_path=str(file_path / file_name))
             return True
         except Exception as e:
-            raise DataStorageError(f"Error saving column mapping: {str(e)}")
+            raise self.error_handler.create_error_handler(
+                'data_storage',
+                f"Error saving column mapping: {str(e)}"
+            )
         
     @log_performance    
     def load_dataframe(self, file_name: str) -> pd.DataFrame:
@@ -140,17 +151,25 @@ class CSVDataAccess(BaseDataAccess):
             file_path = self._get_load_directory(cumulative=True, file_name=file_name)
             file_path = file_path / file_name
             if not file_path.exists():
-                raise DataStorageError(f"File {file_name} not found in {file_path}")
+                raise self.error_handler.create_error_handler(
+                    'data_storage',
+                    f"File {file_name} not found in {file_path}"
+                )
             df = self.app_file_handler.read_csv(file_path)
             if df.empty:
-                raise DataValidationError(f"Loaded DataFrame from {file_name} is empty")
-            structured_log(logger, logging.INFO, "Data loaded successfully",
+                raise self.error_handler.create_error_handler(
+                    'data_validation',
+                    f"Loaded DataFrame from {file_name} is empty"
+                )
+            self.app_logger.structured_log(logging.INFO, "Data loaded successfully",
                            dataframe_count=len(df), file_path=str(file_path))
             return df
-        except (DataStorageError, DataValidationError):
-            raise
+
         except Exception as e:
-            raise DataStorageError(f"Unexpected error loading processed data: {str(e)}")
+            raise self.error_handler.create_error_handler(
+                'data_storage',
+                f"Unexpected error loading processed data: {str(e)}"
+            )
         
     @log_performance
     def _save_dataframe_csv(self, df: pd.DataFrame, file_name: str, cumulative: bool = False) -> None:
@@ -168,11 +187,13 @@ class CSVDataAccess(BaseDataAccess):
         try:
             file_path = self._get_save_directory(cumulative, file_name)
             self.app_file_handler.write_csv(df, file_path / file_name)
-            structured_log(logger, logging.INFO, "Data saved successfully",
+            self.app_logger.structured_log(logging.INFO, "Data saved successfully",
                            file_path=str(file_path / file_name))
         except Exception as e:
-            raise DataStorageError(f"Error saving data to {file_name}: {str(e)}")
-
+            raise self.error_handler.create_error_handler(
+                'data_storage',
+                f"Error saving data to {file_name}: {str(e)}"
+            )
 
     @log_performance
     def _get_save_directory(self, cumulative: bool, file_name: str) -> Path:
@@ -210,11 +231,12 @@ class CSVDataAccess(BaseDataAccess):
                 save_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
 
         if not save_path.exists():
-            raise DataStorageError(f"Directory {save_path} not found")
+            raise self.error_handler.create_error_handler(
+                'data_storage',
+                f"Directory {save_path} not found"
+            )
         
         return save_path
-
-
 
     def _get_load_directory(self, cumulative: bool, file_name: str = None) -> Path:
         """
@@ -229,7 +251,7 @@ class CSVDataAccess(BaseDataAccess):
         Raises:
             DataStorageError: If the directory doesn't exist.
         """
-        structured_log(logger, logging.INFO, "Getting load directory",
+        self.app_logger.structured_log(logging.INFO, "Getting load directory",
                        cumulative=cumulative, file_name=str(file_name))
         
         match file_name:
@@ -253,11 +275,12 @@ class CSVDataAccess(BaseDataAccess):
                 load_path = Path(self.config.cumulative_scraped_directory if cumulative else self.config.newly_scraped_directory)
 
         if not load_path.exists():
-            raise DataStorageError(f"Directory {load_path} not found")
+            raise self.error_handler.create_error_handler(
+                'data_storage',
+                f"Directory {load_path} not found"
+            )
         
         return load_path
-
-
 
     @log_performance
     def _load_dataframes(self, scraped_path: Path) -> List[pd.DataFrame]:
@@ -274,25 +297,31 @@ class CSVDataAccess(BaseDataAccess):
             DataStorageError: If a file is not found or can't be loaded.
             DataValidationError: If a loaded DataFrame is empty.
         """
-        structured_log(logger, logging.INFO, "Loading dataframes")
+        self.app_logger.structured_log(logging.INFO, "Loading dataframes")
         all_dfs: List[pd.DataFrame] = []
         file_names = []
         for file in self.config.scraped_boxscore_files:
             file_path = scraped_path / file
             if not file_path.exists():
-                raise DataStorageError(f"File {file} not found in {scraped_path}")
+                raise self.error_handler.create_error_handler(
+                    'data_storage',
+                    f"File {file} not found in {scraped_path}"
+                )
             file_names.append(file)
             try:
                 df = pd.read_csv(file_path)
             except pd.errors.EmptyDataError:
-                structured_log(logger, logging.WARNING, "Empty CSV file encountered",
+                self.app_logger.structured_log(logging.WARNING, "Empty CSV file encountered",
                              file_path=str(file_path))
                 df = pd.DataFrame()  # Create empty DataFrame - some days no games are played so it might be empty
             except Exception as e:
-                raise DataStorageError(f"Error loading dataframe from {file}: {str(e)}")
+                raise self.error_handler.create_error_handler(
+                    'data_storage',
+                    f"Error loading dataframe from {file}: {str(e)}"
+                )
 
             all_dfs.append(df)
-        structured_log(logger, logging.INFO, "Dataframes loaded successfully",
+        self.app_logger.structured_log(logging.INFO, "Dataframes loaded successfully",
                        dataframe_count=len(all_dfs), scraped_path=str(scraped_path))
         return all_dfs, file_names
 
@@ -309,17 +338,24 @@ class CSVDataAccess(BaseDataAccess):
         """
         try:
             if not dataframes:
-                raise DataValidationError("No dataframes loaded")
+                raise self.error_handler.create_error_handler(
+                    'data_validation',
+                    "No dataframes loaded"
+                )
 
             expected_columns = set(dataframes[0].columns)
             for i, df in enumerate(dataframes[1:], start=1):
                 if set(df.columns) != expected_columns:
-                    raise DataValidationError(f"Dataframe {i} has inconsistent columns")
+                    raise self.error_handler.create_error_handler(
+                        'data_validation',
+                        f"Dataframe {i} has inconsistent columns"
+                    )
 
-            structured_log(logger, logging.INFO, "Data validation completed successfully",
+            self.app_logger.structured_log(logging.INFO, "Data validation completed successfully",
                            dataframe_count=len(dataframes))
 
-        except DataValidationError:
-            raise
         except Exception as e:
-            raise DataValidationError(f"Unexpected error during data validation: {str(e)}")
+            raise self.error_handler.create_error_handler(
+                'data_validation',
+                f"Unexpected error during data validation: {str(e)}"
+            )

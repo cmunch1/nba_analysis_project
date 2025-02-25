@@ -5,7 +5,7 @@ import contextlib
 from typing import Any, Dict, Optional, Callable
 from dataclasses import dataclass
 from contextvars import ContextVar
-from src.common.config_management.config_manager import AbstractConfig
+from src.common.config_management.config_manager import BaseConfigManager
 from src.common.app_logging.base_app_logger import BaseAppLogger
 
 
@@ -23,7 +23,7 @@ class LogContext:
 class AppLogger(BaseAppLogger):
     """Concrete implementation of BaseAppLogger"""
     
-    def __init__(self, config: AbstractConfig):
+    def __init__(self, config: BaseConfigManager):
         self.config = config
         self.logger = None
         

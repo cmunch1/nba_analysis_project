@@ -4,7 +4,7 @@ and proper logging/error handling injection.
 """
 
 from dependency_injector import containers, providers
-from ..common.common_di_container import CommonDIContainer
+from src.common.common_di_container import CommonDIContainer
 from .model_tester import ModelTester
 from .hyperparams_managers.hyperparams_manager import HyperparameterManager
 from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType

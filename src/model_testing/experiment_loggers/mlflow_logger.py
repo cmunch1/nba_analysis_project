@@ -14,12 +14,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from .base_experiment_logger import BaseExperimentLogger
-from ...common.config_management.base_config_manager import BaseConfigManager
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
-from ...visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
-from ...common.app_file_handling.base_app_file_handler import BaseAppFileHandler
-from ...common.data_classes import ModelTrainingResults
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
+from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.data_classes import ModelTrainingResults
 
 
 class MLflowChartLogger:
@@ -115,9 +115,14 @@ class MLFlowLogger(BaseExperimentLogger):
             experiment_name=mlflow.get_experiment(mlflow.active_run().info.experiment_id).name if mlflow.active_run() else None
         )
 
-    @property
-    def log_performance(self):
-        return self.app_logger.log_performance
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def log_experiment(self, results: ModelTrainingResults) -> None:

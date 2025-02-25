@@ -35,9 +35,14 @@ class DataValidator(BaseDataValidator):
         self.app_logger.structured_log(logging.INFO, "DataValidator initialized successfully",
                        config_type=type(config).__name__)
 
-    @property
-    def log_performance(self):
-        return self.app_logger.log_performance
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def validate_scraped_dataframes(self, scraped_dataframes: List[pd.DataFrame], file_names: List[str]) -> bool:
