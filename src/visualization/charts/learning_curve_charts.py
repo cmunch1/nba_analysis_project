@@ -26,9 +26,14 @@ class LearningCurveCharts(BaseChart):
         self.chart_utils = ChartUtils(app_logger, error_handler)
         self.chart_config = config.get('chart_options', {}).get('learning_curve', {})
 
-    @property
-    def log_performance(self):
-        return self.app_logger.log_performance
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def create_figure(self, results: ModelTrainingResults, **kwargs) -> plt.Figure:

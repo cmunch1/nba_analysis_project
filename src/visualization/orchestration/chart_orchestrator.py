@@ -44,9 +44,14 @@ class ChartOrchestrator(BaseChartOrchestrator):
             active_charts=list(self.charts.keys())
         )
 
-    @property
-    def log_performance(self):
-        return self.app_logger.log_performance
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     def _initialize_charts(self) -> None:
         """Initialize enabled chart types based on configuration."""

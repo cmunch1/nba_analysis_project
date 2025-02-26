@@ -18,6 +18,16 @@ class ChartUtils:
         self.app_logger = app_logger
         self.error_handler = error_handler
 
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
+
+    @log_performance
     def create_figure(self, figsize: Tuple[int, int] = (12, 8)) -> Tuple[plt.Figure, plt.Axes]:
         """
         Create a new figure and axis with the specified size.
@@ -31,6 +41,7 @@ class ChartUtils:
         fig, ax = plt.subplots(figsize=figsize)
         return fig, ax
 
+    @log_performance
     def finalize_plot(self, fig: plt.Figure, title: str) -> plt.Figure:
         """
         Apply final touches to the plot.
@@ -46,6 +57,7 @@ class ChartUtils:
         plt.tight_layout()
         return fig
 
+    @log_performance
     def handle_chart_error(self, e: Exception, chart_type: str, **kwargs) -> None:
         """
         Handle chart creation errors consistently.

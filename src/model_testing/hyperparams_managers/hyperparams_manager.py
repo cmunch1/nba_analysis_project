@@ -34,7 +34,7 @@ class HyperparameterSet:
     def from_dict(cls, data: Dict) -> 'HyperparameterSet':
         return cls(**data)
 
-class HyperParamsManager(BaseHyperparamsManager):
+class HyperparamsManager(BaseHyperparamsManager):
     def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, 
                  app_file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler):
         """

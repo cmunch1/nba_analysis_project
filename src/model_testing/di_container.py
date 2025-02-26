@@ -7,7 +7,7 @@ from dependency_injector import containers, providers
 from src.common.common_di_container import CommonDIContainer
 from ..preprocessing.di_container import PreprocessingDIContainer
 from .model_tester import ModelTester
-from .hyperparams_managers.hyperparams_manager import HyperparameterManager
+from .hyperparams_managers.hyperparams_manager import HyperparamsManager
 from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType
 from .hyperparams_optimizers.hyperparams_optimizer_factory import OptimizerFactory, OptimizerType
 from .trainers.trainer_factory import TrainerFactory
@@ -19,8 +19,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
     common = providers.Container(CommonDIContainer)
     
     # Import preprocessing container
-    preprocessing = providers.Container(PreprocessingDIContainer)
-    
+    preprocessing = providers.Container(PreprocessingDIContainer)    
     # Use common container's components
     config = common.config
     app_logger = common.logger
@@ -39,7 +38,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
 
     # Hyperparameter management with proper injection
     hyperparameter_manager = providers.Factory(
-        HyperparameterManager,
+        HyperparamsManager,
         config=config,
         app_logger=app_logger,
         app_file_handler=app_file_handler,

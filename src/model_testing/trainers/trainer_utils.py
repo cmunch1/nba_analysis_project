@@ -1,8 +1,8 @@
 from typing import Dict, Tuple
 import logging
-from ...common.data_classes import ModelTrainingResults
-from ...common.app_logging import BaseAppLogger
-from ...common.error_handling import BaseErrorHandler
+from src.common.data_classes import ModelTrainingResults
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
 
 class TrainerUtils:
     """Utility class providing common functionality for trainers."""
