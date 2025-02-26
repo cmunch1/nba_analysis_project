@@ -26,8 +26,12 @@ from sklearn.pipeline import Pipeline
 from src.common.app_logging.base_app_logger import BaseAppLogger
 from src.common.error_handling.base_error_handler import BaseErrorHandler
 from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.data_classes import PreprocessingResults, PreprocessingStep
 from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.data_classes import (
+    PreprocessingResults, 
+    PreprocessingStep
+)
+
 from .base_preprocessor import BasePreprocessor
 
 
@@ -67,10 +71,14 @@ class Preprocessor(BasePreprocessor):
             "ModularPreprocessor initialized"
         )
 
-    @property
-    def log_performance(self):
-        """Get the performance logging decorator."""
-        return self.app_logger.log_performance
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def fit_transform(self, X: pd.DataFrame, y: Optional[pd.Series] = None,
