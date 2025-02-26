@@ -5,6 +5,7 @@ and proper logging/error handling injection.
 
 from dependency_injector import containers, providers
 from src.common.common_di_container import CommonDIContainer
+from ..preprocessing.di_container import PreprocessingDIContainer
 from .model_tester import ModelTester
 from .hyperparams_managers.hyperparams_manager import HyperparameterManager
 from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType
@@ -12,9 +13,13 @@ from .hyperparams_optimizers.hyperparams_optimizer_factory import OptimizerFacto
 from .trainers.trainer_factory import TrainerFactory
 from ..visualization.orchestration.chart_orchestrator import ChartOrchestrator
 
+
 class ModelTestingDIContainer(containers.DeclarativeContainer):
     # Import common container
     common = providers.Container(CommonDIContainer)
+    
+    # Import preprocessing container
+    preprocessing = providers.Container(PreprocessingDIContainer)
     
     # Use common container's components
     config = common.config
@@ -41,6 +46,9 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         error_handler=error_handler
     )
 
+    # Preprocessor from the preprocessing container
+    preprocessor = preprocessing.preprocessor
+
     # Trainers factory with proper dependency injection
     trainers = providers.Factory(
         TrainerFactory.create_trainers,
@@ -56,7 +64,8 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         hyperparameter_manager=hyperparameter_manager,
         trainers=trainers,
         app_logger=app_logger,
-        error_handler=error_handler
+        error_handler=error_handler,
+        preprocessor=preprocessor
     )
 
     # Experiment logger with proper injection

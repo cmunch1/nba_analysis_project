@@ -9,7 +9,7 @@ import logging
 from typing import Tuple, Dict, Union, Any, List, Optional
 from sklearn.model_selection import TimeSeriesSplit, StratifiedKFold
 
-from .base_model_testing import BaseModelTester
+
 from src.common.config_management.base_config_manager import BaseConfigManager
 from src.common.app_logging.base_app_logger import BaseAppLogger
 from src.common.error_handling.base_error_handler import BaseErrorHandler
@@ -18,9 +18,10 @@ from src.common.data_classes import (
     ClassificationMetrics, 
     PreprocessingResults
 )
-from src.preprocessing.preprocessor import ModularPreprocessor
-from src.model_testing.hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
-from src.model_testing.trainers.base_trainer import BaseTrainer
+from src.preprocessing.base_preprocessor import BasePreprocessor
+from .base_model_testing import BaseModelTester
+from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
+from .trainers.base_trainer import BaseTrainer
 
 class ModelTester(BaseModelTester):
     def __init__(self, 
@@ -28,7 +29,8 @@ class ModelTester(BaseModelTester):
                  hyperparameter_manager: BaseHyperparamsManager,
                  trainers: Dict[str, BaseTrainer],
                  app_logger: BaseAppLogger,
-                 error_handler: BaseErrorHandler):
+                 error_handler: BaseErrorHandler,
+                 preprocessor: BasePreprocessor):
         """
         Initialize the ModelTester with injected dependencies.
 
@@ -41,7 +43,7 @@ class ModelTester(BaseModelTester):
         """
         self.config = config
         self.hyperparameter_manager = hyperparameter_manager
-        self.preprocessor = ModularPreprocessor(config)
+        self.preprocessor = preprocessor
         self.trainers = trainers
         self.app_logger = app_logger
         self.error_handler = error_handler
