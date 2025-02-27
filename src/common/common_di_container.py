@@ -14,8 +14,7 @@ from src.common.data_validation.data_validator import DataValidator
 class CommonDIContainer(containers.DeclarativeContainer):
     """Container for common application dependencies."""
     
-    # Use __file__ to make path resolution more robust
-    CONFIG_DIR: Path = Path(__file__).parent.parent / 'configs'
+
     
     # Core file handling
     app_file_handler: providers.Provider[LocalAppFileHandler] = providers.Singleton(
@@ -25,7 +24,6 @@ class CommonDIContainer(containers.DeclarativeContainer):
     # Configuration management
     config: providers.Provider[ConfigManager] = providers.Singleton(
         ConfigManager,
-        config_dir=CONFIG_DIR,
         app_file_handler=app_file_handler
     )
     

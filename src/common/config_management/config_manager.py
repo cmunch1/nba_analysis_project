@@ -18,13 +18,29 @@ logger = logging.getLogger(__name__)
 
 from .base_config_manager import BaseConfigManager
 
-DEFAULT_CONFIG_DIR = Path('..') / 'configs'
-
 class ConfigManager(BaseConfigManager):
     def __init__(self, config_dir: Path = None, app_file_handler: BaseAppFileHandler = None):
-        self.config_dir = config_dir or DEFAULT_CONFIG_DIR
         self.app_file_handler = app_file_handler
+        self.config_dir = self._get_default_config_dir() if config_dir is None else config_dir
         self._load_configurations()
+
+    def _get_default_config_dir(self) -> Path:
+        """
+        Get the default configuration directory from the config_path.yaml file.
+        Falls back to a default path if the file cannot be loaded.
+        """
+        config_path_file = Path(__file__).parent / 'config_path.yaml'
+        try:
+            print(f"Loading config_path.yaml from: {config_path_file}")
+            config_path_data = self.app_file_handler.read_yaml(config_path_file)
+            config_path = config_path_data.get('default_config_dir')
+            print(f"Config path: {config_path}")
+            return Path(config_path)
+  
+        except Exception as e:
+            logger.warning(f"Could not load config_path.yaml: {str(e)}. Using default path.")
+            # Fallback to the original hardcoded path
+            return Path(__file__).parent.parent.parent / 'configs'
 
     def get_config(self) -> SimpleNamespace:
         return self
@@ -35,6 +51,7 @@ class ConfigManager(BaseConfigManager):
         Handles the new structure with model-specific configs in subdirectories.
         """
         # First load main config files
+        print(f"Loading configuration files from: {self.config_dir}")
         config_dict = self.app_file_handler.load_yaml_files_in_directory(
             self.config_dir,
             required_files=['app_config.yaml']

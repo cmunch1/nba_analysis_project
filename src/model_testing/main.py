@@ -14,6 +14,8 @@ from .di_container import ModelTestingDIContainer
 
 def main() -> None:
     """Main function to perform model testing with visualization."""
+    app_logger = None
+    error_handler = None
     try:
         # Initialize container
         container = ModelTestingDIContainer()
@@ -26,6 +28,7 @@ def main() -> None:
         experiment_logger = container.experiment_logger()
         optimizer = container.optimizer()
         app_logger = container.app_logger()
+        error_handler = container.error_handler()
         chart_orchestrator = container.chart_orchestrator()
 
         # Load and validate data
@@ -94,12 +97,26 @@ def main() -> None:
         )
 
     except Exception as e:
-        app_logger.structured_log(
-            logging.ERROR,
-            "Model testing failed",
-            error=str(e),
-            traceback=traceback.format_exc()
-        )
+        if error_handler and app_logger:
+            # Use error handler if available
+            raise error_handler.create_error_handler(
+                'model_testing',
+                "Model testing failed",
+                error_message=str(e),
+                traceback=traceback.format_exc()
+            )
+        elif app_logger:
+            # If only logger was initialized, use it
+            app_logger.structured_log(
+                logging.ERROR,
+                "Model testing failed",
+                error=str(e),
+                traceback=traceback.format_exc()
+            )
+        else:
+            # Fallback to basic logging if neither was initialized
+            print(f"ERROR: Model testing failed: {str(e)}")
+            print(traceback.format_exc())
         sys.exit(1)
 
 def process_single_model(
