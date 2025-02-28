@@ -27,13 +27,11 @@ class CommonDIContainer(containers.DeclarativeContainer):
         app_file_handler=app_file_handler
     )
     
-    # Logging setup
-    app_logger_factory: providers.Provider[AppLoggerFactory] = providers.Factory(
-        AppLoggerFactory
-    )
+    # Logging setup - AppLoggerFactory has no constructor arguments
+    app_logger_factory = providers.Factory(AppLoggerFactory)
     
     logger = providers.Factory(
-        app_logger_factory.provided.create_app_logger,
+        AppLoggerFactory.create_app_logger,  # Use the static method directly
         config=config
     )
     
@@ -46,15 +44,14 @@ class CommonDIContainer(containers.DeclarativeContainer):
     # Data access setup - flexible for future data access types
     data_access_factory: providers.Provider[DataAccessFactory] = providers.Factory(
         DataAccessFactory,
-        data_access_class=CSVDataAccess,  # This can be changed or made configurable
-        app_file_handler=app_file_handler
+        data_access_class=CSVDataAccess  # This can be changed or made configurable
     )
     
     data_access = providers.Singleton(
         data_access_factory.provided.create_data_access,
         config=config,
         logger=logger,
-        app_file_handler=app_file_handler
+        file_handler=app_file_handler
     )
     
     # Data validation
@@ -78,7 +75,6 @@ class CommonDIContainer(containers.DeclarativeContainer):
         cls.data_access_factory.override(
             providers.Factory(
                 DataAccessFactory,
-                data_access_class=data_access_class,
-                app_file_handler=cls.app_file_handler
+                data_access_class=data_access_class
             )
         )

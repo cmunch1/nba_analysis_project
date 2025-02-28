@@ -91,7 +91,7 @@ class ConfigManager(BaseConfigManager):
                     current_level = current_level.setdefault(part, {})
                 
                 # Load and add config file content
-                config_content = self.app_file_handler.load_yaml_file(item)
+                config_content = self.app_file_handler.read_yaml(item)
                 key = item.stem
                 current_level[key] = config_content
                 
