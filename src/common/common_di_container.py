@@ -30,7 +30,7 @@ class CommonDIContainer(containers.DeclarativeContainer):
     # Logging setup - AppLoggerFactory has no constructor arguments
     app_logger_factory = providers.Factory(AppLoggerFactory)
     
-    logger = providers.Factory(
+    app_logger = providers.Factory(
         AppLoggerFactory.create_app_logger,  # Use the static method directly
         config=config
     )
@@ -38,7 +38,7 @@ class CommonDIContainer(containers.DeclarativeContainer):
     # Error handling setup
     error_handler_factory: providers.Provider[ErrorHandlerFactory] = providers.Singleton(
         ErrorHandlerFactory,
-        logger=logger
+        logger=app_logger
     )
     
     # Data access setup - flexible for future data access types
@@ -50,8 +50,9 @@ class CommonDIContainer(containers.DeclarativeContainer):
     data_access = providers.Singleton(
         data_access_factory.provided.create_data_access,
         config=config,
-        logger=logger,
-        file_handler=app_file_handler
+        logger=app_logger,
+        file_handler=app_file_handler,
+        error_handler=error_handler_factory
     )
     
     # Data validation
@@ -59,7 +60,7 @@ class CommonDIContainer(containers.DeclarativeContainer):
         DataValidator,
         config=config,
         data_access=data_access,
-        app_logger=logger,
+        app_logger=app_logger,
         app_file_handler=app_file_handler,
         error_handler=error_handler_factory
     )
