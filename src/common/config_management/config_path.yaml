@@ -1,2 +1,2 @@
 # Configuration path settings 
-default_config_dir: "../../../configs" 
+default_config_dir: "configs" 
