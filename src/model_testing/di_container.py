@@ -22,7 +22,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
     preprocessing = providers.Container(PreprocessingDIContainer)    
     # Use common container's components
     config = common.config
-    app_logger = common.logger
+    app_logger = common.app_logger
     app_file_handler = common.app_file_handler
     error_handler = common.error_handler_factory
     data_access = common.data_access
