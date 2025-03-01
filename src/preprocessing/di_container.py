@@ -1,10 +1,3 @@
-"""
-Dependency Injection Container for Preprocessing
-
-This module provides a container for managing preprocessing dependencies,
-integrated with the application's DI architecture.
-"""
-
 from dependency_injector import containers, providers
 
 from src.common.common_di_container import CommonDIContainer
@@ -19,7 +12,7 @@ class PreprocessingDIContainer(containers.DeclarativeContainer):
     
     # Use common container's components
     config = common.config
-    app_logger = common.logger
+    app_logger = common.app_logger  # Changed from common.logger
     app_file_handler = common.app_file_handler
     error_handler = common.error_handler_factory
     
