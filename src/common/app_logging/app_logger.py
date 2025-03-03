@@ -23,8 +23,7 @@ class LogContext:
 class AppLogger(BaseAppLogger):
     """Concrete implementation of BaseAppLogger"""
     
-    def __init__(self, config: BaseConfigManager):
-        self.config = config
+    def __init__(self):
         self.logger = None
         
     def setup(self, log_file: str) -> logging.Logger:

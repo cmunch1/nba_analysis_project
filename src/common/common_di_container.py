@@ -27,33 +27,30 @@ class CommonDIContainer(containers.DeclarativeContainer):
         app_file_handler=app_file_handler
     )
     
-    # Logging setup - AppLoggerFactory has no constructor arguments
+    # Logging setup 
     app_logger_factory = providers.Factory(AppLoggerFactory)
     
     app_logger = providers.Factory(
-        AppLoggerFactory.create_app_logger,  # Use the static method directly
-        config=config
+        AppLoggerFactory.create_app_logger, 
     )
     
-    # Error handling setup
     error_handler_factory: providers.Provider[ErrorHandlerFactory] = providers.Singleton(
         ErrorHandlerFactory,
-        logger=app_logger
+        app_logger=app_logger  
     )
     
-    # Data access setup - flexible for future data access types
-    data_access_factory: providers.Provider[DataAccessFactory] = providers.Factory(
-        DataAccessFactory,
-        data_access_class=CSVDataAccess  # This can be changed or made configurable
-    )
+    
+    data_access_factory: providers.Provider[DataAccessFactory] = providers.Factory(DataAccessFactory)
     
     data_access = providers.Singleton(
         data_access_factory.provided.create_data_access,
         config=config,
-        logger=app_logger,
-        file_handler=app_file_handler,
-        error_handler=error_handler_factory
+        app_logger=app_logger,
+        app_file_handler=app_file_handler,
+        error_handler=error_handler_factory,
+        data_access_class=CSVDataAccess 
     )
+
     
     # Data validation
     data_validator: providers.Provider[DataValidator] = providers.Singleton(

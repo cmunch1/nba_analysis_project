@@ -10,9 +10,20 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from typing import List, Tuple, Dict
 
+from ..config_management.base_config_manager import BaseConfigManager
+from ..app_logging.base_app_logger import BaseAppLogger
+from ..app_file_handling.base_app_file_handler import BaseAppFileHandler
+from ..error_handling.base_error_handler import BaseErrorHandler
+
 
 
 class BaseDataAccess(ABC):
+
+    @abstractmethod
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, 
+                 app_file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler):
+        pass
+
     @abstractmethod
     def save_dataframes(self, dataframes: List[pd.DataFrame], file_names: List[str], cumulative: bool = False) -> None:
         """

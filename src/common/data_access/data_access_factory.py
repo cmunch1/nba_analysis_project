@@ -7,9 +7,10 @@ from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandle
 from src.common.error_handling.base_error_handler import BaseErrorHandler
 
 class DataAccessFactory:
-    def __init__(self, data_access_class: Type[BaseDataAccess] = CSVDataAccess):
-        self.data_access_class = data_access_class
+    def __init__(self):
+        pass
         
-    def create_data_access(self, config: BaseConfigManager, logger: BaseAppLogger, 
-                          file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler) -> BaseDataAccess:
-        return self.data_access_class(config, logger, file_handler, error_handler)
+    def create_data_access(self, config: BaseConfigManager, app_logger: BaseAppLogger, 
+                          app_file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler,
+                          data_access_class: Type[BaseDataAccess] = CSVDataAccess) -> BaseDataAccess:
+        return data_access_class(config, app_logger, app_file_handler, error_handler)
