@@ -5,21 +5,21 @@ and proper logging/error handling injection.
 
 from dependency_injector import containers, providers
 from src.common.common_di_container import CommonDIContainer
-from ..preprocessing.di_container import PreprocessingDIContainer
+from src.visualization.orchestration.chart_orchestrator import ChartOrchestrator
+from src.preprocessing.preprocessor import Preprocessor
+
 from .model_tester import ModelTester
 from .hyperparams_managers.hyperparams_manager import HyperparamsManager
 from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType
 from .hyperparams_optimizers.hyperparams_optimizer_factory import OptimizerFactory, OptimizerType
 from .trainers.trainer_factory import TrainerFactory
-from ..visualization.orchestration.chart_orchestrator import ChartOrchestrator
+
 
 
 class ModelTestingDIContainer(containers.DeclarativeContainer):
     # Import common container
     common = providers.Container(CommonDIContainer)
     
-    # Import preprocessing container
-    preprocessing = providers.Container(PreprocessingDIContainer)    
     # Use common container's components
     config = common.config
     app_logger = common.app_logger
@@ -28,7 +28,15 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
     data_access = common.data_access
     data_validator = common.data_validator
 
-    # Chart orchestrator with proper injection
+    # Preprocessor
+    preprocessor = providers.Singleton(
+        Preprocessor,
+        config=config,
+        app_logger=app_logger,
+        error_handler=error_handler
+    )
+
+    # Chart orchestrator
     chart_orchestrator = providers.Singleton(
         ChartOrchestrator,
         config=config,
@@ -45,8 +53,6 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         error_handler=error_handler
     )
 
-    # Preprocessor from the preprocessing container
-    preprocessor = preprocessing.preprocessor
 
     # Trainers factory with proper dependency injection
     trainers = providers.Factory(

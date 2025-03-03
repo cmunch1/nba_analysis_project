@@ -30,6 +30,7 @@ def main() -> None:
         app_logger = container.app_logger()
         error_handler = container.error_handler()
         chart_orchestrator = container.chart_orchestrator()
+        preprocessor = container.preprocessor()
 
         # Load and validate data
         training_data = data_access.load_data(config.training_data_path)

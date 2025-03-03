@@ -2,19 +2,16 @@ from src.common.app_logging.base_app_logger import BaseAppLogger
 from .base_error_handler import BaseErrorHandler
 import logging
 
-class ErrorHandler(BaseErrorHandler, BaseAppLogger):   
-
+class ErrorHandler(BaseErrorHandler):   
     exit_code = 1  # Default exit code
-    def __init__(self, message: str, log_level=logging.ERROR, **kwargs):
-        # Call BaseAppLogger initialization if needed
-        BaseAppLogger.__init__(self)
-        # Call BaseErrorHandler initialization
-        BaseErrorHandler.__init__(self, message, log_level, **kwargs)
+    
+    def __init__(self, message: str, app_logger: BaseAppLogger, log_level=logging.ERROR, **kwargs):
+        # Just call the base class init properly
+        super().__init__(message, app_logger, log_level, **kwargs)
 
     def log(self) -> None:
         """Implementation of abstract log method"""
-        self.structured_log(
-            self.logger, 
+        self.app_logger.structured_log(
             self.log_level, 
             self.message,
             error_type=self.__class__.__name__, 
