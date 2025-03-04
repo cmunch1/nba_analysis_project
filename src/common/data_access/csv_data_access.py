@@ -38,8 +38,7 @@ class CSVDataAccess(BaseDataAccess):
             self.app_logger = app_logger
             self.app_file_handler = app_file_handler
             self.error_handler = error_handler
-            self.app_logger.structured_log(logging.INFO, "DataAccess initialized successfully",
-                           config_type=type(config).__name__)
+
         except AttributeError as e:
             raise self.error_handler.create_error_handler(
                 'configuration',

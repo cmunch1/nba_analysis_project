@@ -23,8 +23,9 @@ class LogContext:
 class AppLogger(BaseAppLogger):
     """Concrete implementation of BaseAppLogger"""
     
-    def __init__(self):
+    def __init__(self, config: BaseConfigManager):
         self.logger = None
+        self.config = config
         
     def setup(self, log_file: str) -> logging.Logger:
         """
@@ -37,7 +38,10 @@ class AppLogger(BaseAppLogger):
             Configured logger instance
         """
         logger = logging.getLogger(__name__)
-        logger.setLevel(self.config.log_level)
+        
+        # Use config log level if available, otherwise default to INFO
+        log_level = getattr(self.config, 'log_level', logging.INFO) if self.config else logging.INFO
+        logger.setLevel(log_level)
         
         # Create formatters
         file_formatter = logging.Formatter(

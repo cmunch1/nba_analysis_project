@@ -3,11 +3,13 @@ from typing import Callable
 import logging
 import contextlib
 
+from src.common.config_management.base_config_manager import BaseConfigManager
+
 class BaseAppLogger(ABC):
     """Abstract base class defining logging interface"""
     
     @abstractmethod
-    def __init__(self): 
+    def __init__(self, config: BaseConfigManager): 
         """Initialize logger with configuration"""
         pass
         

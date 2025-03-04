@@ -33,6 +33,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         Preprocessor,
         config=config,
         app_logger=app_logger,
+        app_file_handler=app_file_handler,
         error_handler=error_handler
     )
 
@@ -41,6 +42,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         ChartOrchestrator,
         config=config,
         app_logger=app_logger,
+        app_file_handler=app_file_handler,
         error_handler=error_handler
     )
 
