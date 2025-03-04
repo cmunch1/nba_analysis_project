@@ -32,8 +32,6 @@ class DataValidator(BaseDataValidator):
         self.app_logger = app_logger
         self.app_file_handler = app_file_handler
         self.error_handler = error_handler
-        self.app_logger.structured_log(logging.INFO, "DataValidator initialized successfully",
-                       config_type=type(config).__name__)
 
     @staticmethod
     def log_performance(func):
