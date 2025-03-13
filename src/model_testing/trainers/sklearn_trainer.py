@@ -271,7 +271,7 @@ class SKLearnTrainer(BaseTrainer):
             n_features = X_val.shape[1]
             estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
             
-            if hasattr(self.config, 'max_shap_interaction_memory_gb') and estimated_memory <= self.config.max_shap_interaction_memory_gb:
+            if not hasattr(self.config, 'max_shap_interaction_memory_gb') or estimated_memory <= self.config.max_shap_interaction_memory_gb:
                 explainer = shap.TreeExplainer(model)
                 interaction_values = explainer.shap_interaction_values(X_val)
                 
@@ -298,11 +298,10 @@ class SKLearnTrainer(BaseTrainer):
                 error=str(e)
             )
             
-    # Use the TrainerUtils methods for the abstract methods
     def _convert_metric_scores(self, train_score: float, val_score: float, metric_name: str) -> Tuple[float, float]:
-        """Delegate to TrainerUtils for metric score conversion."""
+        """Convert metric scores to a consistent format (higher is better)."""
         return self.utils._convert_metric_scores(train_score, val_score, metric_name)
         
     def _process_learning_curve_data(self, evals_result: Dict, results: ModelTrainingResults) -> None:
-        """Delegate to TrainerUtils for learning curve data processing."""
+        """Process and store learning curve data."""
         return self.utils._process_learning_curve_data(evals_result, results)

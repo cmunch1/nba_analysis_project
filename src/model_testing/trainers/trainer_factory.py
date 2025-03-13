@@ -34,6 +34,9 @@ class TrainerFactory:
         # Process each model in the config
         for model_name in vars(config.models):
             enabled = getattr(config.models, model_name)
+
+            # Extract the base model name (strip '_config' suffix if present)
+            model_name = model_name.split('_')[0].upper()
             
             # Handle nested SKLearn models
             if model_name == "SKLearn":
