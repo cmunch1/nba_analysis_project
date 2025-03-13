@@ -20,17 +20,27 @@ def main() -> None:
         # Initialize container
         container = ModelTestingDIContainer()
         
-        # Get dependencies
+        # Get core dependencies
         config = container.config()
+        app_file_handler = container.app_file_handler()
+        app_logger = container.app_logger()
+
+        # initialize the app logger
+        app_logger.setup(config.model_testing_log_file)
+
+        error_handler = container.error_handler()
         data_access = container.data_access()
         data_validator = container.data_validator()
+
+
+        # Get model testing dependencies
         model_tester = container.model_tester()
         experiment_logger = container.experiment_logger()
         optimizer = container.optimizer()
-        app_logger = container.app_logger()
-        error_handler = container.error_handler()
+
         chart_orchestrator = container.chart_orchestrator()
         preprocessor = container.preprocessor()
+
 
         # Load and validate data
         training_data = data_access.load_data(config.training_data_path)

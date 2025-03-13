@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -30,7 +30,8 @@ class SKLearnTrainer(BaseTrainer):
         self.config = config
         self.app_logger = app_logger
         self.error_handler = error_handler
-        self.utils = TrainerUtils()
+        # Create an instance of TrainerUtils which provides shared utility methods
+        self.utils = TrainerUtils(app_logger, error_handler)
         self.model_type = model_type
         
         self.model_registry = {
@@ -113,7 +114,7 @@ class SKLearnTrainer(BaseTrainer):
             results.feature_names = self.feature_names
             
             # Handle categorical features if specified
-            if self.config.categorical_features:
+            if hasattr(self.config, 'categorical_features'):
                 results.categorical_features = self.config.categorical_features
             
             # Train model
@@ -139,10 +140,10 @@ class SKLearnTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_train, results)
             
             # Calculate SHAP values if configured
-            if self.config.calculate_shap_values:
+            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
                 self._calculate_shap_values(model, X_val, y_val, results)
                 
-                if self.config.calculate_shap_interactions:
+                if hasattr(self.config, 'calculate_shap_interactions') and self.config.calculate_shap_interactions:
                     self._calculate_shap_interactions(model, X_val, results)
             
             return results
@@ -172,7 +173,7 @@ class SKLearnTrainer(BaseTrainer):
                 r = permutation_importance(
                     model, X_train, results.target_data,
                     n_repeats=5,
-                    random_state=self.config.random_state,
+                    random_state=self.config.random_state if hasattr(self.config, 'random_state') else 42,
                     n_jobs=-1
                 )
                 importance_scores = r.importances_mean
@@ -270,7 +271,7 @@ class SKLearnTrainer(BaseTrainer):
             n_features = X_val.shape[1]
             estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
             
-            if estimated_memory <= self.config.max_shap_interaction_memory_gb:
+            if hasattr(self.config, 'max_shap_interaction_memory_gb') and estimated_memory <= self.config.max_shap_interaction_memory_gb:
                 explainer = shap.TreeExplainer(model)
                 interaction_values = explainer.shap_interaction_values(X_val)
                 
@@ -296,3 +297,12 @@ class SKLearnTrainer(BaseTrainer):
                 "Failed to calculate SHAP interactions",
                 error=str(e)
             )
+            
+    # Use the TrainerUtils methods for the abstract methods
+    def _convert_metric_scores(self, train_score: float, val_score: float, metric_name: str) -> Tuple[float, float]:
+        """Delegate to TrainerUtils for metric score conversion."""
+        return self.utils._convert_metric_scores(train_score, val_score, metric_name)
+        
+    def _process_learning_curve_data(self, evals_result: Dict, results: ModelTrainingResults) -> None:
+        """Delegate to TrainerUtils for learning curve data processing."""
+        return self.utils._process_learning_curve_data(evals_result, results)
