@@ -6,8 +6,8 @@ class ErrorHandler(BaseErrorHandler):
     exit_code = 1  # Default exit code
     
     def __init__(self, message: str, app_logger: BaseAppLogger, log_level=logging.ERROR, **kwargs):
-        # Just call the base class init properly
-        super().__init__(message, app_logger, log_level, **kwargs)
+        # Pass all parameters as keyword arguments to avoid conflicts
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
     def log(self) -> None:
         """Implementation of abstract log method"""
@@ -32,18 +32,18 @@ class ScrapingError(ErrorHandler):
 
 class PageLoadError(ScrapingError):
     """Raised when a page fails to load."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class ElementNotFoundError(ScrapingError):
     """Raised when an expected element is not found on the page."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class DataExtractionError(ScrapingError):
     """Raised when there's an error extracting data from the page."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class DataProcessingError(ScrapingError):
     """Raised when there's an error processing the scraped data."""
@@ -51,50 +51,50 @@ class DataProcessingError(ScrapingError):
 
 class DataValidationError(ErrorHandler):
     """Raised when data validation fails."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class DataStorageError(ErrorHandler):
     """Raised when there's an error storing or retrieving data."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class DynamicContentLoadError(ScrapingError):
     """Raised when dynamic content fails to load within the specified timeout."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class FeatureEngineeringError(ErrorHandler):
     """Raised when there's an error in the feature engineering process."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class FeatureSelectionError(ErrorHandler):
     """Raised when there's an error in the feature selection process."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class ModelTestingError(ErrorHandler):
     """Raised when there's an error in the model testing process."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class ChartCreationError(ErrorHandler):
     """Raised when there's an error in the chart creation process."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class PreprocessingError(ErrorHandler):
     """Raised when there's an error in the preprocessing process."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
  
 class OptimizationError(ErrorHandler):
     """Raised when there's an error in the optimization process."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
 
 class ExperimentLoggerError(ErrorHandler):
     """Raised when there's an error in the experiment logger process."""
-    def __init__(self, message, log_level=logging.ERROR, **kwargs):
-        super().__init__(message, log_level, **kwargs)
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)

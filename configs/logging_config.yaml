@@ -1,3 +1,6 @@
+# log files
+model_testing_log_file: model_testing.log
+
 # Logger configuration
 log_level: INFO
 use_structured_logging: true
