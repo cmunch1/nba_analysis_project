@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import shutil
-from typing import Dict
+from typing import Dict, Tuple
 from catboost import Pool, CatBoost
 from .base_trainer import BaseTrainer
 from .trainer_utils import TrainerUtils
@@ -21,7 +21,7 @@ class CatBoostTrainer(BaseTrainer):
         self.config = config
         self.app_logger = app_logger
         self.error_handler = error_handler
-        self.utils = TrainerUtils()
+        self.utils = TrainerUtils(app_logger, error_handler)
         
         self.app_logger.structured_log(
             logging.INFO, 
@@ -53,13 +53,13 @@ class CatBoostTrainer(BaseTrainer):
                 data=X_train,
                 label=y_train,
                 feature_names=X_train.columns.tolist(),
-                cat_features=self.config.categorical_features
+                cat_features=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None
             )
             val_pool = Pool(
                 data=X_val,
                 label=y_val,
                 feature_names=X_val.columns.tolist(),
-                cat_features=self.config.categorical_features
+                cat_features=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None
             )
 
             # Ensure metrics are properly set in parameters
@@ -81,7 +81,7 @@ class CatBoostTrainer(BaseTrainer):
             
             model_params.update({
                 'train_dir': str(log_dir),
-                'verbose': self.config.CatBoost.verbose_eval
+                'verbose': self.config.CatBoost.verbose_eval if hasattr(self.config, 'CatBoost') and hasattr(self.config.CatBoost, 'verbose_eval') else 100
             })
 
             # Initialize and train model
@@ -89,15 +89,15 @@ class CatBoostTrainer(BaseTrainer):
             model.fit(
                 train_pool,
                 eval_set=val_pool,
-                early_stopping_rounds=self.config.CatBoost.early_stopping_rounds,
+                early_stopping_rounds=self.config.CatBoost.early_stopping_rounds if hasattr(self.config, 'CatBoost') and hasattr(self.config.CatBoost, 'early_stopping_rounds') else 10,
                 use_best_model=True
             )
 
             # Store model and update basic information
             results.model = model
             results.num_boost_round = model.tree_count_
-            results.early_stopping = self.config.CatBoost.early_stopping_rounds
-            results.categorical_features = self.config.categorical_features
+            results.early_stopping = self.config.CatBoost.early_stopping_rounds if hasattr(self.config, 'CatBoost') and hasattr(self.config.CatBoost, 'early_stopping_rounds') else 10
+            results.categorical_features = self.config.categorical_features if hasattr(self.config, 'categorical_features') else []
             
             # Generate predictions
             loss_function = model_params.get('loss_function', '').lower()
@@ -122,7 +122,7 @@ class CatBoostTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_train, results)
 
             # Calculate SHAP values if configured
-            if self.config.calculate_shap_values:
+            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
                 self._calculate_shap_values(model, val_pool, y_val, results)
 
             return results
@@ -230,7 +230,7 @@ class CatBoostTrainer(BaseTrainer):
             )
             
             # Calculate interactions if configured
-            if self.config.calculate_shap_interactions:
+            if hasattr(self.config, 'calculate_shap_interactions') and self.config.calculate_shap_interactions:
                 self._calculate_shap_interactions(model, val_pool, results)
             
         except Exception as e:
@@ -247,7 +247,7 @@ class CatBoostTrainer(BaseTrainer):
             n_features = val_pool.get_features().shape[1]
             estimated_memory = (val_pool.get_features().shape[0] * n_features * n_features * 8) / (1024 ** 3)
             
-            if estimated_memory <= self.config.max_shap_interaction_memory_gb:
+            if not hasattr(self.config, 'max_shap_interaction_memory_gb') or estimated_memory <= self.config.max_shap_interaction_memory_gb:
                 interaction_values = model.get_feature_importance(
                     val_pool,
                     type='ShapInteractionValues'
@@ -271,3 +271,11 @@ class CatBoostTrainer(BaseTrainer):
                 "Failed to calculate SHAP interactions",
                 error=str(e)
             )
+
+    def _convert_metric_scores(self, train_score: float, val_score: float, metric_name: str) -> Tuple[float, float]:
+        """Convert metric scores to a consistent format (higher is better)."""
+        return self.utils._convert_metric_scores(train_score, val_score, metric_name)
+
+    def _process_learning_curve_data(self, evals_result: Dict, results: ModelTrainingResults) -> None:
+        """Process and store learning curve data."""
+        return self.utils._process_learning_curve_data(evals_result, results)

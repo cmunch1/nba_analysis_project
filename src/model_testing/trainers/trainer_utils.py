@@ -1,8 +1,9 @@
 from typing import Dict, Tuple
 import logging
-from src.common.data_classes import ModelTrainingResults
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.base_error_handler import BaseErrorHandler
+import numpy as np
+from ...common.data_classes import ModelTrainingResults
+from ...common.app_logging.base_app_logger import BaseAppLogger
+from ...common.error_handling.base_error_handler import BaseErrorHandler
 
 class TrainerUtils:
     """Utility class providing common functionality for trainers."""
@@ -38,7 +39,7 @@ class TrainerUtils:
         """Process and store learning curve data."""
         try:
             # Get first metric from evaluation results
-            eval_metric = list(evals_result['train'].keys())[0]
+            eval_metric = next(iter(evals_result['train'].keys()))
             results.learning_curve_data.metric_name = eval_metric
 
             # Process each iteration's scores

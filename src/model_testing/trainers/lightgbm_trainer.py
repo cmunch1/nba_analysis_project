@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import lightgbm as lgb
-from typing import Dict
+from typing import Dict, Tuple
 from .base_trainer import BaseTrainer
 from .trainer_utils import TrainerUtils
 from ...common.data_classes import ModelTrainingResults
@@ -15,7 +15,7 @@ class LightGBMTrainer(BaseTrainer):
         self.config = config
         self.app_logger = app_logger
         self.error_handler = error_handler
-        self.utils = TrainerUtils()
+        self.utils = TrainerUtils(app_logger, error_handler)
         
         self.app_logger.structured_log(
             logging.INFO, 
@@ -47,13 +47,13 @@ class LightGBMTrainer(BaseTrainer):
                 X_train, 
                 label=y_train,
                 feature_name=X_train.columns.tolist(),
-                categorical_feature=self.config.categorical_features
+                categorical_feature=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None
             )
             val_data = lgb.Dataset(
                 X_val, 
                 label=y_val,
                 feature_name=X_val.columns.tolist(),
-                categorical_feature=self.config.categorical_features,
+                categorical_feature=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None,
                 reference=train_data
             )
 
@@ -64,24 +64,24 @@ class LightGBMTrainer(BaseTrainer):
             model = lgb.train(
                 params=model_params,
                 train_set=train_data,
-                num_boost_round=self.config.LightGBM.num_boost_round,
+                num_boost_round=self.config.LightGBM.num_boost_round if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'num_boost_round') else 100,
                 valid_sets=[train_data, val_data],
                 valid_names=['train', 'eval'],
-                early_stopping_rounds=self.config.LightGBM.early_stopping_rounds,
-                verbose_eval=self.config.LightGBM.verbose_eval,
+                early_stopping_rounds=self.config.LightGBM.early_stopping_rounds if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'early_stopping_rounds') else 10,
+                verbose_eval=self.config.LightGBM.verbose_eval if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'verbose_eval') else 100,
                 evals_result=evals_result
             )
 
             # Store model and generate predictions
             results.model = model
             results.predictions = model.predict(X_val)
-            results.num_boost_round = self.config.LightGBM.num_boost_round
-            results.early_stopping = self.config.LightGBM.early_stopping_rounds
-            results.categorical_features = self.config.categorical_features
+            results.num_boost_round = self.config.LightGBM.num_boost_round if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'num_boost_round') else 100
+            results.early_stopping = self.config.LightGBM.early_stopping_rounds if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'early_stopping_rounds') else 10
+            results.categorical_features = self.config.categorical_features if hasattr(self.config, 'categorical_features') else []
 
             # Process learning curve data if requested
-            if self.config.generate_learning_curve_data:
-                self.utils._process_learning_curve_data(evals_result, results)
+            if hasattr(self.config, 'generate_learning_curve_data') and self.config.generate_learning_curve_data:
+                self._process_learning_curve_data(evals_result, results)
 
             self.app_logger.structured_log(
                 logging.INFO, 
@@ -94,7 +94,7 @@ class LightGBMTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_train, results)
 
             # Calculate SHAP values if configured
-            if self.config.calculate_shap_values:
+            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
                 self._calculate_shap_values(model, X_val, y_val, results)
 
             return results
@@ -163,7 +163,7 @@ class LightGBMTrainer(BaseTrainer):
             results.shap_values = shap_values
             
             # Calculate interactions if configured
-            if self.config.calculate_shap_interactions:
+            if hasattr(self.config, 'calculate_shap_interactions') and self.config.calculate_shap_interactions:
                 self._calculate_shap_interactions(model, X_val, results)
                 
         except Exception as e:
@@ -180,7 +180,7 @@ class LightGBMTrainer(BaseTrainer):
         n_features = X_val.shape[1]
         estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
         
-        if estimated_memory <= self.config.max_shap_interaction_memory_gb:
+        if not hasattr(self.config, 'max_shap_interaction_memory_gb') or estimated_memory <= self.config.max_shap_interaction_memory_gb:
             interaction_values = model.predict(X_val, pred_interactions=True)
             # Remove bias term from interaction values if present
             if interaction_values.shape[1] == X_val.shape[1] + 1:
@@ -191,3 +191,11 @@ class LightGBMTrainer(BaseTrainer):
                 "Calculated SHAP interaction values",
                 interaction_shape=interaction_values.shape
             )
+
+    def _convert_metric_scores(self, train_score: float, val_score: float, metric_name: str) -> Tuple[float, float]:
+        """Convert metric scores to a consistent format (higher is better)."""
+        return self.utils._convert_metric_scores(train_score, val_score, metric_name)
+
+    def _process_learning_curve_data(self, evals_result: Dict, results: ModelTrainingResults) -> None:
+        """Process and store learning curve data."""
+        return self.utils._process_learning_curve_data(evals_result, results)
