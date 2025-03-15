@@ -79,4 +79,4 @@ class ChartUtils:
             f"Error creating {chart_type}",
             original_error=str(e),
             **kwargs
-        ) 
+        )

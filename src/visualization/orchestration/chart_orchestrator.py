@@ -56,29 +56,38 @@ class ChartOrchestrator(BaseChartOrchestrator):
     def _initialize_charts(self) -> None:
         """Initialize enabled chart types based on configuration."""
         try:
-            chart_options = self.config.get('chart_options', {})
+            # Get chart options with fallbacks
+            if hasattr(self.config, 'chart_options'):
+                chart_options = self.config.chart_options
+            else:
+                chart_options = type('EmptyConfig', (), {})()  # Empty object
             
-            if chart_options.get('feature_importance', {}).get('enabled', False):
+            # Check for feature importance chart
+            if hasattr(chart_options, 'feature_importance') and getattr(chart_options.feature_importance, 'enabled', False):
                 self.charts[ChartType.FEATURE] = ChartFactory.create_chart(
                     ChartType.FEATURE, self.config, self.app_logger, self.error_handler
                 )
                 
-            if chart_options.get('metrics', {}).get('enabled', False):
+            # Check for metrics chart
+            if hasattr(chart_options, 'metrics') and getattr(chart_options.metrics, 'enabled', False):
                 self.charts[ChartType.METRICS] = ChartFactory.create_chart(
                     ChartType.METRICS, self.config, self.app_logger, self.error_handler
                 )
                 
-            if chart_options.get('learning_curve', {}).get('enabled', False):
+            # Check for learning curve chart
+            if hasattr(chart_options, 'learning_curve') and getattr(chart_options.learning_curve, 'enabled', False):
                 self.charts[ChartType.LEARNING_CURVE] = ChartFactory.create_chart(
                     ChartType.LEARNING_CURVE, self.config, self.app_logger, self.error_handler
                 )
                 
-            if chart_options.get('shap', {}).get('enabled', False):
+            # Check for SHAP chart
+            if hasattr(chart_options, 'shap') and getattr(chart_options.shap, 'enabled', False):
                 self.charts[ChartType.SHAP] = ChartFactory.create_chart(
                     ChartType.SHAP, self.config, self.app_logger, self.error_handler
                 )
 
-            if chart_options.get('model_interpretation', {}).get('enabled', False):
+            # Check for model interpretation chart
+            if hasattr(chart_options, 'model_interpretation') and getattr(chart_options.model_interpretation, 'enabled', False):
                 self.charts[ChartType.MODEL_INTERPRETATION] = ChartFactory.create_chart(
                     ChartType.MODEL_INTERPRETATION, self.config, self.app_logger, self.error_handler
                 )
@@ -105,11 +114,16 @@ class ChartOrchestrator(BaseChartOrchestrator):
             charts_dict = {}
             
             # Feature importance chart
-            if ChartType.FEATURE in self.charts and results.feature_importance is not None:
+            if ChartType.FEATURE in self.charts and hasattr(results, 'feature_importance') and results.feature_importance is not None:
+                # Get top_n from config if available
+                top_n = None
+                if hasattr(self.config, 'chart_options') and hasattr(self.config.chart_options, 'feature_importance'):
+                    top_n = getattr(self.config.chart_options.feature_importance, 'top_n', None)
+                
                 charts_dict['feature_importance'] = self.charts[ChartType.FEATURE].create_figure(
                     feature_importance=results.feature_importance,
                     feature_names=results.feature_names,
-                    top_n=self.config.chart_options.feature_importance.top_n
+                    top_n=top_n
                 )
             
             # Metrics charts (confusion matrix, ROC curve, etc.)
@@ -118,13 +132,13 @@ class ChartOrchestrator(BaseChartOrchestrator):
                 charts_dict.update(metrics_charts)
             
             # Learning curve
-            if ChartType.LEARNING_CURVE in self.charts and results.learning_curve_data:
+            if ChartType.LEARNING_CURVE in self.charts and hasattr(results, 'learning_curve_data') and results.learning_curve_data:
                 charts_dict['learning_curve'] = self.charts[ChartType.LEARNING_CURVE].create_figure(
                     results=results
                 )
             
             # SHAP charts
-            if ChartType.SHAP in self.charts and results.shap_values is not None:
+            if ChartType.SHAP in self.charts and hasattr(results, 'shap_values') and results.shap_values is not None:
                 shap_charts = self._create_shap_charts(results)
                 charts_dict.update(shap_charts)
 
@@ -170,14 +184,24 @@ class ChartOrchestrator(BaseChartOrchestrator):
         shap_charts = {}
         shap = self.charts[ChartType.SHAP]
         
-        if results.shap_values is not None:
+        if hasattr(results, 'shap_values') and results.shap_values is not None:
             shap_charts['shap_summary'] = shap.create_summary_plot(
                 shap_values=results.shap_values,
                 feature_names=results.feature_names
             )
             
-            if self.config.chart_options.shap.dependence_plots:
-                for feature in self.config.chart_options.shap.dependence_features:
+            # Check for dependence plots config
+            if (hasattr(self.config, 'chart_options') and 
+                hasattr(self.config.chart_options, 'shap') and 
+                hasattr(self.config.chart_options.shap, 'dependence_plots') and
+                self.config.chart_options.shap.dependence_plots):
+                
+                # Get dependence features
+                dependence_features = []
+                if hasattr(self.config.chart_options.shap, 'dependence_features'):
+                    dependence_features = self.config.chart_options.shap.dependence_features
+                
+                for feature in dependence_features:
                     shap_charts[f'shap_dependence_{feature}'] = shap.create_dependence_plot(
                         shap_values=results.shap_values,
                         features=results.X_val,
@@ -191,14 +215,21 @@ class ChartOrchestrator(BaseChartOrchestrator):
         interpretation_charts = {}
         interpreter = self.charts[ChartType.MODEL_INTERPRETATION]
         
-        # Create SHAP force plots for configured instances
-        if hasattr(results, 'model') and self.config.chart_options.model_interpretation.force_plot_indices:
-            for idx in self.config.chart_options.model_interpretation.force_plot_indices:
+        # Check if model and configuration are available
+        if (hasattr(results, 'model') and 
+            hasattr(self.config, 'chart_options') and 
+            hasattr(self.config.chart_options, 'model_interpretation') and
+            hasattr(self.config.chart_options.model_interpretation, 'force_plot_indices')):
+            
+            # Get indices for force plots
+            force_plot_indices = self.config.chart_options.model_interpretation.force_plot_indices
+            
+            for idx in force_plot_indices:
                 interpretation_charts[f'shap_force_plot_{idx}'] = interpreter.create_shap_force_plot(
                     model=results.model,
                     X=results.X_val,
                     index=idx,
-                    shap_values=results.shap_values
+                    shap_values=results.shap_values if hasattr(results, 'shap_values') else None
                 )
                     
         return interpretation_charts
@@ -219,7 +250,7 @@ class ChartOrchestrator(BaseChartOrchestrator):
         )
         
         try:
-            self.app_file_handler.create_directory(output_dir)
+            self.app_file_handler.ensure_directory(output_dir)
             
             for name, fig in charts.items():
                 output_path = self.app_file_handler.join_paths(output_dir, f"{name}.png")
@@ -239,4 +270,4 @@ class ChartOrchestrator(BaseChartOrchestrator):
                 "Error saving charts",
                 error_message=str(e),
                 output_dir=output_dir
-            ) 
+            )

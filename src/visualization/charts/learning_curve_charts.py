@@ -24,7 +24,13 @@ class LearningCurveCharts(BaseChart):
         """
         super().__init__(config, app_logger, error_handler)
         self.chart_utils = ChartUtils(app_logger, error_handler)
-        self.chart_config = config.get('chart_options', {}).get('learning_curve', {})
+        
+        # Get chart configuration with appropriate fallbacks
+        if hasattr(config, 'chart_options') and hasattr(config.chart_options, 'learning_curve'):
+            self.chart_config = config.chart_options.learning_curve
+        else:
+            # Create empty config if not available
+            self.chart_config = type('EmptyConfig', (), {})()
 
     @staticmethod
     def log_performance(func):
@@ -57,7 +63,7 @@ class LearningCurveCharts(BaseChart):
                 return None
 
             # Get configuration values
-            figure_size = self.chart_config.get('figure_size', [10, 6])
+            figure_size = getattr(self.chart_config, 'figure_size', [10, 6])
             
             fig, ax = self.chart_utils.create_figure(figsize=figure_size)
             
@@ -119,4 +125,4 @@ class LearningCurveCharts(BaseChart):
                 e,
                 "learning curve",
                 model_name=results.model_name if results else None
-            ) 
+            )

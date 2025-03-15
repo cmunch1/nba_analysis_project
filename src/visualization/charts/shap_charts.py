@@ -25,7 +25,13 @@ class SHAPCharts(BaseChart):
         """
         super().__init__(config, app_logger, error_handler)
         self.chart_utils = ChartUtils(app_logger, error_handler)
-        self.chart_config = config.get('chart_options', {}).get('shap', {})
+        
+        # Get chart configuration with appropriate fallbacks
+        if hasattr(config, 'chart_options') and hasattr(config.chart_options, 'shap'):
+            self.chart_config = config.chart_options.shap
+        else:
+            # Create empty config if not available
+            self.chart_config = type('EmptyConfig', (), {})()
 
     @staticmethod
     def log_performance(func):
@@ -72,9 +78,9 @@ class SHAPCharts(BaseChart):
         """
         try:
             # Get configuration values
-            summary_config = self.chart_config.get('summary_plot', {})
-            figure_size = summary_config.get('figure_size', [12, 8])
-            max_display = max_display or summary_config.get('max_display', 20)
+            summary_config = getattr(self.chart_config, 'summary_plot', type('EmptyConfig', (), {})())
+            figure_size = getattr(summary_config, 'figure_size', [12, 8])
+            max_display = max_display or getattr(summary_config, 'max_display', 20)
             
             fig = plt.figure(figsize=figure_size)
             shap.summary_plot(
@@ -122,8 +128,8 @@ class SHAPCharts(BaseChart):
         """
         try:
             # Get configuration values
-            dependence_config = self.chart_config.get('dependence_plots', {})
-            figure_size = dependence_config.get('figure_size', [10, 7])
+            dependence_config = getattr(self.chart_config, 'dependence_plots', type('EmptyConfig', (), {})())
+            figure_size = getattr(dependence_config, 'figure_size', [10, 7])
             
             fig = plt.figure(figsize=figure_size)
             shap.dependence_plot(
@@ -195,10 +201,13 @@ class SHAPCharts(BaseChart):
                 show=False
             )
             
-            return self._finalize_plot(fig, f'SHAP Waterfall Plot for Observation {index}')
+            return self.chart_utils.finalize_plot(fig, f'SHAP Waterfall Plot for Observation {index}')
             
         except Exception as e:
-            self._handle_error(e, "SHAP waterfall plot",
-                             model_type=type(model).__name__,
-                             dataframe_shape=X.shape,
-                             index=index) 
+            self.chart_utils.handle_chart_error(
+                e,
+                "SHAP waterfall plot",
+                model_type=type(model).__name__,
+                dataframe_shape=X.shape,
+                index=index
+            )
