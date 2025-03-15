@@ -27,7 +27,13 @@ class ModelInterpretationCharts(BaseChart):
         """
         super().__init__(config, app_logger, error_handler)
         self.chart_utils = ChartUtils(app_logger, error_handler)
-        self.chart_config = config.get('chart_options', {}).get('model_interpretation', {})
+        
+        # Get chart configuration with appropriate fallbacks
+        if hasattr(config, 'chart_options') and hasattr(config.chart_options, 'model_interpretation'):
+            self.chart_config = config.chart_options.model_interpretation
+        else:
+            # Create empty config if not available
+            self.chart_config = type('EmptyConfig', (), {})()
 
     @staticmethod
     def log_performance(func):
@@ -67,9 +73,9 @@ class ModelInterpretationCharts(BaseChart):
         """
         try:
             # Get configuration values
-            force_plot_config = self.chart_config.get('force_plot', {})
-            figure_size = force_plot_config.get('figure_size', [12, 6])
-            background_samples = self.chart_config.get('background_samples', 100)
+            force_plot_config = getattr(self.chart_config, 'force_plot', type('EmptyConfig', (), {})())
+            figure_size = getattr(force_plot_config, 'figure_size', [12, 6])
+            background_samples = getattr(self.chart_config, 'background_samples', 100)
             
             # Calculate SHAP values if not provided
             if shap_values is None:

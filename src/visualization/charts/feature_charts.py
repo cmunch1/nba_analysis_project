@@ -24,7 +24,13 @@ class FeatureCharts(BaseChart):
         """
         super().__init__(config, app_logger, error_handler)
         self.chart_utils = ChartUtils(app_logger, error_handler)
-        self.chart_config = config.get('chart_options', {}).get('feature_importance', {})
+        
+        # Get chart configuration with appropriate fallbacks
+        if hasattr(config, 'chart_options') and hasattr(config.chart_options, 'feature_importance'):
+            self.chart_config = config.chart_options.feature_importance
+        else:
+            # Create empty config if not available
+            self.chart_config = type('EmptyConfig', (), {})()
 
     @staticmethod
     def log_performance(func):
@@ -59,8 +65,8 @@ class FeatureCharts(BaseChart):
                 raise ValueError("Feature importance and names must have same length")
             
             # Get configuration values with defaults
-            top_n = top_n or self.chart_config.get('top_n', 20)
-            figure_size = self.chart_config.get('figure_size', [12, 8])
+            top_n = top_n or getattr(self.chart_config, 'top_n', 20)
+            figure_size = getattr(self.chart_config, 'figure_size', [12, 8])
             
             # Sort features by importance and get top_n features
             indices = np.argsort(np.abs(feature_importance))[-top_n:]

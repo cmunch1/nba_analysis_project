@@ -25,7 +25,13 @@ class MetricsCharts(BaseChart):
         """
         super().__init__(config, app_logger, error_handler)
         self.chart_utils = ChartUtils(app_logger, error_handler)
-        self.chart_config = config.get('chart_options', {}).get('metrics', {})
+        
+        # Get chart configuration with appropriate fallbacks
+        if hasattr(config, 'chart_options') and hasattr(config.chart_options, 'metrics'):
+            self.chart_config = config.chart_options.metrics
+        else:
+            # Create empty config if not available
+            self.chart_config = type('EmptyConfig', (), {})()
 
     @staticmethod
     def log_performance(func):
@@ -70,10 +76,10 @@ class MetricsCharts(BaseChart):
             matrix = confusion_matrix_data['matrix']
             labels = confusion_matrix_data.get('labels')
             
-            # Get configuration values
-            cm_config = self.chart_config.get('confusion_matrix', {})
-            figure_size = cm_config.get('figure_size', [10, 8])
-            color_map = cm_config.get('color_map', 'Blues')
+            # Get configuration values with appropriate fallbacks
+            cm_config = getattr(self.chart_config, 'confusion_matrix', type('EmptyConfig', (), {})())
+            figure_size = getattr(cm_config, 'figure_size', [10, 8])
+            color_map = getattr(cm_config, 'color_map', 'Blues')
             
             fig, ax = self.chart_utils.create_figure(figsize=figure_size)
             sns.heatmap(
@@ -150,4 +156,4 @@ class MetricsCharts(BaseChart):
 
     def create_figure(self, y_true: np.ndarray, y_score: np.ndarray, **kwargs) -> plt.Figure:
         """Default to creating ROC curve."""
-        return self.create_roc_curve(y_true, y_score) 
+        return self.create_roc_curve(y_true, y_score)
