@@ -82,6 +82,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         config=config,
         app_logger=app_logger,
         error_handler=error_handler,
+        app_file_handler=app_file_handler,
         chart_orchestrator=chart_orchestrator
     )
 
@@ -92,7 +93,8 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         config=config,
         hyperparameter_manager=hyperparameter_manager,
         app_logger=app_logger,
-        error_handler=error_handler
+        error_handler=error_handler,
+        app_file_handler=app_file_handler
     )
 
     @classmethod
@@ -105,7 +107,8 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
                 config=cls.config,
                 hyperparameter_manager=cls.hyperparameter_manager,
                 app_logger=cls.app_logger,
-                error_handler=cls.error_handler
+                error_handler=cls.error_handler,
+                app_file_handler=cls.app_file_handler
             )
         )
 
