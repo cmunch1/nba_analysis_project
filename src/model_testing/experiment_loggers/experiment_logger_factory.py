@@ -1,12 +1,13 @@
 from enum import Enum, auto
 from typing import Type, Dict
+import logging
 from .base_experiment_logger import BaseExperimentLogger
 from .mlflow_logger import MLFlowLogger
-from ...common.config_management.base_config_manager import BaseConfigManager
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
-from ...common.app_file_handling.base_app_file_handler import BaseAppFileHandler
-from ...visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 
 class LoggerType(Enum):
     """Enum for supported experiment logger types."""
@@ -32,8 +33,8 @@ class ExperimentLoggerFactory:
                      config: BaseConfigManager,
                      app_logger: BaseAppLogger,
                      error_handler: BaseErrorHandler,
-                     chart_orchestrator: BaseChartOrchestrator,
-                     app_file_handler: BaseAppFileHandler) -> BaseExperimentLogger:
+                     app_file_handler: BaseAppFileHandler,
+                     chart_orchestrator: BaseChartOrchestrator) -> BaseExperimentLogger:
         """
         Create an experiment logger instance with proper dependency injection.
         
@@ -54,7 +55,7 @@ class ExperimentLoggerFactory:
             logger_class = cls._loggers[logger_type]
             
             app_logger.structured_log(
-                "info",
+                logging.INFO,  
                 "Creating experiment logger",
                 logger_type=logger_type.name
             )
@@ -70,11 +71,11 @@ class ExperimentLoggerFactory:
         except KeyError:
             error_msg = f"Unsupported logger type: {logger_type}"
             app_logger.structured_log(
-                "error",
-                error_msg,
+                logging.ERROR,
+                "Unsupported logger type",
                 logger_type=logger_type.name
             )
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) 
 
     @classmethod
     def register_logger(cls, 

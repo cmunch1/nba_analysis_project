@@ -19,6 +19,8 @@ from src.common.data_classes import (
     PreprocessingResults
 )
 from src.preprocessing.base_preprocessor import BasePreprocessor
+from src.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
+
 from .base_model_testing import BaseModelTester
 from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
 from .trainers.base_trainer import BaseTrainer
@@ -30,7 +32,8 @@ class ModelTester(BaseModelTester):
                  trainers: Dict[str, BaseTrainer],
                  app_logger: BaseAppLogger,
                  error_handler: BaseErrorHandler,
-                 preprocessor: BasePreprocessor):
+                 preprocessor: BasePreprocessor,
+                 chart_orchestrator: BaseChartOrchestrator):
         """
         Initialize the ModelTester with injected dependencies.
 

@@ -1,11 +1,15 @@
 from enum import Enum
 from typing import Type, Dict
+
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+
 from .base_hyperparams_optimizer import BaseHyperparamsOptimizer
 from .optuna_optimizer import OptunaOptimizer
-from ...common.config_management.base_config_manager import BaseConfigManager
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
 from ..hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
+
 
 class OptimizerType(Enum):
     """Supported hyperparameter optimizer types."""
@@ -33,18 +37,16 @@ class OptimizerFactory:
                         config: BaseConfigManager,
                         hyperparameter_manager: BaseHyperparamsManager,
                         app_logger: BaseAppLogger,
-                        error_handler: BaseErrorHandler) -> BaseHyperparamsOptimizer:
+                        error_handler: BaseErrorHandler,
+                        app_file_handler: BaseAppFileHandler) -> BaseHyperparamsOptimizer:
         """Create optimizer with proper nested config handling."""
         optimizer_class = cls._optimizers.get(optimizer_type)
         if optimizer_class is None:
             raise ValueError(f"Unknown optimizer type: {optimizer_type}")
             
-        # Get optimizer-specific config if available
-        optimizer_config = getattr(config, optimizer_type.value.lower(), None)
         
         return optimizer_class(
             config=config,
-            optimizer_config=optimizer_config,  # Pass specific config
             hyperparameter_manager=hyperparameter_manager,
             app_logger=app_logger,
             error_handler=error_handler

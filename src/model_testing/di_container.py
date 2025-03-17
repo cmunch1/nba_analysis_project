@@ -47,7 +47,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
     )
 
     # Hyperparameter management with proper injection
-    hyperparameter_manager = providers.Factory(
+    hyperparameter_manager = providers.Singleton(
         HyperparamsManager,
         config=config,
         app_logger=app_logger,
@@ -72,7 +72,8 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         trainers=trainers,
         app_logger=app_logger,
         error_handler=error_handler,
-        preprocessor=preprocessor
+        preprocessor=preprocessor,
+        chart_orchestrator=chart_orchestrator
     )
 
     # Experiment logger with proper injection

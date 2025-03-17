@@ -10,7 +10,6 @@ class BaseHyperparamsOptimizer(ABC):
     @abstractmethod
     def __init__(self,
                  config: BaseConfigManager,
-                 optimizer_config: Any,  # Add optimizer-specific config
                  hyperparameter_manager: BaseHyperparamsManager,
                  app_logger: BaseAppLogger,
                  error_handler: BaseErrorHandler):
