@@ -35,10 +35,12 @@ def main() -> None:
 
         # Get model testing dependencies
         model_tester = container.model_tester()
-        experiment_logger = container.experiment_logger()
-        optimizer = container.optimizer()
-
         chart_orchestrator = container.chart_orchestrator()
+        optimizer = container.optimizer()
+        experiment_logger = container.experiment_logger()
+
+
+
         preprocessor = container.preprocessor()
 
 

@@ -89,8 +89,9 @@ class MLFlowLogger(BaseExperimentLogger):
                  config: BaseConfigManager,
                  app_logger: BaseAppLogger,
                  error_handler: BaseErrorHandler,
-                 chart_orchestrator: BaseChartOrchestrator,
-                 app_file_handler: BaseAppFileHandler):
+                 app_file_handler: BaseAppFileHandler,
+                 chart_orchestrator: BaseChartOrchestrator
+                 ):
         """
         Initialize MLflow logger with dependencies.
         
@@ -98,8 +99,9 @@ class MLFlowLogger(BaseExperimentLogger):
             config: Configuration manager
             app_logger: Application logger
             error_handler: Error handler
-            chart_orchestrator: Chart orchestrator for visualization
             app_file_handler: Application file handler for managing files
+            chart_orchestrator: Chart orchestrator for visualization
+            
         """
         super().__init__(config, app_logger, error_handler, chart_orchestrator)
         self.app_file_handler = app_file_handler
