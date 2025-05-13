@@ -42,8 +42,8 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         ChartOrchestrator,
         config=config,
         app_logger=app_logger,
-        app_file_handler=app_file_handler,
-        error_handler=error_handler
+        error_handler=error_handler,
+        app_file_handler=app_file_handler
     )
 
     # Hyperparameter management with proper injection
@@ -54,7 +54,6 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         app_file_handler=app_file_handler,
         error_handler=error_handler
     )
-
 
     # Trainers factory with proper dependency injection
     trainers = providers.Factory(
@@ -123,6 +122,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
                 config=cls.config,
                 app_logger=cls.app_logger,
                 error_handler=cls.error_handler,
+                app_file_handler=cls.app_file_handler,
                 chart_orchestrator=cls.chart_orchestrator
             )
         )

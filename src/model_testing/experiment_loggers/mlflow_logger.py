@@ -22,68 +22,6 @@ from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandle
 from src.common.data_classes import ModelTrainingResults
 
 
-class MLflowChartLogger:
-    """Helper class for generating and logging charts to MLflow."""
-    
-    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, error_handler: BaseErrorHandler):
-        """Initialize MLflow chart logger with dependencies."""
-        self.config = config
-        self.app_logger = app_logger
-        self.error_handler = error_handler
-               
-        self.app_logger.structured_log(
-            logging.INFO, 
-            "MLflowChartLogger initialized"
-        )
-
-    def log_model_charts(self, results: Any) -> None:
-        """Generate and log model evaluation charts to MLflow."""
-        try:
-            chart_data = results.prepare_for_charting()
-            
-            with tempfile.TemporaryDirectory() as temp_dir:
-                # Feature Importance Chart
-                if self._should_create_feature_importance_chart():
-                    self._create_feature_importance_chart(chart_data, temp_dir)
-
-                # Confusion Matrix
-                if self.config.chart_options.confusion_matrix:
-                    self._create_confusion_matrix(chart_data, temp_dir)
-
-                # ROC Curve
-                if self.config.chart_options.roc_curve:
-                    self._create_roc_curve(chart_data, temp_dir)
-
-                # SHAP Summary Plot
-                if self._should_create_shap_summary():
-                    self._create_shap_summary(chart_data, temp_dir)
-
-                # Learning Curve
-                if getattr(self.config.chart_options, 'learning_curve', False):
-                    self._create_learning_curve(results, temp_dir)
-                
-                self.app_logger.structured_log(
-                    logging.INFO, 
-                    "All charts logged successfully"
-                )
-
-        except Exception as e:
-            raise self.error_handler.create_error_handler(
-                'experiment_logging',
-                "Error in chart logging",
-                original_error=str(e)
-            )
-
-    def _should_create_feature_importance_chart(self) -> bool:
-        return (hasattr(self.config.chart_options, 'feature_importance') and 
-                getattr(self.config.chart_options.feature_importance, 'enabled', False))
-
-    def _should_create_shap_summary(self) -> bool:
-        return (hasattr(self.config.chart_options, 'shap_summary') and 
-                getattr(self.config.chart_options.shap_summary, 'enabled', False))
-
-    # ... Additional chart creation methods ...
-
 class MLFlowLogger(BaseExperimentLogger):
     def __init__(self,
                  config: BaseConfigManager,
@@ -103,8 +41,7 @@ class MLFlowLogger(BaseExperimentLogger):
             chart_orchestrator: Chart orchestrator for visualization
             
         """
-        super().__init__(config, app_logger, error_handler, chart_orchestrator)
-        self.app_file_handler = app_file_handler
+        super().__init__(config, app_logger, error_handler, app_file_handler, chart_orchestrator)
         
         # Configure MLflow
         mlflow.set_tracking_uri(self.config.get('mlflow', {}).get('tracking_uri'))
@@ -213,7 +150,7 @@ class MLFlowLogger(BaseExperimentLogger):
             mlflow.log_params({
                 "n_folds": results.n_folds,
                 "feature_count": len(results.feature_names),
-                "sample_count": results.X_train.shape[0]
+                "sample_count": results.feature_data.shape[0] if hasattr(results, 'feature_data') else 0
             })
             
         except Exception as e:
@@ -226,15 +163,12 @@ class MLFlowLogger(BaseExperimentLogger):
     def _log_metrics(self, results: ModelTrainingResults) -> None:
         """Log model metrics to MLflow."""
         try:
-            # Log average metrics
-            for metric_name, value in results.metrics.items():
-                mlflow.log_metric(f"avg_{metric_name}", value)
+            # Log metrics
+            if hasattr(results, 'metrics') and results.metrics:
+                for metric_name, value in vars(results.metrics).items():
+                    if isinstance(value, (int, float)):
+                        mlflow.log_metric(f"avg_{metric_name}", value)
             
-            # Log fold-specific metrics
-            for fold, fold_metrics in results.fold_metrics.items():
-                for metric_name, value in fold_metrics.items():
-                    mlflow.log_metric(f"{metric_name}_fold_{fold}", value)
-                    
         except Exception as e:
             raise self.error_handler.create_error_handler(
                 'experiment_logging',
@@ -245,11 +179,15 @@ class MLFlowLogger(BaseExperimentLogger):
     def _log_model(self, results: ModelTrainingResults) -> None:
         """Log the trained model to MLflow."""
         try:
-            mlflow.sklearn.log_model(
-                results.best_model,
-                "model",
-                registered_model_name=results.model_name
-            )
+            if hasattr(results, 'model') and results.model:
+                if hasattr(results.model, "__module__") and "xgboost" in results.model.__module__:
+                    mlflow.xgboost.log_model(results.model, "model")
+                elif hasattr(results.model, "__module__") and "lightgbm" in results.model.__module__:
+                    mlflow.lightgbm.log_model(results.model, "model")
+                elif hasattr(results.model, "__module__") and "catboost" in results.model.__module__:
+                    mlflow.catboost.log_model(results.model, "model")
+                else:
+                    mlflow.sklearn.log_model(results.model, "model")
             
         except Exception as e:
             raise self.error_handler.create_error_handler(

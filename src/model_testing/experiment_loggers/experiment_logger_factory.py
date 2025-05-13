@@ -43,6 +43,7 @@ class ExperimentLoggerFactory:
             config: Configuration manager
             app_logger: Application logger
             error_handler: Error handler
+            app_file_handler: Application file handler
             chart_orchestrator: Chart orchestrator for visualization
             
         Returns:
@@ -64,8 +65,8 @@ class ExperimentLoggerFactory:
                 config=config,
                 app_logger=app_logger,
                 error_handler=error_handler,
-                chart_orchestrator=chart_orchestrator,
-                app_file_handler=app_file_handler
+                app_file_handler=app_file_handler,
+                chart_orchestrator=chart_orchestrator
             )
             
         except KeyError:
