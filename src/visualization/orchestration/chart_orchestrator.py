@@ -114,14 +114,14 @@ class ChartOrchestrator(BaseChartOrchestrator):
             charts_dict = {}
             
             # Feature importance chart
-            if ChartType.FEATURE in self.charts and hasattr(results, 'feature_importance') and results.feature_importance is not None:
+            if ChartType.FEATURE in self.charts and hasattr(results, 'feature_importance_scores') and results.feature_importance_scores is not None:
                 # Get top_n from config if available
                 top_n = None
                 if hasattr(self.config, 'chart_options') and hasattr(self.config.chart_options, 'feature_importance'):
                     top_n = getattr(self.config.chart_options.feature_importance, 'top_n', None)
                 
                 charts_dict['feature_importance'] = self.charts[ChartType.FEATURE].create_figure(
-                    feature_importance=results.feature_importance,
+                    feature_importance=results.feature_importance_scores,
                     feature_names=results.feature_names,
                     top_n=top_n
                 )
@@ -167,15 +167,46 @@ class ChartOrchestrator(BaseChartOrchestrator):
         metrics_charts = {}
         metrics = self.charts[ChartType.METRICS]
         
-        if hasattr(results, 'confusion_matrix_data'):
-            metrics_charts['confusion_matrix'] = metrics.create_confusion_matrix(
-                results.confusion_matrix_data
-            )
+        if hasattr(results, 'metrics') and results.metrics:
+            try:
+                # Create confusion matrix data
+                from sklearn.metrics import confusion_matrix
+                if hasattr(results, 'binary_predictions') and hasattr(results, 'target_data'):
+                    cm = confusion_matrix(results.target_data, results.binary_predictions)
+                    confusion_matrix_data = {
+                        'matrix': cm,
+                        'labels': ['0', '1']
+                    }
+                    metrics_charts['confusion_matrix'] = metrics.create_confusion_matrix(
+                        confusion_matrix_data
+                    )
+            except Exception as e:
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Failed to create confusion matrix",
+                    error=str(e)
+                )
             
-        if hasattr(results, 'roc_curve_data'):
-            metrics_charts['roc_curve'] = metrics.create_roc_curve(
-                results.roc_curve_data
-            )
+            try:
+                # Create ROC curve data
+                from sklearn.metrics import roc_curve, auc
+                if hasattr(results, 'probability_predictions') and hasattr(results, 'target_data'):
+                    fpr, tpr, _ = roc_curve(results.target_data, results.probability_predictions)
+                    roc_auc = auc(fpr, tpr)
+                    roc_data = {
+                        'fpr': fpr,
+                        'tpr': tpr,
+                        'auc': roc_auc
+                    }
+                    metrics_charts['roc_curve'] = metrics.create_roc_curve(
+                        roc_data
+                    )
+            except Exception as e:
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Failed to create ROC curve",
+                    error=str(e)
+                )
             
         return metrics_charts
 
@@ -202,37 +233,104 @@ class ChartOrchestrator(BaseChartOrchestrator):
                     dependence_features = self.config.chart_options.shap.dependence_features
                 
                 for feature in dependence_features:
-                    shap_charts[f'shap_dependence_{feature}'] = shap.create_dependence_plot(
-                        shap_values=results.shap_values,
-                        features=results.X_val,
-                        feature_name=feature
-                    )
+                    if feature in results.feature_names:
+                        shap_charts[f'shap_dependence_{feature}'] = shap.create_dependence_plot(
+                            shap_values=results.shap_values,
+                            features=results.feature_data,
+                            feature_name=feature
+                        )
                     
         return shap_charts
 
     def _create_interpretation_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
         """Create model interpretation charts."""
         interpretation_charts = {}
-        interpreter = self.charts[ChartType.MODEL_INTERPRETATION]
         
-        # Check if model and configuration are available
-        if (hasattr(results, 'model') and 
-            hasattr(self.config, 'chart_options') and 
-            hasattr(self.config.chart_options, 'model_interpretation') and
-            hasattr(self.config.chart_options.model_interpretation, 'force_plot_indices')):
+        if ChartType.MODEL_INTERPRETATION in self.charts:
+            interpreter = self.charts[ChartType.MODEL_INTERPRETATION]
             
-            # Get indices for force plots
-            force_plot_indices = self.config.chart_options.model_interpretation.force_plot_indices
-            
-            for idx in force_plot_indices:
-                interpretation_charts[f'shap_force_plot_{idx}'] = interpreter.create_shap_force_plot(
-                    model=results.model,
-                    X=results.X_val,
-                    index=idx,
-                    shap_values=results.shap_values if hasattr(results, 'shap_values') else None
-                )
+            # Check if model and configuration are available
+            if (hasattr(results, 'model') and 
+                hasattr(self.config, 'chart_options') and 
+                hasattr(self.config.chart_options, 'model_interpretation') and
+                hasattr(self.config.chart_options.model_interpretation, 'force_plot_indices')):
+                
+                # Get indices for force plots
+                force_plot_indices = self.config.chart_options.model_interpretation.force_plot_indices
+                
+                for idx in force_plot_indices:
+                    if hasattr(results, 'feature_data') and idx < len(results.feature_data):
+                        interpretation_charts[f'shap_force_plot_{idx}'] = interpreter.create_shap_force_plot(
+                            model=results.model,
+                            X=results.feature_data,
+                            index=idx,
+                            shap_values=results.shap_values if hasattr(results, 'shap_values') else None
+                        )
                     
         return interpretation_charts
+
+    def create_model_comparison_charts(self, model_results: list) -> Dict[str, plt.Figure]:
+        """
+        Create charts comparing multiple models.
+        
+        Args:
+            model_results: List of model results to compare
+            
+        Returns:
+            Dictionary mapping chart names to figure objects
+        """
+        comparison_charts = {}
+        
+        try:
+            # Create metrics comparison chart
+            if len(model_results) > 1 and ChartType.METRICS in self.charts:
+                # Extract metrics from each model
+                metrics_data = {
+                    result.model_name: vars(result.metrics) 
+                    for result in model_results 
+                    if hasattr(result, 'metrics') and result.metrics
+                }
+                
+                if metrics_data:
+                    fig, ax = plt.subplots(figsize=(12, 8))
+                    
+                    metrics_to_compare = ['accuracy', 'precision', 'recall', 'f1', 'auc']
+                    model_names = list(metrics_data.keys())
+                    
+                    # Create bar chart for each metric
+                    bar_width = 0.15
+                    index = np.arange(len(metrics_to_compare))
+                    
+                    for i, model_name in enumerate(model_names):
+                        metric_values = [
+                            metrics_data[model_name].get(metric, 0) 
+                            for metric in metrics_to_compare
+                        ]
+                        ax.bar(
+                            index + i * bar_width, 
+                            metric_values,
+                            bar_width,
+                            label=model_name
+                        )
+                    
+                    ax.set_xlabel('Metric')
+                    ax.set_ylabel('Score')
+                    ax.set_title('Model Performance Comparison')
+                    ax.set_xticks(index + bar_width * (len(model_names) - 1) / 2)
+                    ax.set_xticklabels(metrics_to_compare)
+                    ax.legend()
+                    ax.grid(True, linestyle='--', alpha=0.7)
+                    
+                    comparison_charts['metrics_comparison'] = fig
+            
+            return comparison_charts
+            
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'chart_creation',
+                "Error creating model comparison charts",
+                original_error=str(e)
+            )
 
     @log_performance
     def save_charts(self, charts: Dict[str, plt.Figure], output_dir: str) -> None:

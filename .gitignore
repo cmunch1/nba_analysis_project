@@ -12,4 +12,4 @@ mlruns/
 zzz/
 .vscode/
 .cspell/
-logs/*.log
+logs/*

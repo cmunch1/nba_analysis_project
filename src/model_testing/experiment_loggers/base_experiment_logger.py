@@ -49,14 +49,3 @@ class BaseExperimentLogger(ABC):
     def log_performance(self):
         """Get the performance logging decorator."""
         return self.app_logger.log_performance
-
-    
-    """
-    @abstractmethod
-    def log_model(self, 
-                  model: Any,
-                  model_name: str,
-                  model_params: Dict[str, Any]) -> None:
-
-        pass
-    """
