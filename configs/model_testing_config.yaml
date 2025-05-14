@@ -1,6 +1,8 @@
 # settings for experiment logging
 experiment_name: "NBA Predictor"
 experiment_description: "NBA Predictor"
+tracking_uri: None
+
 
 #sort columns - ensures that the columns are in the correct order - important for TimeSeriesSplit cross validation
 sort_columns:

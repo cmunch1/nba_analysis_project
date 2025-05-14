@@ -43,15 +43,38 @@ class MLFlowLogger(BaseExperimentLogger):
         """
         super().__init__(config, app_logger, error_handler, app_file_handler, chart_orchestrator)
         
-        # Configure MLflow
-        mlflow.set_tracking_uri(self.config.get('mlflow', {}).get('tracking_uri'))
-        mlflow.set_experiment(self.config.get('mlflow', {}).get('experiment_name', 'default'))
+        # Configure MLflow - use attribute access instead of dict-like access
+        tracking_uri = None
+        experiment_name = "default"
+        
+
+        if hasattr(self.config, 'tracking_uri'):
+            tracking_uri = self.config.tracking_uri
+        if hasattr(self.config, 'experiment_name'):
+            experiment_name = self.config.experiment_name
+        
+        # Set tracking URI if provided
+        if tracking_uri:
+            mlflow.set_tracking_uri(tracking_uri)
+        
+        # Set experiment
+        mlflow.set_experiment(experiment_name)
+        
+        # Safely check if there's an active run before trying to access experiment_id
+        active_run = mlflow.active_run()
+        experiment_name_log = None
+        if active_run:
+            try:
+                experiment_name_log = mlflow.get_experiment(active_run.info.experiment_id).name
+            except Exception:
+                # If there's any issue getting the experiment name, just log None
+                pass
         
         self.app_logger.structured_log(
             logging.INFO,
             "MLflow logger initialized",
             tracking_uri=mlflow.get_tracking_uri(),
-            experiment_name=mlflow.get_experiment(mlflow.active_run().info.experiment_id).name if mlflow.active_run() else None
+            experiment_name=experiment_name_log
         )
 
     @staticmethod

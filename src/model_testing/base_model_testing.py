@@ -79,6 +79,15 @@ class BaseModelTester(ABC):
         """Get the performance logging decorator from app_logger."""
         pass
 
+    @abstractmethod
+    def get_model_config(self, model_name: str) -> Any:
+        """Get model-specific configuration."""
+        pass    
+
+    @abstractmethod
+    def get_model_config_value(self, model_name: str, key: str, default: Any) -> Any:
+        """Get a configuration value with fallback to default."""
+        pass
 
     
 

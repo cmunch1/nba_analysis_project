@@ -104,9 +104,9 @@ class ModelTester(BaseModelTester):
 
         try:
             # Get sort configuration from model-specific config if available
-            sort_columns = self._get_model_config_value(model_name, 'sort_columns', 
+            sort_columns = self.get_model_config_value(model_name, 'sort_columns', 
                                                       self.config.sort_columns)
-            sort_order = self._get_model_config_value(model_name, 'sort_order',
+            sort_order = self.get_model_config_value(model_name, 'sort_order',
                                                     self.config.sort_order)
 
             # Sort chronologically for time series data
@@ -127,7 +127,7 @@ class ModelTester(BaseModelTester):
                 X = X.drop(columns=self.config.non_useful_columns)
 
             # Get preprocessing configuration
-            perform_preprocessing = self._get_model_config_value(
+            perform_preprocessing = self.get_model_config_value(
                 model_name, 'perform_preprocessing', 
                 self.config.perform_preprocessing
             )
@@ -137,7 +137,7 @@ class ModelTester(BaseModelTester):
                 original_columns = X.columns.tolist()
 
                 # Get categorical features from model config
-                categorical_features = self._get_model_config_value(
+                categorical_features = self.get_model_config_value(
                     model_name, 'categorical_features',
                     self.config.categorical_features
                 )
@@ -210,16 +210,16 @@ class ModelTester(BaseModelTester):
             model_config = self._get_model_config(model_name)
             
             # Initialize SHAP arrays if needed
-            if self._get_model_config_value(model_name, 'calculate_shap_values', 
+            if self.get_model_config_value(model_name, 'calculate_shap_values', 
                                           self.config.calculate_shap_values):
                 full_results.shap_values = np.full((len(y), X.shape[1]), np.nan)
-                if self._get_model_config_value(model_name, 'calculate_shap_interactions',
+                if self.get_model_config_value(model_name, 'calculate_shap_interactions',
                                               self.config.calculate_shap_interactions):
                     full_results.shap_interaction_values = np.full((len(y), X.shape[1], X.shape[1]), np.nan)
 
             # Setup cross-validation
-            n_splits = self._get_model_config_value(model_name, 'n_splits', self.config.n_splits)
-            cv_type = self._get_model_config_value(model_name, 'cross_validation_type', 
+            n_splits = self.get_model_config_value(model_name, 'n_splits', self.config.n_splits)
+            cv_type = self.get_model_config_value(model_name, 'cross_validation_type', 
                                                  self.config.cross_validation_type)
             
             if cv_type == "StratifiedKFold":
@@ -286,7 +286,7 @@ class ModelTester(BaseModelTester):
             )
 
     @log_performance
-    def _get_model_config(self, model_name: str) -> Any:
+    def get_model_config(self, model_name: str) -> Any:
         """Get model-specific configuration."""
         try:
             if model_name.startswith('SKLearn_'):
@@ -296,9 +296,9 @@ class ModelTester(BaseModelTester):
         except AttributeError:
             return None
 
-    def _get_model_config_value(self, model_name: str, key: str, default: Any) -> Any:
+    def get_model_config_value(self, model_name: str, key: str, default: Any) -> Any:
         """Get a configuration value with fallback to default."""
-        model_config = self._get_model_config(model_name)
+        model_config = self.get_model_config(model_name)
         if model_config is not None and hasattr(model_config, key):
             return getattr(model_config, key)
         return default
