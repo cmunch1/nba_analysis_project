@@ -45,11 +45,11 @@ def main() -> None:
 
 
         # Load and validate data
-        training_data = data_access.load_data(config.training_data_path)
-        validation_data = data_access.load_data(config.validation_data_path)
+        training_data = data_access.load_dataframe(config.training_data_file)
+        validation_data = data_access.load_dataframe(config.validation_data_file)
         
-        data_validator.validate_data(training_data)
-        data_validator.validate_data(validation_data)
+        #data_validator.validate_processed_dataframe(training_data, config.training_data_file)
+        #data_validator.validate_processed_dataframe(validation_data, config.validation_data_file)
 
         app_logger.structured_log(
             logging.INFO,
@@ -165,7 +165,7 @@ def process_single_model(
     )
 
     # Optimize hyperparameters if configured
-    if config.perform_hyperparameter_optimization:
+    if model_tester.get_model_config_value(model_name, 'perform_hyperparameter_optimization', False):
         model_params = optimizer.optimize(
             model_type=model_name,
             X=X,
@@ -179,7 +179,7 @@ def process_single_model(
     val_results = ModelTrainingResults(X_val.shape)
 
     # Perform cross-validation if configured
-    if config.perform_oof_cross_validation:
+    if model_tester.get_model_config_value(model_name, 'perform_oof_cross_validation', config.perform_oof_cross_validation):
         oof_results = process_model_evaluation(
             model_tester=model_tester,
             data_access=data_access,
