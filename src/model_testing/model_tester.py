@@ -8,6 +8,7 @@ import numpy as np
 import logging
 from typing import Tuple, Dict, Union, Any, List, Optional
 from sklearn.model_selection import TimeSeriesSplit, StratifiedKFold
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve
 
 
 from src.common.config_management.base_config_manager import BaseConfigManager
@@ -207,7 +208,7 @@ class ModelTester(BaseModelTester):
             full_results.target_data = y.copy()
 
             # Get model-specific configuration
-            model_config = self._get_model_config(model_name)
+            model_config = self.get_model_config(model_name)
             
             # Initialize SHAP arrays if needed
             if self.get_model_config_value(model_name, 'calculate_shap_values', 
@@ -282,29 +283,141 @@ class ModelTester(BaseModelTester):
                 'model_testing',
                 "Error in OOF cross-validation",
                 original_error=str(e),
-                dataframe_shape=X.shape
+                dataframe_shape=X.shape,
+                model_name=model_name,
+                model_params=model_params,
+            )
+        
+    @log_performance    
+    def perform_validation_set_testing(self, X: pd.DataFrame, y: pd.Series, 
+                                    X_val: pd.DataFrame, y_val: pd.Series, 
+                                    model_name: str, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
+        """
+        Perform model training and validation on a separate validation set.
+        """
+        try:
+            fold = 1 # needs a value for consistency with OOF cross-validation
+            
+            results = self._train_model(
+                X, y,
+                X_val, y_val, fold,
+                model_name, model_params,
+                results
             )
 
+            
+            return results
+            
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'model_testing',
+                "Error in validation set testing",
+                original_error=str(e),
+                dataframe_shape=X.shape,
+                model_name=model_name,
+                model_params=model_params,
+            )
+        
     @log_performance
+    def calculate_classification_evaluation_metrics(self, y_true, y_prob, metrics: ClassificationMetrics) -> ClassificationMetrics:
+        """Calculate classification metrics using probability scores and optimal threshold."""
+        
+        self.app_logger.structured_log(logging.INFO, "Calculating classification metrics")
+        
+        try:
+            # Input validation
+            if y_true is None or y_prob is None:
+                raise ValueError("y_true and y_prob must not be None")
+            
+            if not isinstance(y_true, (np.ndarray, pd.Series)) or not isinstance(y_prob, (np.ndarray, pd.Series)):
+                raise ValueError("y_true and y_prob must be numpy arrays or pandas Series")
+
+            if np.any(np.isnan(y_prob)):
+                self.app_logger.structured_log(logging.WARNING, 
+                            "Unexpected NaN values found in predictions after OOF filtering",
+                            nan_count=np.sum(np.isnan(y_prob)))
+                # Filter out NaN values
+                mask = ~np.isnan(y_prob)
+                y_true = y_true[mask]
+                y_prob = y_prob[mask]
+                
+                if len(y_true) == 0:
+                    raise ValueError("No valid predictions after filtering NaN values")
+            
+            # Find optimal threshold using ROC curve
+            fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+            optimal_idx = np.argmax(tpr - fpr)
+            optimal_threshold = thresholds[optimal_idx]
+            
+            # Convert probabilities to predictions using optimal threshold
+            y_pred = (y_prob >= optimal_threshold).astype(int)
+            
+            # Calculate metrics
+            metrics.accuracy = accuracy_score(y_true, y_pred)
+            metrics.precision = precision_score(y_true, y_pred)
+            metrics.recall = recall_score(y_true, y_pred)
+            metrics.f1 = f1_score(y_true, y_pred)
+            metrics.auc = roc_auc_score(y_true, y_prob)
+            metrics.optimal_threshold = float(optimal_threshold)
+            
+            # Add information about samples
+            metrics.valid_samples = len(y_true)
+            metrics.total_samples = len(y_true)  # These are now equal since filtering happened earlier
+            metrics.nan_percentage = 0  # No NaNs should be present
+            
+            self.app_logger.structured_log(logging.INFO, "Classification metrics calculated",
+                        optimal_threshold=float(optimal_threshold),
+                        accuracy=float(metrics.accuracy),
+                        auc=float(metrics.auc),
+                        n_samples=len(y_true))
+            
+            return metrics
+            
+        except Exception as e:
+            self.app_logger.structured_log(logging.ERROR, "Error calculating classification metrics",
+                        error=str(e),
+                        y_true_type=type(y_true).__name__ if y_true is not None else None,
+                        y_prob_type=type(y_prob).__name__ if y_prob is not None else None,
+                        y_true_shape=y_true.shape if hasattr(y_true, 'shape') else None,
+                        y_prob_shape=y_prob.shape if hasattr(y_prob, 'shape') else None)
+            raise self.error_handler.create_error_handler(
+                'model_testing',
+                "Error calculating classification metrics",
+                original_error=str(e),
+                n_samples=len(y_true) if y_true is not None else None,
+                n_predictions=len(y_prob) if y_prob is not None else None)
+    
+
     def get_model_config(self, model_name: str) -> Any:
         """Get model-specific configuration."""
         try:
-            if model_name.startswith('SKLearn_'):
+            if model_name.startswith('sklearn_'):
                 base_model = model_name.split('_')[1]
-                return getattr(self.config.models.SKLearn, base_model)
+                return getattr(self.config.models.sklearn, base_model)
             return getattr(self.config.models, model_name)
         except AttributeError:
             return None
 
     def get_model_config_value(self, model_name: str, key: str, default: Any) -> Any:
         """Get a configuration value with fallback to default."""
+
+        model_key = None
         model_config = self.get_model_config(model_name)
+        # check if the model.yaml file has the key if not use the default value from model_testing_config.yaml
         if model_config is not None and hasattr(model_config, key):
-            return getattr(model_config, key)
-        return default
+            model_key = getattr(model_config, key)
+            self.app_logger.structured_log(logging.INFO, "Model specific config value found",
+                                           model_name=model_name,
+                                           key=key,
+                                           value=model_key)
+        else:
+            model_key = default       
+
+        return model_key
 
     def _get_trainer(self, model_name: str) -> BaseTrainer:
         """Get the appropriate trainer for the model."""
+        model_name = model_name.upper()
         if model_name not in self.trainers:
             raise self.error_handler.create_error_handler(
                 'model_testing',
