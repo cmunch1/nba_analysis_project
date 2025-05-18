@@ -26,7 +26,8 @@ def main() -> None:
         app_logger = container.app_logger()
 
         # initialize the app logger
-        app_logger.setup(config.model_testing_log_file)
+        log_file = app_file_handler.join_paths(config.log_path, config.model_testing_log_file)
+        app_logger.setup(log_file)
 
         error_handler = container.error_handler()
         data_access = container.data_access()
@@ -60,7 +61,15 @@ def main() -> None:
 
         # Process each enabled model
         results_by_model = {}
-        for model_name in _get_enabled_models(config):
+        enabled_models = _get_enabled_models(config)
+
+        app_logger.structured_log(
+            logging.INFO,
+            "Enabled models",
+            models=enabled_models
+        )
+
+        for model_name in enabled_models:
             try:
                 app_logger.structured_log(
                     logging.INFO,
@@ -91,8 +100,7 @@ def main() -> None:
                     error=str(e),
                     traceback=traceback.format_exc()
                 )
-                if not config.continue_on_model_error:
-                    raise
+                raise
 
         # Create comparison visualizations if multiple models
         if len(results_by_model) > 1:
@@ -174,12 +182,19 @@ def process_single_model(
     else:
         model_params = model_tester.get_model_params(model_name)    
 
+    app_logger.structured_log(
+        logging.INFO,
+        "Model parameters",
+        model_name=model_name,
+        model_params=model_params
+    )
+
     # Initialize results objects
     oof_results = ModelTrainingResults(X.shape)
     val_results = ModelTrainingResults(X_val.shape)
 
     # Perform cross-validation if configured
-    if model_tester.get_model_config_value(model_name, 'perform_oof_cross_validation', config.perform_oof_cross_validation):
+    if config.perform_oof_cross_validation:
         oof_results = process_model_evaluation(
             model_tester=model_tester,
             data_access=data_access,
@@ -278,9 +293,11 @@ def process_model_evaluation(
             })
 
         # Calculate metrics
+        metrics = ClassificationMetrics()  # Initialize metrics object
         metrics = model_tester.calculate_classification_evaluation_metrics(
             results.target_data,
-            results.predictions
+            results.predictions,
+            metrics
         )
         results.metrics = metrics
 
@@ -329,13 +346,13 @@ def _get_enabled_models(config) -> list:
         enabled = getattr(config.models, model_name)
         
         # Handle nested SKLearn models
-        if model_name == "SKLearn":
+        if model_name == "sklearn":
             if hasattr(enabled, '__dict__'):
                 for sklearn_model, is_enabled in vars(enabled).items():
-                    if is_enabled:
-                        enabled_models.append(f"SKLearn_{sklearn_model}")
+                    if isinstance(is_enabled, bool) and is_enabled:
+                        enabled_models.append(f"sklearn_{sklearn_model}")
         # Handle other model types
-        elif enabled:
+        elif isinstance(enabled, bool) and enabled:
             enabled_models.append(model_name)
             
     return enabled_models

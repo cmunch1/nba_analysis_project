@@ -1,0 +1,15 @@
+artifact_uri: file:///E:/OneDrive/nba_analysis_project/None/294638605374083474/141e044ea07c4f618be5da1be88ab3cc/artifacts
+end_time: 1747573661618
+entry_point_name: ''
+experiment_id: '294638605374083474'
+lifecycle_stage: active
+run_id: 141e044ea07c4f618be5da1be88ab3cc
+run_name: xgboost
+run_uuid: 141e044ea07c4f618be5da1be88ab3cc
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1747573656430
+status: 3
+tags: []
+user_id: Chris

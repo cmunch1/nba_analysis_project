@@ -37,6 +37,19 @@ current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
 # hyperparameters storage directory
 hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
 
+# hyperparameter metadata - fields that are not used as hyperparameters but may be included in tracking
+hyperparameter_metadata:
+  - name
+  - metrics
+  - updated_at
+  - experiment_id
+  - run_id
+  - num_boost_round
+  - early_stopping
+  - enable_categorical
+  - categorical_features
+
+
 # model testing options
 perform_oof_cross_validation: true
 perform_validation_set_testing: true
@@ -52,13 +65,13 @@ random_state: 42
 
 # models to use in this experiment run
 models:
-  XGBoost: false
-  LGBM: false
-  CatBoost: false
-  SKLearn:
-    RandomForest: false
-    LogisticRegression: false
-    HistGradientBoosting: true
+  xgboost: true
+  lgbm: false
+  catboost: false
+  sklearn:
+    random_forest: false
+    logistic_regression: false
+    hist_gradient_boosting: false
 
 
 # learning curve settings

@@ -13,10 +13,10 @@ from ...common.error_handling.base_error_handler import BaseErrorHandler
 
 
 class TrainerType(Enum):
-    XGBOOST = "XGBoost"
-    LIGHTGBM = "LGBM"
-    SKLEARN = "SKLearn"
-    CATBOOST = "CatBoost"
+    XGBOOST = "xgboost"
+    LIGHTGBM = "lgbm"
+    SKLEARN = "sklearn"
+    CATBOOST = "catboost"
 
 class TrainerFactory:
     _trainer_map: Dict[TrainerType, Type[BaseTrainer]] = {

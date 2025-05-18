@@ -113,7 +113,11 @@ class HyperparamsManager(BaseHyperparamsManager):
                     f"No parameters found for {model_name}, using default from config"
                 )
                 # Return empty default params
-                return {}
+                params = {}
+            else:
+                self.app_logger.structured_log(logging.INFO, "Parameters found for {model_name}",
+                                             model_name=model_name,
+                                             params=params)
                 
             return params
             
@@ -200,7 +204,14 @@ class HyperparamsManager(BaseHyperparamsManager):
                 )
                 try:
                     params_data = self.app_file_handler.read_json(param_file)
-                    return params_data.get("params", {})
+                    # Handle both formats - with or without "params" key
+                    if "params" in params_data:
+                        return params_data["params"]
+                    else:
+                        # If no "params" key, assume the entire file is parameters
+                        # but exclude metadata fields
+                        metadata_fields = self.config.hyperparameter_metadata
+                        return {k: v for k, v in params_data.items() if k not in metadata_fields}
                 except Exception as e:
                     self.app_logger.structured_log(
                         logging.WARNING,
