@@ -98,11 +98,12 @@ class HyperparamsManager(BaseHyperparamsManager):
             model_config = self._get_model_config(model_name)
             
             # Determine which parameter set to use
-            use_baseline = False
+            use_baseline = True
+            if model_config and hasattr(model_config, 'use_baseline_hyperparameters'):
+                use_baseline = model_config.use_baseline_hyperparameters
             if model_config and hasattr(model_config, 'perform_hyperparameter_optimization'):
-                use_baseline = (not model_config.perform_hyperparameter_optimization and 
-                              hasattr(model_config, 'use_baseline_hyperparameters') and
-                              model_config.use_baseline_hyperparameters)
+                if model_config.perform_hyperparameter_optimization:
+                    use_baseline = False
             
             # Load parameters from model-specific JSON file
             params = self._load_model_params(model_name, "baseline" if use_baseline else "current_best")

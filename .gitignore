@@ -13,4 +13,5 @@ zzz/
 .vscode/
 .cspell/
 /logs/
+/logs/catboost_info/
 charts/
