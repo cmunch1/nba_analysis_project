@@ -1,7 +1,7 @@
 # settings for experiment logging
 experiment_name: "NBA Predictor"
 experiment_description: "NBA Predictor"
-tracking_uri: None
+
 
 
 #sort columns - ensures that the columns are in the correct order - important for TimeSeriesSplit cross validation
@@ -65,13 +65,13 @@ random_state: 42
 
 # models to use in this experiment run
 models:
-  xgboost: true
-  lgbm: false
-  catboost: false
+  xgboost: false
+  lightgbm: false
+  catboost: true
   sklearn:
-    random_forest: false
-    logistic_regression: false
-    hist_gradient_boosting: false
+    randomforest: false
+    logisticregression: false
+    histgradientboosting: true
 
 
 # learning curve settings

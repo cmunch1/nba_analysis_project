@@ -7,10 +7,10 @@ from typing import Dict, Tuple
 from catboost import Pool, CatBoost
 from .base_trainer import BaseTrainer
 from .trainer_utils import TrainerUtils
-from ...common.data_classes import ModelTrainingResults
-from ...common.config_management.base_config_manager import BaseConfigManager
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.data_classes import ModelTrainingResults
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
 
 class CatBoostTrainer(BaseTrainer):
     def __init__(self, 

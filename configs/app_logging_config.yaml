@@ -10,11 +10,11 @@ log_filename_fallback: log_file.log # Fallback filename if log_filename is not p
 log_current_run_only: true
 log_path: ./logs
 log_size_max: 2 # in MB
-log_backup_count: 3
+log_backup_count: 1
 
 # dedicated error file with unique error identifiers
 error_filename_fallback: error_file.log # Fallback filename if error_filename is not provided
 error_size_max: 2 # in MB
-error_backup_count: 3
+error_backup_count: 1
 
 

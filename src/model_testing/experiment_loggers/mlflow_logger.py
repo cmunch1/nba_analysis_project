@@ -43,7 +43,7 @@ class MLFlowLogger(BaseExperimentLogger):
         """
         super().__init__(config, app_logger, error_handler, app_file_handler, chart_orchestrator)
         
-        # Configure MLflow - use attribute access instead of dict-like access
+        # default values if not provided in config
         tracking_uri = None
         experiment_name = "default"
         
@@ -185,12 +185,14 @@ class MLFlowLogger(BaseExperimentLogger):
 
     def _log_metrics(self, results: ModelTrainingResults) -> None:
         """Log model metrics to MLflow."""
+    
         try:
             # Log metrics
             if hasattr(results, 'metrics') and results.metrics:
+                prefix = "val_" if results.is_validation else "oof_"
                 for metric_name, value in vars(results.metrics).items():
                     if isinstance(value, (int, float)):
-                        mlflow.log_metric(f"avg_{metric_name}", value)
+                        mlflow.log_metric(f"{prefix}{metric_name}", value)
             
         except Exception as e:
             raise self.error_handler.create_error_handler(
