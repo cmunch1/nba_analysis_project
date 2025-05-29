@@ -417,14 +417,23 @@ class ModelTester(BaseModelTester):
 
     def _get_trainer(self, model_name: str) -> BaseTrainer:
         """Get the appropriate trainer for the model."""
+        # Convert to uppercase for comparison
         model_name = model_name.upper()
-        if model_name not in self.trainers:
-            raise self.error_handler.create_error_handler(
-                'model_testing',
-                f"No trainer found for model: {model_name}",
-                available_trainers=list(self.trainers.keys())
-            )
-        return self.trainers[model_name]
+        
+        # Try exact match first
+        if model_name in self.trainers:
+            return self.trainers[model_name]
+            
+        # Try case-insensitive match
+        for trainer_name in self.trainers:
+            if trainer_name.upper() == model_name:
+                return self.trainers[trainer_name]
+                
+        raise self.error_handler.create_error_handler(
+            'model_testing',
+            f"No trainer found for model: {model_name}",
+            available_trainers=list(self.trainers.keys())
+        )
 
     @log_performance
     def _reduce_memory_footprint(self, df: pd.DataFrame) -> pd.DataFrame:

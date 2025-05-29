@@ -7,14 +7,14 @@ from . import (
     SKLearnTrainer,
     CatBoostTrainer
 )
-from ...common.config_management.base_config_manager import BaseConfigManager
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.error_handling.base_error_handler import BaseErrorHandler
 
 
 class TrainerType(Enum):
     XGBOOST = "xgboost"
-    LIGHTGBM = "lgbm"
+    LIGHTGBM = "lightgbm"
     SKLEARN = "sklearn"
     CATBOOST = "catboost"
 
