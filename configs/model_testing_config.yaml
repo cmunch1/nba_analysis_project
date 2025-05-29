@@ -67,7 +67,7 @@ random_state: 42
 models:
   xgboost: false
   lightgbm: false
-  catboost: true
+  catboost: false
   sklearn:
     randomforest: false
     logisticregression: false
