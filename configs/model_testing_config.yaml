@@ -65,12 +65,13 @@ random_state: 42
 
 # models to use in this experiment run
 models:
-  xgboost: false
+  xgboost: true
   lightgbm: false
   catboost: false
   sklearn_randomforest: false
   sklearn_logisticregression: false
-  sklearn_histgradientboosting: true
+  sklearn_histgradientboosting: false
+  pytorch: false
 
 
 # learning curve settings

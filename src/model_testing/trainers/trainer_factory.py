@@ -1,3 +1,4 @@
+
 from enum import Enum
 from typing import Dict, Type
 from . import (
@@ -5,8 +6,9 @@ from . import (
     XGBoostTrainer,
     LightGBMTrainer,
     SKLearnTrainer,
-    CatBoostTrainer
-)
+    CatBoostTrainer,
+    PyTorchTrainer)
+
 from src.common.config_management.base_config_manager import BaseConfigManager
 from src.common.app_logging.base_app_logger import BaseAppLogger
 from src.common.error_handling.base_error_handler import BaseErrorHandler
@@ -17,6 +19,7 @@ class TrainerType(Enum):
     LIGHTGBM = "lightgbm"
     SKLEARN = "sklearn"
     CATBOOST = "catboost"
+    PYTORCH = "pytorch"  
 
 class TrainerFactory:
     _trainer_map: Dict[TrainerType, Type[BaseTrainer]] = {
@@ -24,6 +27,7 @@ class TrainerFactory:
         TrainerType.LIGHTGBM: LightGBMTrainer,
         TrainerType.SKLEARN: SKLearnTrainer,
         TrainerType.CATBOOST: CatBoostTrainer,
+        TrainerType.PYTORCH: PyTorchTrainer,  # Add PyTorch mapping
     }
 
     @classmethod

@@ -1,0 +1,33 @@
+# PyTorch Neural Network Configuration
+
+# Training Settings
+epochs: 100
+early_stopping_patience: 10
+batch_size: 64
+
+# Hyperparameter Settings
+perform_hyperparameter_optimization: false 
+use_baseline_hyperparameters: true # false = use current best hyperparameters
+
+# Hyperparameter Optimization
+optimizer: Optuna   #only Optuna is supported currently
+
+static_params:
+  random_state: 42
+  optimizer: adam
+  epochs: 100
+  early_stopping_patience: 10
+  batch_size: 64
+
+optimization:
+  n_trials: 50
+  param_space:
+    learning_rate: [1.0e-4, 1.0e-1, float, true]
+    weight_decay: [1.0e-6, 1.0e-2, float, true]
+    dropout_rate: [0.1, 0.5, float]
+    batch_size: [32, 128, int]
+    hidden_sizes: [
+      [[64, 32], [128, 64], [128, 64, 32], [256, 128, 64]], 
+      categorical
+    ]
+    optimizer: [["adam", "sgd"], categorical]
