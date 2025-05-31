@@ -345,14 +345,7 @@ def _get_enabled_models(config) -> list:
     for model_name in vars(config.models):
         enabled = getattr(config.models, model_name)
         
-        # Handle nested SKLearn models
-        if model_name == "sklearn":
-            if hasattr(enabled, '__dict__'):
-                for sklearn_model, is_enabled in vars(enabled).items():
-                    if isinstance(is_enabled, bool) and is_enabled:
-                        enabled_models.append(f"sklearn_{sklearn_model}")
-        # Handle other model types
-        elif isinstance(enabled, bool) and enabled:
+        if isinstance(enabled, bool) and enabled:
             enabled_models.append(model_name)
             
     return enabled_models

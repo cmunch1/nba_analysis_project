@@ -131,7 +131,7 @@ class HyperparamsManager(BaseHyperparamsManager):
 
     def _get_model_config(self, model_name: str) -> Any:
         """
-        Get model-specific configuration, handling nested paths.
+        Get model-specific configuration, handling flattened model names.
         
         Args:
             model_name: Name of the model
@@ -140,23 +140,19 @@ class HyperparamsManager(BaseHyperparamsManager):
             Model-specific configuration object
         """
         try:
-            # Handle SKLearn models
-            if model_name.startswith('SKLearn_'):
-                base_model = model_name.split('_')[1].lower()
-                return getattr(self.config.models.SKLearn, base_model)
-            # Handle other models
-            return getattr(self.config.models, model_name.lower())
+            # All models are now flattened - just access directly
+            config_name = model_name.replace('_', '')  # Remove underscores for config access
+            return getattr(self.config.models, config_name, None)
         except AttributeError:
             self.app_logger.structured_log(
                 logging.WARNING,
                 f"No configuration found for model: {model_name}"
             )
-            # Return None instead of raising an error to allow fallback
             return None
 
     def _get_model_hyperparams_dir(self, model_name: str) -> Path:
         """
-        Get the directory path for a model's hyperparameters based on config structure.
+        Get the directory path for a model's hyperparameters based on flattened structure.
         
         Args:
             model_name: Name of the model
@@ -171,12 +167,8 @@ class HyperparamsManager(BaseHyperparamsManager):
             # Default to the configs/hyperparameters structure
             base_dir = Path("configs") / "hyperparameters"
             
-        # Handle SKLearn models which have a nested structure
-        if model_name.startswith('SKLearn_'):
-            base_model = model_name.split('_')[1].lower()
-            return base_dir / "sklearn" / base_model
-        else:
-            return base_dir / model_name.lower()
+        # All models are now flattened - just use the model name directly
+        return base_dir / model_name.lower()
 
     def _load_model_params(self, model_name: str, param_type: str = "current_best") -> Optional[Dict[str, Any]]:
         """

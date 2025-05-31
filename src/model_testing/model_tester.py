@@ -388,16 +388,19 @@ class ModelTester(BaseModelTester):
                 n_predictions=len(y_prob) if y_prob is not None else None)
     
 
+
     def get_model_config(self, model_name: str) -> Any:
         """Get model-specific configuration."""
         try:
-            if model_name.startswith('sklearn_'):
-                base_model = model_name.split('_')[1]
-                return getattr(self.config.models.sklearn, base_model)
-            return getattr(self.config.models, model_name)
+            config_name = model_name.replace('_', '')  # Remove underscores for config access
+            return getattr(self.config.models, config_name, None)
         except AttributeError:
+            self.app_logger.structured_log(
+                logging.WARNING,
+                f"No configuration found for model: {model_name}"
+            )
             return None
-
+    
     def get_model_config_value(self, model_name: str, key: str, default: Any) -> Any:
         """Get a configuration value with fallback to default."""
 
