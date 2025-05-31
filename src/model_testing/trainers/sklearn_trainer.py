@@ -14,10 +14,10 @@ from src.common.error_handling.base_error_handler import BaseErrorHandler
 
 class SKLearnTrainer(BaseTrainer):
     def __init__(self, 
-                 config: BaseConfigManager, 
-                 app_logger: BaseAppLogger, 
-                 error_handler: BaseErrorHandler,
-                 model_type: Optional[str] = None):
+                config: BaseConfigManager, 
+                app_logger: BaseAppLogger, 
+                error_handler: BaseErrorHandler,
+                model_type: Optional[str] = None):
         """
         Initialize SKLearn trainer with configuration and dependencies.
         
@@ -25,19 +25,18 @@ class SKLearnTrainer(BaseTrainer):
             config: Configuration manager
             app_logger: Application logger
             error_handler: Error handler
-            model_type: Type of sklearn model (e.g., 'RandomForest', 'LogisticRegression')
+            model_type: Type of sklearn model (e.g., 'randomforest', 'logisticregression')
         """
         self.config = config
         self.app_logger = app_logger
         self.error_handler = error_handler
-        # Create an instance of TrainerUtils which provides shared utility methods
         self.utils = TrainerUtils(app_logger, error_handler)
         self.model_type = model_type
         
         self.model_registry = {
-            'RandomForest': RandomForestClassifier,
-            'LogisticRegression': LogisticRegression,
-            'HistGradientBoosting': HistGradientBoostingClassifier
+            'randomforest': RandomForestClassifier,
+            'logisticregression': LogisticRegression,
+            'histgradientboosting': HistGradientBoostingClassifier
         }
         
         self.app_logger.structured_log(

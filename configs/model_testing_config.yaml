@@ -68,10 +68,9 @@ models:
   xgboost: false
   lightgbm: false
   catboost: false
-  sklearn:
-    randomforest: false
-    logisticregression: false
-    histgradientboosting: true
+  sklearn_randomforest: false
+  sklearn_logisticregression: false
+  sklearn_histgradientboosting: true
 
 
 # learning curve settings

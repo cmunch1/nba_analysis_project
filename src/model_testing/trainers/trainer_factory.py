@@ -36,23 +36,28 @@ class TrainerFactory:
             enabled = getattr(config.models, model_name)
 
             # Extract the base model name (strip '_config' suffix if present)
-            model_name = model_name.split('_')[0].upper()
+            base_model_name = model_name.split('_')[0].upper()
             
-            # Handle nested SKLearn models
-            if model_name == "SKLearn":
-                if hasattr(enabled, '__dict__'):  # Check if it's a namespace
-                    for sklearn_model, is_enabled in vars(enabled).items():
-                        if is_enabled:
-                            trainer_type = TrainerType.SKLEARN
-                            trainer_class = cls._trainer_map[trainer_type]
-                            trainers[f"SKLearn_{sklearn_model}"] = trainer_class(config, app_logger, error_handler)
+            # Handle sklearn models
+            if model_name.lower().startswith('sklearn_'):
+                if enabled:
+                    trainer_type = TrainerType.SKLEARN
+                    trainer_class = cls._trainer_map[trainer_type]
+                    # Extract the specific sklearn model type from the name
+                    sklearn_model_type = model_name.lower().replace('sklearn_', '')
+                    trainers[model_name.upper()] = trainer_class(
+                        config, 
+                        app_logger, 
+                        error_handler,
+                        model_type=sklearn_model_type
+                    )
             # Handle other model types
             elif enabled:
                 try:
-                    trainer_type = TrainerType[model_name.upper()]
+                    trainer_type = TrainerType[base_model_name]
                     trainer_class = cls._trainer_map[trainer_type]
-                    trainers[model_name] = trainer_class(config, app_logger, error_handler)
+                    trainers[base_model_name] = trainer_class(config, app_logger, error_handler)
                 except KeyError:
-                    raise ValueError(f"Unsupported model type: {model_name}")
+                    raise ValueError(f"Unsupported model type: {base_model_name}")
         
         return trainers 
