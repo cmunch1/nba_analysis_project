@@ -1,5 +1,0 @@
-mlflow==2.20.1
-pandas==2.2.2
-psutil==5.9.8
-scikit-learn==1.5.2
-xgboost==2.1.3
