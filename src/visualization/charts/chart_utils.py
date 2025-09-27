@@ -1,8 +1,8 @@
 import logging
 import matplotlib.pyplot as plt
 from typing import Tuple
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
+from ...common.core.app_logging.base_app_logger import BaseAppLogger
+from ...common.core.error_handling.base_error_handler import BaseErrorHandler
 
 class ChartUtils:
     """Utility class providing common chart methods."""

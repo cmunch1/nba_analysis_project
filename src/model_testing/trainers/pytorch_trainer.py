@@ -8,10 +8,10 @@ from torch.utils.data import DataLoader, TensorDataset
 from typing import Dict, Tuple, Optional, List
 from .base_trainer import BaseTrainer
 from .trainer_utils import TrainerUtils
-from src.common.data_classes import ModelTrainingResults
-from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.framework.data_classes import ModelTrainingResults
+from src.common.core.config_management.base_config_manager import BaseConfigManager
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
 
 class NeuralNetwork(nn.Module):
     """Simple feedforward neural network for binary classification."""

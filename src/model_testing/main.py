@@ -5,9 +5,9 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-from src.common.data_classes import (
-    ClassificationMetrics, 
-    ModelTrainingResults, 
+from src.common.framework.data_classes import (
+    ClassificationMetrics,
+    ModelTrainingResults,
     PreprocessingResults
 )
 from .di_container import ModelTestingDIContainer

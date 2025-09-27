@@ -1,4 +1,4 @@
-from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
 from .base_error_handler import BaseErrorHandler
 import logging
 

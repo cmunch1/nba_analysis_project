@@ -5,8 +5,8 @@ import contextlib
 from typing import Any, Dict, Optional, Callable
 from dataclasses import dataclass
 from contextvars import ContextVar
-from src.common.config_management.config_manager import BaseConfigManager
-from src.common.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.config_management.config_manager import BaseConfigManager
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
 
 
 # Context variable to store logging context

@@ -3,7 +3,7 @@ from typing import Callable
 import logging
 import contextlib
 
-from src.common.config_management.base_config_manager import BaseConfigManager
+from src.common.core.config_management.base_config_manager import BaseConfigManager
 
 class BaseAppLogger(ABC):
     """Abstract base class defining logging interface"""

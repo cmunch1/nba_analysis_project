@@ -4,7 +4,7 @@ and proper logging/error handling injection.
 """
 
 from dependency_injector import containers, providers
-from src.common.common_di_container import CommonDIContainer
+from src.common.core.common_di_container import CommonDIContainer
 from src.visualization.orchestration.chart_orchestrator import ChartOrchestrator
 from src.preprocessing.preprocessor import Preprocessor
 

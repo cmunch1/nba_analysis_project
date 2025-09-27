@@ -3,10 +3,10 @@ from typing import Dict, Optional
 import matplotlib.pyplot as plt
 from ..charts.chart_types import ChartType
 from ..charts.base_chart import BaseChart
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
-from ...common.config_management.base_config_manager import BaseConfigManager
-from ...common.data_classes import ModelTrainingResults
+from ...common.core.app_logging.base_app_logger import BaseAppLogger
+from ...common.core.error_handling.base_error_handler import BaseErrorHandler
+from ...common.core.config_management.base_config_manager import BaseConfigManager
+from ...common.framework.data_classes import ModelTrainingResults
 
 class BaseChartOrchestrator(ABC):
     """Abstract base class for chart orchestration."""

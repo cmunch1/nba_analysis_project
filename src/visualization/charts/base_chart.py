@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 import logging
 import matplotlib.pyplot as plt
 from typing import Any, Tuple, Optional
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
-from ...common.config_management.base_config_manager import BaseConfigManager
+from ...common.core.app_logging.base_app_logger import BaseAppLogger
+from ...common.core.error_handling.base_error_handler import BaseErrorHandler
+from ...common.core.config_management.base_config_manager import BaseConfigManager
 
 class BaseChart(ABC):
     @abstractmethod

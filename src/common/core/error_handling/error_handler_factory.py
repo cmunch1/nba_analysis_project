@@ -1,6 +1,6 @@
 from typing import Type, Optional
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.error_handler import (
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.error_handler import (
     ConfigurationError,
     WebDriverError,
     ScrapingError,

@@ -23,12 +23,12 @@ from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.base_error_handler import BaseErrorHandler
-from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
-from src.common.data_classes import (
-    PreprocessingResults, 
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
+from src.common.core.config_management.base_config_manager import BaseConfigManager
+from src.common.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.framework.data_classes import (
+    PreprocessingResults,
     PreprocessingStep
 )
 

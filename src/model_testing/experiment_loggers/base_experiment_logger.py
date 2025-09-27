@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 import matplotlib.pyplot as plt
 
-from src.common.data_classes import ModelTrainingResults
-from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
-from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.framework.data_classes import ModelTrainingResults
+from src.common.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.core.config_management.base_config_manager import BaseConfigManager
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
 from src.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 
 class BaseExperimentLogger(ABC):

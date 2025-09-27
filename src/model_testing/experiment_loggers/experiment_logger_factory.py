@@ -3,10 +3,10 @@ from typing import Type, Dict
 import logging
 from .base_experiment_logger import BaseExperimentLogger
 from .mlflow_logger import MLFlowLogger
-from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.base_error_handler import BaseErrorHandler
-from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.core.config_management.base_config_manager import BaseConfigManager
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
+from src.common.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
 from src.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 
 class LoggerType(Enum):

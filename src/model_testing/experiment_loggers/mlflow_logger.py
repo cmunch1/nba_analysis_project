@@ -14,9 +14,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from .base_experiment_logger import BaseExperimentLogger
-from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.core.config_management.base_config_manager import BaseConfigManager
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
 from src.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
 from src.common.data_classes import ModelTrainingResults

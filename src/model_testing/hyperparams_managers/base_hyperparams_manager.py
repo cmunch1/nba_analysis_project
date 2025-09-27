@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ...common.config_management.base_config_manager import BaseConfigManager
+from ...common.core.config_management.base_config_manager import BaseConfigManager
 from typing import Dict, Any, Optional
 
 class BaseHyperparamsManager(ABC):

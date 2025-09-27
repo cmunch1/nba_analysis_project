@@ -13,11 +13,11 @@ from typing import List, Tuple, Dict
 from pathlib import Path
 import json
 
-from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.data_access.base_data_access import BaseDataAccess
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
-from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.core.config_management.base_config_manager import BaseConfigManager
+from src.common.framework.data_access.base_data_access import BaseDataAccess
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
 
 class CSVDataAccess(BaseDataAccess):
     def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, 

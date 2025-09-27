@@ -8,9 +8,9 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold, TimeSeries
 import xgboost as xgb
 import lightgbm as lgb
 
-from src.common.config_management.base_config_manager import BaseConfigManager
-from src.common.app_logging.base_app_logger import BaseAppLogger
-from src.common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.core.config_management.base_config_manager import BaseConfigManager
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
 
 from .base_hyperparams_optimizer import BaseHyperparamsOptimizer
 from ..hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
