@@ -1,9 +1,9 @@
 from typing import Dict, Tuple
 import logging
 import numpy as np
-from ...common.data_classes import ModelTrainingResults
-from ...common.app_logging.base_app_logger import BaseAppLogger
-from ...common.error_handling.base_error_handler import BaseErrorHandler
+from src.common.framework.data_classes import ModelTrainingResults
+from src.common.core.app_logging.base_app_logger import BaseAppLogger
+from src.common.core.error_handling.base_error_handler import BaseErrorHandler
 
 class TrainerUtils:
     """Utility class providing common functionality for trainers."""
@@ -27,7 +27,7 @@ class TrainerUtils:
             
         except Exception as e:
             raise self.error_handler.create_error_handler(
-                'model_training',
+                'model_testing',
                 "Error converting metric scores",
                 original_error=str(e),
                 metric_name=metric_name
@@ -68,7 +68,7 @@ class TrainerUtils:
             
         except Exception as e:
             raise self.error_handler.create_error_handler(
-                'model_training',
+                'model_testing',
                 "Error processing learning curve data",
                 original_error=str(e)
             )

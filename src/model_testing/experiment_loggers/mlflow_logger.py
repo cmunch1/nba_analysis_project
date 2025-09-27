@@ -18,8 +18,8 @@ from src.common.core.config_management.base_config_manager import BaseConfigMana
 from src.common.core.app_logging.base_app_logger import BaseAppLogger
 from src.common.core.error_handling.base_error_handler import BaseErrorHandler
 from src.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
-from src.common.app_file_handling.base_app_file_handler import BaseAppFileHandler
-from src.common.data_classes import ModelTrainingResults
+from src.common.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from src.common.framework.data_classes import ModelTrainingResults
 
 
 class MLFlowLogger(BaseExperimentLogger):
@@ -53,10 +53,15 @@ class MLFlowLogger(BaseExperimentLogger):
         if hasattr(self.config, 'experiment_name'):
             experiment_name = self.config.experiment_name
         
-        # Set tracking URI if provided
+        # Set tracking URI if provided, otherwise use local file system
         if tracking_uri:
             mlflow.set_tracking_uri(tracking_uri)
-        
+        else:
+            # Ensure we use a Linux-compatible local path
+            local_mlruns_path = f"file://{os.path.abspath('mlruns')}"
+            mlflow.set_tracking_uri(local_mlruns_path)
+
+
         # Set experiment
         mlflow.set_experiment(experiment_name)
         

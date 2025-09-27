@@ -60,6 +60,7 @@ class ErrorHandlerFactory:
             
             # Logging errors
             'experiment_logger': ExperimentLoggerError,
+            'experiment_logging': ExperimentLoggerError,
         }
     
     def create_error_handler(

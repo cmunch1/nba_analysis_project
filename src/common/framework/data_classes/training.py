@@ -63,7 +63,7 @@ class ModelTrainingResults:
         self.target_data = y
         self.feature_names = X.columns.tolist()
 
-    def update_predictions(self, probability_predictions: NDArray[np.float_], 
+    def update_predictions(self, probability_predictions: NDArray[np.float64], 
                          threshold: float = 0.5) -> None:
         """Update probability and binary predictions"""
         self.probability_predictions = probability_predictions

@@ -10,6 +10,8 @@ keyfile
 geckodriver.log
 .env
 mlruns/
+mlruns_backup*/
+temp/
 .pytest_cache/
 zzz/
 .vscode/
