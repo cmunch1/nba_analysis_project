@@ -1,0 +1,1 @@
+"""Visualization orchestration and coordination components."""

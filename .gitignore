@@ -19,3 +19,4 @@ zzz/
 /logs/
 /logs/catboost_info/
 charts/
+*:Zone.Identifier

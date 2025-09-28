@@ -1,9 +1,5 @@
 ./
 ├── configs/
-│   ├── app_config.yaml
-│   ├── data_access_config.yaml
-│   ├── data_processing_config.yaml
-│   ├── feature_engineering_config.yaml
 │   ├── hyperparameters/
 │   │   ├── catboost/
 │   │   │   ├── baseline.json
@@ -11,29 +7,34 @@
 │   │   ├── lightgbm/
 │   │   │   ├── baseline.json
 │   │   │   └── current_best.json
-│   │   ├── sklearn/
-│   │   │   ├── histgb/
-│   │   │   │   ├── baseline.json
-│   │   │   │   └── current_best.json
-│   │   │   ├── logistic/
-│   │   │   │   ├── baseline.json
-│   │   │   │   └── current_best.json
-│   │   │   └── randomforest/
-│   │   │       ├── baseline.json
-│   │   │       └── current_best.json
+│   │   ├── pytorch/
+│   │   │   └── baseline.json
+│   │   ├── sklearn_histgradientboosting/
+│   │   │   ├── baseline.json
+│   │   │   └── current_best.json
+│   │   ├── sklearn_logisticregression/
+│   │   │   ├── baseline.json
+│   │   │   └── current_best.json
+│   │   ├── sklearn_randomforest/
+│   │   │   ├── baseline.json
+│   │   │   └── current_best.json
 │   │   └── xgboost/
 │   │       ├── baseline.json
 │   │       └── current_best.json
-│   ├── logging_config.yaml
-│   ├── model_testing_config.yaml
 │   ├── models/
 │   │   ├── catboost_config.yaml
 │   │   ├── lightgbm_config.yaml
-│   │   ├── sklearn/
-│   │   │   ├── histgb_config.yaml
-│   │   │   ├── logistic_config.yaml
-│   │   │   └── randomforest_config.yaml
+│   │   ├── pytorch_config.yaml
+│   │   ├── sklearn_histgradientboosting_config.yaml
+│   │   ├── sklearn_logisticregression_config.yaml
+│   │   ├── sklearn_randomforest_config.yaml
 │   │   └── xgboost_config.yaml
+│   ├── app_config.yaml
+│   ├── app_logging_config.yaml
+│   ├── data_access_config.yaml
+│   ├── data_processing_config.yaml
+│   ├── feature_engineering_config.yaml
+│   ├── model_testing_config.yaml
 │   ├── optuna_config.yaml
 │   ├── preprocessing_config.yaml
 │   ├── visualization_config.yaml
@@ -59,10 +60,12 @@
 │   │   ├── CatBoost_val_predictions.csv
 │   │   ├── LGBM_oof_predictions.csv
 │   │   ├── LGBM_val_predictions.csv
+│   │   ├── lightgbm_val_predictions.csv
 │   │   ├── SKLearn_HistGradientBoosting_val_predictions.csv
 │   │   ├── SKLearn_RandomForest_val_predictions.csv
 │   │   ├── XGBoost_oof_predictions.csv
-│   │   └── XGBoost_val_predictions.csv
+│   │   ├── XGBoost_val_predictions.csv
+│   │   └── xgboost_val_predictions.csv
 │   ├── processed/
 │   │   ├── column_mapping.json
 │   │   ├── games_boxscores.csv
@@ -76,111 +79,51 @@
 │   └── training/
 │       ├── training_data.csv
 │       └── validation_data.csv
-├── directory_tree.txt
 ├── docs/
 │   ├── commentary/
 │   │   └── Webscraping.md
 │   ├── data/
 │   │   ├── column_mapping.json
 │   │   └── nba-boxscore-data-dictionary.md
-│   ├── readme.md
-│   └── src/
-│       └── readme.md
+│   ├── src/
+│   │   └── readme.md
+│   └── readme.md
 ├── hyperparameter_history/
 │   ├── LGBM_history.json
 │   └── XGBoost_history.json
-├── logs/
-│   ├── catboost_info/
-│   │   ├── fold_1/
-│   │   │   ├── catboost_training.json
-│   │   │   ├── learn/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── learn_error.tsv
-│   │   │   ├── test/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── test_error.tsv
-│   │   │   ├── time_left.tsv
-│   │   │   └── tmp/
-│   │   ├── fold_2/
-│   │   │   ├── catboost_training.json
-│   │   │   ├── learn/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── learn_error.tsv
-│   │   │   ├── test/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── test_error.tsv
-│   │   │   ├── time_left.tsv
-│   │   │   └── tmp/
-│   │   ├── fold_3/
-│   │   │   ├── catboost_training.json
-│   │   │   ├── learn/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── learn_error.tsv
-│   │   │   ├── test/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── test_error.tsv
-│   │   │   ├── time_left.tsv
-│   │   │   └── tmp/
-│   │   ├── fold_4/
-│   │   │   ├── catboost_training.json
-│   │   │   ├── learn/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── learn_error.tsv
-│   │   │   ├── test/
-│   │   │   │   └── events.out.tfevents
-│   │   │   ├── test_error.tsv
-│   │   │   ├── time_left.tsv
-│   │   │   └── tmp/
-│   │   └── fold_5/
-│   │       ├── catboost_training.json
-│   │       ├── learn/
-│   │       │   └── events.out.tfevents
-│   │       ├── learn_error.tsv
-│   │       ├── test/
-│   │       │   └── events.out.tfevents
-│   │       ├── test_error.tsv
-│   │       ├── time_left.tsv
-│   │       └── tmp/
-│   ├── data_processing.log
-│   ├── error_file.log
-│   ├── feature_engineering.log
-│   ├── model_testing.log
-│   ├── model_testing.log.1
-│   ├── model_testing.log.2
-│   ├── model_testing.log.3
-│   └── webscraping.log
 ├── noteboooks/
 │   ├── baseline.ipynb
 │   └── eda.ipynb
-├── README.md
-├── spec-list.txt
 ├── src/
 │   ├── common/
-│   │   ├── app_file_handling/
-│   │   │   ├── app_file_handler.py
-│   │   │   └── base_app_file_handler.py
-│   │   ├── app_logging/
-│   │   │   ├── app_logger.py
-│   │   │   └── base_app_logger.py
-│   │   ├── common_di_container.py
-│   │   ├── config_management/
-│   │   │   ├── base_config_manager.py
-│   │   │   ├── config_manager.py
-│   │   │   └── config_path.yaml
-│   │   ├── data_access/
-│   │   │   ├── base_data_access.py
-│   │   │   └── csv_data_access.py
-│   │   ├── data_classes/
-│   │   │   ├── metrics.py
-│   │   │   ├── preprocessing.py
-│   │   │   └── training.py
-│   │   ├── data_validation/
-│   │   │   ├── base_data_validator.py
-│   │   │   └── data_validator.py
-│   │   └── error_handling/
-│   │       ├── base_error_handler.py
-│   │       ├── error_handler.py
-│   │       └── error_handler_factory.py
+│   │   ├── core/
+│   │   │   ├── app_file_handling/
+│   │   │   │   ├── app_file_handler.py
+│   │   │   │   └── base_app_file_handler.py
+│   │   │   ├── app_logging/
+│   │   │   │   ├── app_logger.py
+│   │   │   │   └── base_app_logger.py
+│   │   │   ├── config_management/
+│   │   │   │   ├── base_config_manager.py
+│   │   │   │   ├── config_manager.py
+│   │   │   │   └── config_path.yaml
+│   │   │   ├── error_handling/
+│   │   │   │   ├── base_error_handler.py
+│   │   │   │   ├── error_handler.py
+│   │   │   │   └── error_handler_factory.py
+│   │   │   └── common_di_container.py
+│   │   ├── framework/
+│   │   │   ├── data_access/
+│   │   │   │   ├── base_data_access.py
+│   │   │   │   └── csv_data_access.py
+│   │   │   ├── data_classes/
+│   │   │   │   ├── metrics.py
+│   │   │   │   ├── preprocessing.py
+│   │   │   │   └── training.py
+│   │   │   └── base_data_validator.py
+│   │   ├── hyperparameter_history/
+│   │   └── nba/
+│   │       └── data_validator.py
 │   ├── data_processing/
 │   │   ├── abstract_data_processing_classes.py
 │   │   ├── di_container.py
@@ -193,8 +136,6 @@
 │   │   ├── feature_selector.py
 │   │   └── main.py
 │   ├── model_testing/
-│   │   ├── base_model_testing.py
-│   │   ├── di_container.py
 │   │   ├── experiment_loggers/
 │   │   │   ├── base_experiment_logger.py
 │   │   │   ├── experiment_logger_factory.py
@@ -206,16 +147,19 @@
 │   │   │   ├── base_hyperparams_optimizer.py
 │   │   │   ├── hyperparams_optimizer_factory.py
 │   │   │   └── optuna_optimizer.py
+│   │   ├── trainers/
+│   │   │   ├── base_trainer.py
+│   │   │   ├── catboost_trainer.py
+│   │   │   ├── lightgbm_trainer.py
+│   │   │   ├── pytorch_trainer.py
+│   │   │   ├── sklearn_trainer.py
+│   │   │   ├── trainer_factory.py
+│   │   │   ├── trainer_utils.py
+│   │   │   └── xgboost_trainer.py
+│   │   ├── base_model_testing.py
+│   │   ├── di_container.py
 │   │   ├── main.py
-│   │   ├── model_tester.py
-│   │   └── trainers/
-│   │       ├── base_trainer.py
-│   │       ├── catboost_trainer.py
-│   │       ├── lightgbm_trainer.py
-│   │       ├── sklearn_trainer.py
-│   │       ├── trainer_factory.py
-│   │       ├── trainer_utils.py
-│   │       └── xgboost_trainer.py
+│   │   └── model_tester.py
 │   ├── preprocessing/
 │   │   ├── base_preprocessor.py
 │   │   └── preprocessor.py
@@ -242,15 +186,15 @@
 │   │       ├── base_chart_orchestrator.py
 │   │       └── chart_orchestrator.py
 │   └── webscraping/
+│       ├── old/
+│       │   ├── test_websraping.py
+│       │   └── webscraping_old.py
 │       ├── abstract_scraper_classes.py
 │       ├── boxscore_scraper.py
 │       ├── di_container.py
 │       ├── main.py
 │       ├── matchup_validator.py
 │       ├── nba_scraper.py
-│       ├── old/
-│       │   ├── test_websraping.py
-│       │   └── webscraping_old.py
 │       ├── page_scraper.py
 │       ├── readme.md
 │       ├── schedule_scraper.py
@@ -258,10 +202,15 @@
 │       ├── test_page_scraper.py
 │       ├── utils.py
 │       └── web_driver.py
-└── tests/
-    └── webscraping/
-        ├── test_boxscore_scraper.py
-        ├── test_integration.py
-        ├── test_nba_scraper.py
-        ├── test_page_scraper.py
-        └── test_schedule_scraper.py
+├── tests/
+│   └── webscraping/
+│       ├── test_boxscore_scraper.py
+│       ├── test_integration.py
+│       ├── test_nba_scraper.py
+│       ├── test_page_scraper.py
+│       └── test_schedule_scraper.py
+├── directory_tree.txt
+├── interfaces.md
+├── pyproject.toml
+├── README.md
+└── uv.lock
