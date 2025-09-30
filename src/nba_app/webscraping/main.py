@@ -58,23 +58,29 @@ def main() -> None:
     """
 
     container = DIContainer()
-    config = container.config()
-    data_access = container.data_access()
-    nba_scraper = container.nba_scraper()
-    web_driver = container.web_driver_factory()
-    data_validator = container.data_validator()
+    
+    # Configure basic logging first
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(LOG_FILE),
+            logging.StreamHandler()
+        ]
+    )
+    logger = logging.getLogger(__name__)
     
     try:
-        # Configure basic logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(LOG_FILE),
-                logging.StreamHandler()
-            ]
-        )
-        logger = logging.getLogger(__name__)
+        config = container.config()
+
+        # Setup the app logger
+        app_logger = container.app_logger()
+        app_logger.setup(LOG_FILE)
+
+        data_access = container.data_access()
+        nba_scraper = container.nba_scraper()
+        web_driver = container.web_driver_factory()
+        data_validator = container.data_validator()
 
         structured_log(logger, logging.INFO, "Starting web scraping process", 
                        app_version=config.app_version, 
@@ -103,11 +109,11 @@ def main() -> None:
 
     except (ConfigurationError, ScrapingError, DataValidationError, 
             DataStorageError, DataProcessingError) as e:
-        _handle_known_error(error_logger, e)
+        _handle_known_error(logger, e)
     except Exception as e:
-        _handle_unexpected_error(error_logger, e)
+        _handle_unexpected_error(logger, e)
     finally:
-        _close_web_driver(web_driver, error_logger)
+        _close_web_driver(container.web_driver_factory() if 'container' in locals() else None, logger)
 
 
 def scrape_boxscores(nba_scraper, seasons, first_start_date, logger):
@@ -196,6 +202,8 @@ def _handle_unexpected_error(error_logger, e):
     sys.exit(6)
 
 def _close_web_driver(web_driver, error_logger):
+    if web_driver is None:
+        return
     try:
         web_driver.close_driver()
     except WebDriverError as e:

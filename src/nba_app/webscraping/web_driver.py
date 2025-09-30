@@ -15,6 +15,7 @@ import logging
 
 from .abstract_scraper_classes import AbstractWebDriver
 from platform_core.core.config_management.base_config_manager import BaseConfigManager
+from platform_core.core.app_logging.base_app_logger import BaseAppLogger
 from platform_core.core.error_handling.error_handler import (
     WebDriverError,
     ConfigurationError
@@ -23,24 +24,26 @@ from platform_core.core.error_handling.error_handler import (
 logger = logging.getLogger(__name__)
 
 class CustomWebDriver(AbstractWebDriver):
-    def __init__(self, config: BaseConfigManager):
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger):
         """
         Initialize the WebDriver with configuration.
 
         Args:
             config (BaseConfigManager): Configuration object.
+            app_logger (BaseAppLogger): Logger instance for error handling.
 
         Raises:
             ConfigurationError: If there's an issue with the provided configuration.
         """
         try:
             self.config = config
+            self.app_logger = app_logger
             self.browsers = self.config.browsers if hasattr(self.config, 'browsers') else ['chrome', 'firefox']
             logger.info(f"WebDriver initialized with browsers: {self.browsers}")
         except AttributeError as e:
-            raise ConfigurationError(f"Missing required configuration: {str(e)}")
+            raise ConfigurationError(f"Missing required configuration: {str(e)}", self.app_logger)
         except Exception as e:
-            raise ConfigurationError(f"Error initializing WebDriver: {str(e)}")
+            raise ConfigurationError(f"Error initializing WebDriver: {str(e)}", self.app_logger)
 
     def create_driver(self) -> webdriver.Remote:
         """
@@ -61,7 +64,7 @@ class CustomWebDriver(AbstractWebDriver):
             except Exception as e:
                 logger.warning(f"Failed to create {browser.capitalize()} WebDriver: {str(e)}")
         
-        raise WebDriverError("Failed to create WebDriver with any available browser")
+        raise WebDriverError("Failed to create WebDriver with any available browser", self.app_logger)
 
     def _create_browser_driver(self, browser: str) -> webdriver.Remote:
         """
@@ -83,7 +86,7 @@ class CustomWebDriver(AbstractWebDriver):
         elif browser == "firefox":
             return self._create_firefox_driver()
         else:
-            raise WebDriverError(f"Unsupported browser: {browser}")
+            raise WebDriverError(f"Unsupported browser: {browser}", self.app_logger)
 
     def _create_chrome_driver(self) -> webdriver.Chrome:
         """
@@ -100,7 +103,7 @@ class CustomWebDriver(AbstractWebDriver):
             self._add_browser_options(chrome_options, 'chrome_options')
             return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
         except Exception as e:
-            raise WebDriverError(f"Error creating Chrome WebDriver: {str(e)}")
+            raise WebDriverError(f"Error creating Chrome WebDriver: {str(e)}", self.app_logger)
 
     def _create_firefox_driver(self) -> webdriver.Firefox:
         """
@@ -117,7 +120,7 @@ class CustomWebDriver(AbstractWebDriver):
             self._add_browser_options(firefox_options, 'firefox_options')
             return webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=firefox_options)
         except Exception as e:
-            raise WebDriverError(f"Error creating Firefox WebDriver: {str(e)}")
+            raise WebDriverError(f"Error creating Firefox WebDriver: {str(e)}", self.app_logger)
 
     def _add_browser_options(self, options: webdriver.ChromeOptions | webdriver.FirefoxOptions, config_key: str) -> None:
         """
@@ -146,7 +149,7 @@ class CustomWebDriver(AbstractWebDriver):
             else:
                 logger.warning(f"No {config_key} found in configuration")
         except Exception as e:
-            raise ConfigurationError(f"Error processing browser options: {str(e)}")
+            raise ConfigurationError(f"Error processing browser options: {str(e)}", self.app_logger)
 
     @staticmethod
     def verify_browser_installations() -> List[str]:
@@ -185,4 +188,4 @@ class CustomWebDriver(AbstractWebDriver):
                 self.driver.quit()
                 logger.info("WebDriver successfully closed")
         except Exception as e:
-            raise WebDriverError(f"Error closing WebDriver: {str(e)}")
+            raise WebDriverError(f"Error closing WebDriver: {str(e)}", self.app_logger)

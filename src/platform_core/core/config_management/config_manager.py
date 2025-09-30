@@ -70,35 +70,60 @@ class ConfigManager(BaseConfigManager):
 
     def _load_nested_configurations(self) -> Dict[str, Any]:
         """
-        Recursively load configurations from nested directories.
+        Recursively load configurations from nested directories and core configs.
         Returns a dictionary with nested configuration data.
         """
         nested_configs = {}
-        
+
+        # Load from current app directory's subdirectories
         for item in self.config_dir.rglob('*.yaml'):
             # Skip files in the root config directory
             if item.parent == self.config_dir:
                 continue
-                
+
             try:
                 # Create nested dictionary structure based on directory path
                 current_level = nested_configs
                 relative_path = item.relative_to(self.config_dir)
                 parts = list(relative_path.parts[:-1])  # Exclude filename
-                
+
                 # Build nested structure
                 for part in parts:
                     current_level = current_level.setdefault(part, {})
-                
+
                 # Load and add config file content
                 config_content = self.app_file_handler.read_yaml(item)
                 key = item.stem
                 current_level[key] = config_content
-                
+
                 logger.debug(f"Loaded nested configuration from: {item}")
             except Exception as e:
                 logger.error(f"Error loading nested configuration {item}: {str(e)}")
                 raise
+
+        # Also load core configs from the parallel core directory
+        core_config_dir = self.config_dir.parent / 'core'
+        if core_config_dir.exists():
+            for item in core_config_dir.rglob('*.yaml'):
+                try:
+                    # Create nested dictionary structure with 'core' prefix
+                    current_level = nested_configs.setdefault('core', {})
+                    relative_path = item.relative_to(core_config_dir)
+                    parts = list(relative_path.parts[:-1])  # Exclude filename
+
+                    # Build nested structure
+                    for part in parts:
+                        current_level = current_level.setdefault(part, {})
+
+                    # Load and add config file content
+                    config_content = self.app_file_handler.read_yaml(item)
+                    key = item.stem
+                    current_level[key] = config_content
+
+                    logger.debug(f"Loaded core configuration from: {item}")
+                except Exception as e:
+                    logger.error(f"Error loading core configuration {item}: {str(e)}")
+                    raise
 
         return nested_configs
 

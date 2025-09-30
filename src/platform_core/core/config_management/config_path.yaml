@@ -1,2 +1,2 @@
-# Configuration path settings 
-default_config_dir: "configs" 
+# Configuration path settings
+default_config_dir: "configs/nba" 

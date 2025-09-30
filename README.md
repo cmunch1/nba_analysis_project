@@ -35,7 +35,6 @@ This is a comprehensive rework of my original NBA prediction machine learning pr
 
 ### Deployment Strategy
 - Multi-provider deployment architecture
-- Self-hosted solutions
 - Cloud platform integration
 - Redundant deployment systems
 

@@ -1,0 +1,772 @@
+NBA ANALYSIS PROJECT - CONFIGURATION REFERENCE
+==================================================
+
+Generated on: 2025-09-28 13:57:29
+
+This document provides a comprehensive reference for all configuration
+settings available in the NBA Analysis Project.
+
+GENERAL SETTINGS
+----------------
+
+api_rate_limit: not implemented (str)
+app_name: NBA Prediction App (str)
+app_version: 1.0.0 (str)
+browsers: [list with 2 items]
+  - chrome
+  - firefox
+column_mapping_file: column_mapping.json (str)
+combined_cases_suffix: all (str)
+config_dir: configs/nba (PosixPath)
+cumulative_scraped_directory: data/cumulative_scraped/ (str)
+data_retention_days: not implemented (str)
+date_column: GAME_DATE (str)
+day_class_name: ScheduleDay_sdDay__3s2Xt (str)
+default_language: en-US (str)
+default_percentage_value: 75 (int)
+dropdown_class_name: DropDown_select__4pIg9 (str)
+dynamic_content_timeout: 30 (int)
+elo_change_column: elo_change (str)
+elo_update_new_rows_only: False (bool)
+elo_width: 400 (int)
+engineered_data_directory: data/engineered/ (str)
+engineered_data_file: engineered_features.csv (str)
+environment: development (str)
+evaluation_data_directory: data/evaluation/ (str)
+evaluation_data_file: evaluation_data.csv (str)
+extend_rolling_avgs: True (bool)
+extend_streaks: True (bool)
+full_scrape: False (bool)
+game_centric_data_file: games_boxscores.csv (str)
+game_date_header_variations: [list with 4 items]
+  - Game Date
+  - Game_Date
+  - GAME DATE
+  - Game Date
+game_id_column: GAME_ID (str)
+game_info_columns: [list with 7 items]
+  - game_id
+  - season
+  - game_date
+  - sub_season_id
+  - is_playoff
+  - is_overtime
+  - min
+game_links_class_name: Anchor_anchor__cSc3P TabLink_link__f_15h (str)
+games_per_day_class_name: ScheduleDay_sdGames__NGdO5 (str)
+home_advantage: 100 (int)
+home_game_suffix: home (str)
+home_team_column: is_home_team (str)
+home_team_prefix: h_ (str)
+include_postseason: True (bool)
+initial_elo: 1500 (int)
+is_overtime_column: is_overtime (str)
+is_playoff_column: is_playoff (str)
+k_factor: 20 (int)
+maintainer_email: cmunch1@yahoo.com (str)
+matchup_rolling_avg_periods: [list with 4 items]
+  - 1
+  - 2
+  - 3
+  - 4
+max_retries: 2 (int)
+nba_boxscores_url: https://www.nba.com/stats/teams/boxscores (str)
+nba_schedule_url: https://www.nba.com/schedule (str)
+new_date_column: game_date (str)
+new_game_id_column: game_id (str)
+new_team_id_column: team_id (str)
+newly_scraped_directory: data/newly_scraped/ (str)
+no_data_class_name: NoDataMessage_base__xUA61 (str)
+off_season_start_month: 8 (int)
+opp_elo_before_column: elo_opp_before (str)
+page_load_timeout: 30 (int)
+pagination_class_name: Pagination_pageDropdown__KgjBU (str)
+play_in_month: 4 (int)
+play_in_season_text: PlayIn (str)
+playoffs_season_text: Playoffs (str)
+predictions_directory: data/predictions/ (str)
+processed_data_directory: data/processed/ (str)
+processed_schema: [list with 73 items]
+  - game_id
+  - season
+  - game_date
+  - sub_season_id
+  - is_playoff
+  - is_overtime
+  - min
+  - team_id
+  - is_home_team
+  - team
+  - match_up
+  - pts
+  - fgm
+  - fga
+  - fg_pct
+  - 3pm
+  - 3pa
+  - 3p_pct
+  - ftm
+  - fta
+  - ft_pct
+  - oreb
+  - dreb
+  - reb
+  - ast
+  - tov
+  - stl
+  - blk
+  - pf
+  - plus_minus
+  - off_rtg
+  - def_rtg
+  - net_rtg
+  - ast_pct
+  - ast_turnover_ratio
+  - ast_ratio
+  - oreb_pct
+  - dreb_pct
+  - reb_pct
+  - tov_pct
+  - efg_pct
+  - ts_pct
+  - pace
+  - pie
+  - fta_rate
+  - opp_efg_pct
+  - opp_fta_rate
+  - opp_tov_pct
+  - opp_oreb_pct
+  - pts_off_to
+  - 2nd_pts
+  - fbps
+  - pitp
+  - opp_pts_off_to
+  - opp_2nd_pts
+  - opp_fbps
+  - opp_pitp
+  - pct_fga_2pt
+  - pct_fga_3pt
+  - pct_pts_2pt
+  - pct_pts_2pt_mr
+  - pct_pts_3pt
+  - pct_pts_fbps
+  - pct_pts_ft
+  - pct_pts_off_to
+  - pct_pts_pitp
+  - 2fgm_pct_ast
+  - 2fgm_pct_uast
+  - 3fgm_pct_ast
+  - 3fgm_pct_uast
+  - fgm_pct_ast
+  - fgm_pct_uast
+  - is_win
+regular_game_minutes: 240 (int)
+regular_season_game_id_threshold: 2 (int)
+regular_season_start_month: 10 (int)
+regular_season_text: Regular+Season (str)
+retry_delay: 2 (int)
+schedule_game_id_column: game_id (str)
+schedule_home_team_id_column: home_id (str)
+schedule_preview_text: PREVIEW (str)
+schedule_visitor_team_id_column: visitor_id (str)
+scraped_boxscore_files: [list with 5 items]
+  - games_traditional.csv
+  - games_advanced.csv
+  - games_four-factors.csv
+  - games_misc.csv
+  - games_scoring.csv
+season_column: season (str)
+season_end: 7-1 (str)
+season_start: 10-1 (str)
+season_year_offset: 2000 (int)
+start_season: 2006 (int)
+stat_types: [list with 5 items]
+  - traditional
+  - advanced
+  - four-factors
+  - misc
+  - scoring
+stratify_column: month (str)
+sub_season_id_column: sub_season_id (str)
+table_class_name: Crom_table__p1iZz (str)
+target_column: is_win (str)
+team_centric_data_file: teams_boxscores.csv (str)
+team_elo_after_column: elo_team_after (str)
+team_elo_before_column: elo_team_before (str)
+team_id_column: TEAM_ID (str)
+team_info_columns: [list with 4 items]
+  - team_id
+  - is_home_team
+  - team
+  - match_up
+team_rolling_avg_periods: [list with 6 items]
+  - 3
+  - 5
+  - 7
+  - 10
+  - 15
+  - 20
+teams_and_games_class_name: Anchor_anchor__cSc3P (str)
+teams_links_class_name: Anchor_anchor__cSc3P Link_styled__okbXW (str)
+timezone: UTC (str)
+todays_games_ids_file: todays_games_ids.csv (str)
+todays_matchups_file: todays_matchups.csv (str)
+training_data_directory: data/training/ (str)
+training_data_file: training_data.csv (str)
+validation_data_file: validation_data.csv (str)
+validation_last_n_seasons: 3 (int)
+validation_split: 0.2 (float)
+visitor_game_suffix: visitor (str)
+visitor_team_prefix: v_ (str)
+wait_time: 10 (int)
+win_column: is_win (str)
+win_prob_column: elo_win_prob (str)
+
+APP_FILE_HANDLER
+----------------
+
+
+CHROME_OPTIONS
+--------------
+
+--disable-3d-apis: None (NoneType)
+--disable-blink-features=AutomationControlled: None (NoneType)
+--disable-dev-shm-usage: None (NoneType)
+--disable-extensions: None (NoneType)
+--disable-features=VizDisplayCompositor: None (NoneType)
+--disable-gpu: None (NoneType)
+--disable-notifications: None (NoneType)
+--disable-popup-blocking: None (NoneType)
+--disable-web-security: None (NoneType)
+--headless: new (str)
+--ignore-certificate-errors: None (NoneType)
+--ignore-ssl-errors: None (NoneType)
+--no-sandbox: None (NoneType)
+--remote-debugging-port: 9222 (int)
+--single-process: None (NoneType)
+--start-maximized: None (NoneType)
+--user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3 (str)
+
+CORE
+----
+
+app_logging_config:
+  error_backup_count: 1 (int)
+  error_filename_fallback: error_file.log (str)
+  error_size_max: 2 (int)
+  log_backup_count: 1 (int)
+  log_current_run_only: True (bool)
+  log_filename_fallback: log_file.log (str)
+  log_level: INFO (str)
+  log_path: ./logs (str)
+  log_size_max: 2 (int)
+  log_to_console: True (bool)
+  log_to_file: True (bool)
+  model_testing_log_file: model_testing.log (str)
+  use_structured_logging: True (bool)
+model_testing_config:
+  calculate_shap_interactions: False (bool)
+  calculate_shap_values: True (bool)
+  categorical_features: [list with 2 items]
+    - h_team_id
+    - v_team_id
+  cross_validation_type: TimeSeriesSplit (str)
+  current_hyperparameters: /home/chris/projects/nba_analysis_project/src/platform_core/configs/hyperparameters.json (str)
+  experiment_description: NBA Predictor (str)
+  experiment_name: NBA Predictor (str)
+  generate_learning_curve_data: True (bool)
+  hyperparameter_history_dir: /home/chris/projects/nba_analysis_project/src/platform_core/hyperparameter_history (str)
+  hyperparameter_metadata: [list with 9 items]
+    - name
+    - metrics
+    - updated_at
+    - experiment_id
+    - run_id
+    - num_boost_round
+    - early_stopping
+    - enable_categorical
+    - categorical_features
+  log_experiment: True (bool)
+  max_shap_interaction_memory_gb: 256.0 (float)
+  models:
+    catboost: False (bool)
+    lightgbm: False (bool)
+    pytorch: False (bool)
+    sklearn_histgradientboosting: False (bool)
+    sklearn_logisticregression: False (bool)
+    sklearn_randomforest: False (bool)
+    xgboost: True (bool)
+  n_splits: 5 (int)
+  non_useful_columns: None (NoneType)
+  perform_oof_cross_validation: True (bool)
+  perform_preprocessing: False (bool)
+  perform_validation_set_testing: True (bool)
+  primary_id_column: game_id (str)
+  random_state: 42 (int)
+  save_oof_predictions: False (bool)
+  save_validation_predictions: True (bool)
+  sort_columns: [list with 2 items]
+    - season
+    - season_progress
+  sort_order: [list with 2 items]
+    - True
+    - True
+models:
+  catboost_config:
+    early_stopping_rounds: 100 (int)
+    num_boost_round: 10000 (int)
+    optimization:
+      n_trials: 100 (int)
+      param_space:
+        bagging_temperature: [list with 3 items]
+          - 0.0
+          - 1.0
+          - float
+        depth: [list with 3 items]
+          - 1
+          - 12
+          - int
+        l2_leaf_reg: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        leaf_estimation_iterations: [list with 3 items]
+          - 1
+          - 10
+          - int
+        learning_rate: [list with 4 items]
+          - 0.001
+          - 1.0
+          - float
+          - True
+        min_data_in_leaf: [list with 3 items]
+          - 1
+          - 100
+          - int
+        random_strength: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+    optimizer: Optuna (str)
+    perform_hyperparameter_optimization: False (bool)
+    static_params:
+      eval_metric: AUC (str)
+      loss_function: Logloss (str)
+      random_seed: 42 (int)
+      task_type: GPU (str)
+      verbose: False (bool)
+    use_baseline_hyperparameters: True (bool)
+    verbose_eval: 100 (int)
+  lightgbm_config:
+    early_stopping_rounds: 100 (int)
+    num_boost_round: 10000 (int)
+    optimization:
+      n_trials: 100 (int)
+      param_space:
+        bagging_fraction: [list with 4 items]
+          - 1e-16
+          - 1.0
+          - float
+          - True
+        bagging_freq: [list with 3 items]
+          - 1
+          - 10
+          - int
+        feature_fraction: [list with 4 items]
+          - 1e-16
+          - 1.0
+          - float
+          - True
+        lambda_l1: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        lambda_l2: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        learning_rate: [list with 4 items]
+          - 0.001
+          - 1.0
+          - float
+          - True
+        max_depth: [list with 3 items]
+          - 1
+          - 15
+          - int
+        min_data_in_leaf: [list with 3 items]
+          - 1
+          - 100
+          - int
+        min_gain_to_split: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        num_leaves: [list with 3 items]
+          - 2
+          - 256
+          - int
+    optimizer: Optuna (str)
+    perform_hyperparameter_optimization: False (bool)
+    static_params:
+      device: cuda (str)
+      force_col_wise: True (bool)
+      metric: auc (str)
+      objective: binary (str)
+      random_state: 42 (int)
+      verbose: -1 (int)
+    use_baseline_hyperparameters: True (bool)
+    verbose_eval: 100 (int)
+  pytorch_config:
+    batch_size: 64 (int)
+    early_stopping_patience: 10 (int)
+    epochs: 100 (int)
+    optimization:
+      n_trials: 50 (int)
+      param_space:
+        batch_size: [list with 3 items]
+          - 32
+          - 128
+          - int
+        dropout_rate: [list with 3 items]
+          - 0.1
+          - 0.5
+          - float
+        hidden_sizes: [list with 2 items]
+          - [[64, 32], [128, 64], [128, 64, 32], [256, 128, 64]]
+          - categorical
+        learning_rate: [list with 4 items]
+          - 0.0001
+          - 0.1
+          - float
+          - True
+        optimizer: [list with 2 items]
+          - ['adam', 'sgd']
+          - categorical
+        weight_decay: [list with 4 items]
+          - 1e-06
+          - 0.01
+          - float
+          - True
+    optimizer: Optuna (str)
+    perform_hyperparameter_optimization: False (bool)
+    static_params:
+      batch_size: 64 (int)
+      early_stopping_patience: 10 (int)
+      epochs: 100 (int)
+      optimizer: adam (str)
+      random_state: 42 (int)
+    use_baseline_hyperparameters: True (bool)
+  sklearn_histgradientboosting_config:
+    optimization:
+      n_trials: 100 (int)
+      param_space:
+        l2_regularization: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        learning_rate: [list with 4 items]
+          - 0.001
+          - 1.0
+          - float
+          - True
+        max_bins: [list with 3 items]
+          - 2
+          - 255
+          - int
+        max_depth: [list with 3 items]
+          - 1
+          - 20
+          - int
+        max_iter: [list with 3 items]
+          - 10
+          - 1000
+          - int
+        min_samples_leaf: [list with 3 items]
+          - 1
+          - 100
+          - int
+    optimizer: Optuna (str)
+    perform_hyperparameter_optimization: False (bool)
+    static_params:
+      random_state: 42 (int)
+      verbose: 0 (int)
+    use_baseline_hyperparameters: True (bool)
+  sklearn_logisticregression_config:
+    optimization:
+      n_trials: 100 (int)
+      param_space:
+        C: [list with 4 items]
+          - 0.0001
+          - 1.0e4
+          - float
+          - True
+        class_weight: [list with 3 items]
+          - None
+          - balanced
+          - categorical
+        penalty: [list with 3 items]
+          - l1
+          - l2
+          - categorical
+        solver: [list with 3 items]
+          - saga
+          - liblinear
+          - categorical
+    optimizer: Optuna (str)
+    perform_hyperparameter_optimization: False (bool)
+    static_params:
+      max_iter: 1000 (int)
+      n_jobs: -1 (int)
+      random_state: 42 (int)
+      verbose: 0 (int)
+    use_baseline_hyperparameters: True (bool)
+  sklearn_randomforest_config:
+    optimization:
+      n_trials: 100 (int)
+      param_space:
+        max_depth: [list with 3 items]
+          - 1
+          - 20
+          - int
+        max_features: [list with 3 items]
+          - 0.1
+          - 1.0
+          - float
+        min_samples_leaf: [list with 3 items]
+          - 1
+          - 10
+          - int
+        min_samples_split: [list with 3 items]
+          - 2
+          - 20
+          - int
+        n_estimators: [list with 3 items]
+          - 10
+          - 1000
+          - int
+    optimizer: Optuna (str)
+    perform_hyperparameter_optimization: False (bool)
+    static_params:
+      n_jobs: -1 (int)
+      random_state: 42 (int)
+      verbose: 0 (int)
+    use_baseline_hyperparameters: True (bool)
+  xgboost_config:
+    early_stopping_rounds: 100 (int)
+    enable_categorical: False (bool)
+    num_boost_round: 10000 (int)
+    optimization:
+      n_trials: 100 (int)
+      param_space:
+        alpha: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        colsample_bytree: [list with 4 items]
+          - 1e-16
+          - 1.0
+          - float
+          - True
+        gamma: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        learning_rate: [list with 4 items]
+          - 0.001
+          - 1.0
+          - float
+          - True
+        max_bin: [list with 3 items]
+          - 2
+          - 256
+          - int
+        max_depth: [list with 3 items]
+          - 1
+          - 15
+          - int
+        min_child_weight: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        reg_lambda: [list with 4 items]
+          - 1e-16
+          - 12
+          - float
+          - True
+        scale_pos_weight: [list with 3 items]
+          - 1
+          - 15
+          - int
+        subsample: [list with 4 items]
+          - 1e-16
+          - 1.0
+          - float
+          - True
+    optimizer: Optuna (str)
+    perform_hyperparameter_optimization: False (bool)
+    static_params:
+      device: cuda (str)
+      eval_metric: auc (str)
+      objective: binary:logistic (str)
+      random_state: 42 (int)
+      tree_method: hist (str)
+    use_baseline_hyperparameters: True (bool)
+    verbose_eval: 100 (int)
+optuna_config:
+  optuna:
+    direction: maximize (str)
+    interval_steps: 1 (int)
+    n_startup_trials: 20 (int)
+    n_warmup_steps: 5 (int)
+    pruner: median (str)
+    scoring: auc (str)
+preprocessing_config:
+  preprocessing:
+    default:
+      categorical:
+        encoding: None (NoneType)
+        handling_missing: None (NoneType)
+      numerical:
+        handling_missing: None (NoneType)
+        handling_outliers: None (NoneType)
+        scaling: None (NoneType)
+    model_specific:
+      CatBoost:
+        categorical:
+          encoding: None (NoneType)
+          handling_missing: None (NoneType)
+        numerical:
+          handling_missing: None (NoneType)
+          handling_outliers: None (NoneType)
+          scaling: None (NoneType)
+      LightGBM:
+        categorical:
+          encoding: ordinal (str)
+          handling_missing: None (NoneType)
+        numerical:
+          handling_missing: None (NoneType)
+          handling_outliers: None (NoneType)
+          scaling: None (NoneType)
+      LogisticRegression:
+        categorical:
+          encoding: ordinal (str)
+          handling_missing: constant (str)
+        numerical:
+          handling_missing: mean (str)
+          handling_outliers: None (NoneType)
+          scaling: standard (str)
+      NeuralNetwork:
+        categorical:
+          encoding: None (NoneType)
+          handling_missing: constant (str)
+        numerical:
+          handling_missing: mean (str)
+          handling_outliers: clip (str)
+          scaling: standard (str)
+      RandomForest:
+        categorical:
+          encoding: ordinal (str)
+          handling_missing: None (NoneType)
+        numerical:
+          handling_missing: mean (str)
+          handling_outliers: None (NoneType)
+          scaling: None (NoneType)
+      XGBoost:
+        categorical:
+          encoding: ordinal (str)
+          handling_missing: None (NoneType)
+        numerical:
+          handling_missing: None (NoneType)
+          handling_outliers: None (NoneType)
+          scaling: None (NoneType)
+visualization_config:
+  chart_options:
+    feature_importance:
+      enabled: True (bool)
+      figure_size: [list with 2 items]
+        - 12
+        - 8
+      top_n: 20 (int)
+    learning_curve:
+      enabled: True (bool)
+      figure_size: [list with 2 items]
+        - 10
+        - 6
+      n_points: 10 (int)
+    metrics:
+      confusion_matrix:
+        color_map: Blues (str)
+        enabled: True (bool)
+        figure_size: [list with 2 items]
+          - 10
+          - 8
+      enabled: True (bool)
+      roc_curve:
+        enabled: True (bool)
+        figure_size: [list with 2 items]
+          - 10
+          - 8
+    model_interpretation:
+      background_samples: 100 (int)
+      enabled: True (bool)
+      force_plot:
+        enabled: True (bool)
+        figure_size: [list with 2 items]
+          - 12
+          - 6
+        force_plot_indices: [list with 3 items]
+          - 0
+          - 1
+          - 2
+    shap:
+      dependence_plots:
+        enabled: True (bool)
+        features: [list with 0 items]
+        figure_size: [list with 2 items]
+          - 10
+          - 7
+      enabled: True (bool)
+      summary_plot:
+        enabled: True (bool)
+        figure_size: [list with 2 items]
+          - 12
+          - 8
+        max_display: 20 (int)
+
+EXTERNAL_SERVICES
+-----------------
+
+team_logos_cdn: https://cdn.nba.com/logos/ (str)
+
+FEATURES
+--------
+
+enable_caching: not implemented (str)
+perform_data_validation: not implemented (str)
+use_proxy: not implemented (str)
+
+FIREFOX_OPTIONS
+---------------
+
+--disable-blink-features=AutomationControlled: None (NoneType)
+--headless: None (NoneType)
+--user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:53.0) Gecko/20100101 Firefox/53.0 (str)
+
+NOTIFICATIONS
+-------------
+
+alert_recipients: [list with 2 items]
+  - admin@example.com
+  - analyst@example.com
+email_alerts: not implemented (str)
+slack_alerts: not implemented (str)
