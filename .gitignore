@@ -20,3 +20,10 @@ zzz/
 /logs/catboost_info/
 charts/
 *:Zone.Identifier
+
+# Data files - large CSVs should not be in version control
+data/engineered/
+data/training/
+data/predictions/
+data/processed/
+data/cumulative_scraped/
