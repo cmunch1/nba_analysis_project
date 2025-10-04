@@ -24,13 +24,11 @@ from pytz import timezone
 
 from platform_core.core.config_management.base_config_manager import BaseConfigManager
 from platform_core.framework.data_access.base_data_access import BaseDataAccess
-from platform_core.core.error_handling.error_handler import (
-    DataValidationError, DataProcessingError, ConfigurationError
-)
+from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
 
 logger = logging.getLogger(__name__)
 
-def get_start_date_and_seasons(config: BaseConfigManager, data_access: BaseDataAccess) -> Tuple[str, List[str]]:
+def get_start_date_and_seasons(config: BaseConfigManager, data_access: BaseDataAccess, error_handler: ErrorHandlerFactory) -> Tuple[str, List[str]]:
     """
     Determine the start date and seasons for scraping.
     Example format: "10/1/2021", ["2023-24", "2022-23", "2021-22"]
@@ -53,27 +51,28 @@ def get_start_date_and_seasons(config: BaseConfigManager, data_access: BaseDataA
             first_start_date = f"{config.regular_season_start_month}/01/{config.start_season}"
         else:
             scraped_data, file_names = data_access.load_scraped_data(cumulative=True)
-            first_start_date, seasons = determine_scrape_start(scraped_data, config)
+            first_start_date, seasons = determine_scrape_start(scraped_data, config, error_handler)
 
             if first_start_date is None and seasons is None:
-                raise DataValidationError("Previous scraped data has inconsistent dates")
+                raise error_handler.create_error_handler('data_validation', "Previous scraped data has inconsistent dates")
             if first_start_date is None:
-                raise DataProcessingError("Error in determining scrape start date")
+                raise error_handler.create_error_handler('data_processing', "Error in determining scrape start date")
 
         logger.info(f"Start date: {first_start_date}, Seasons: {seasons}")
         return first_start_date, seasons
     except AttributeError as e:
-        raise ConfigurationError(f"Missing required configuration: {str(e)}")
+        raise error_handler.create_error_handler('configuration', f"Missing required configuration: {str(e)}")
     except Exception as e:
-        raise DataProcessingError(f"Error in get_start_date_and_seasons: {str(e)}")
+        raise error_handler.create_error_handler('data_processing', f"Error in get_start_date_and_seasons: {str(e)}")
 
-def determine_scrape_start(scraped_data: List[pd.DataFrame], config: BaseConfigManager) -> Tuple[Optional[str], Optional[List[str]]]:
+def determine_scrape_start(scraped_data: List[pd.DataFrame], config: BaseConfigManager, error_handler: ErrorHandlerFactory) -> Tuple[Optional[str], Optional[List[str]]]:
     """
     Determine where to begin scraping for more games based on the latest game in the dataset.
 
     Args:
         scraped_data (List[pd.DataFrame]): List of DataFrames that have been scraped.
         config (BaseConfigManager): The configuration object.
+        error_handler (ErrorHandlerFactory): Error handler factory for creating errors.
 
     Returns:
         Tuple[Optional[str], Optional[List[str]]]: A tuple containing the start date (str) and a list of seasons (List[str]).
@@ -86,20 +85,20 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: BaseConfigM
         last_date = None
         for i, df in enumerate(scraped_data):
             if df.empty:
-                raise DataValidationError(f"Dataframe {i} is empty")
-            
+                raise error_handler.create_error_handler('data_validation', f"Dataframe {i} is empty")
+
             date_col = next((col for col in config.game_date_header_variations if col in df.columns), None)
-        
+
             if date_col is None:
-                raise DataValidationError(f"Dataframe {i} does not have a recognized game date column")
-            
+                raise error_handler.create_error_handler('data_validation', f"Dataframe {i} does not have a recognized game date column")
+
             df[date_col] = pd.to_datetime(df[date_col])
             current_last_date = df[date_col].max()
-            
+
             if last_date is None:
                 last_date = current_last_date
             elif current_last_date != last_date:
-                raise DataValidationError(f"Dataframe {i} has a different last date: {current_last_date} than the first dataframe: {last_date}")
+                raise error_handler.create_error_handler('data_validation', f"Dataframe {i} has a different last date: {current_last_date} than the first dataframe: {last_date}")
 
         # Calculate the last season based on the last date
         # If the month is October or later, it's considered part of the next season
@@ -118,9 +117,10 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: BaseConfigM
         logger.info(f"Start date: {start_date}")
 
         return start_date, seasons
-    except DataValidationError:
-        raise
     except Exception as e:
-        raise DataProcessingError(f"Error in determine_scrape_start: {str(e)}")
+        # Check if it's already one of our error types
+        if hasattr(e, 'app_logger'):
+            raise
+        raise error_handler.create_error_handler('data_processing', f"Error in determine_scrape_start: {str(e)}")
 
 

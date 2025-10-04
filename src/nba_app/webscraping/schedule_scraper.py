@@ -13,18 +13,13 @@ import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
 
 from .abstract_scraper_classes import (
-    AbstractScheduleScraper, 
+    AbstractScheduleScraper,
     AbstractPageScraper,
 )
 from platform_core.framework.data_access.base_data_access import BaseDataAccess
 from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler import (
-    ScrapingError, DataExtractionError, DataValidationError, ElementNotFoundError,
-    PageLoadError, DataStorageError
-)
-from platform_core.core.app_logging import log_performance, log_context, structured_log
-
-logger = logging.getLogger(__name__)
+from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from platform_core.core.app_logging import log_performance, log_context, structured_log, AppLogger
 
 class ScheduleScraper(AbstractScheduleScraper):
     """
@@ -39,7 +34,7 @@ class ScheduleScraper(AbstractScheduleScraper):
     """
 
     @log_performance
-    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: AbstractPageScraper) -> None:
+    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: AbstractPageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
         """
         Initialize the ScheduleScraper with configuration, data access, and page scraper.
 
@@ -47,11 +42,15 @@ class ScheduleScraper(AbstractScheduleScraper):
             config (BaseConfigManager): Configuration object.
             data_access (BaseDataAccess): Data access object.
             page_scraper (AbstractPageScraper): Page scraper object.
+            app_logger (AppLogger): Application logger instance.
+            error_handler (ErrorHandlerFactory): Error handler factory instance.
         """
         self.config = config
         self.data_access = data_access
         self.page_scraper = page_scraper
-        structured_log(logger, logging.INFO, "ScheduleScraper initialized", 
+        self.app_logger = app_logger
+        self.error_handler = error_handler
+        self.app_logger.structured_log(logging.INFO, "ScheduleScraper initialized",
                        config_type=type(config).__name__,
                        data_access_type=type(data_access).__name__,
                        page_scraper_type=type(page_scraper).__name__)
@@ -75,10 +74,10 @@ class ScheduleScraper(AbstractScheduleScraper):
         """
         with log_context(operation="scrape_matchups", search_day=search_day):
             try:
-                structured_log(logger, logging.INFO, "Starting to scrape matchups", search_day=search_day)
+                self.app_logger.structured_log( logging.INFO, "Starting to scrape matchups", search_day=search_day)
                 
                 self.page_scraper.go_to_url(self.config.nba_schedule_url)
-                structured_log(logger, logging.INFO, "Navigated to NBA schedule URL")
+                self.app_logger.structured_log( logging.INFO, "Navigated to NBA schedule URL")
 
                 days_games = self._find_games_for_day(search_day)
                 
@@ -91,19 +90,18 @@ class ScheduleScraper(AbstractScheduleScraper):
 
                 self._save_matchups_and_games(matchups, games)
 
-                structured_log(logger, logging.INFO, "Successfully scraped and saved matchups", 
+                self.app_logger.structured_log( logging.INFO, "Successfully scraped and saved matchups", 
                                matchups_count=len(matchups), games_count=len(games))
 
                 return True
 
-            except (PageLoadError, ElementNotFoundError, ScrapingError, DataStorageError) as e:
-                structured_log(logger, logging.ERROR, "Error during scraping process", 
-                               error_message=str(e), error_type=type(e).__name__)
-                raise
             except Exception as e:
-                structured_log(logger, logging.ERROR, "Unexpected error occurred", 
+                # Check if it's already one of our error types (has app_logger)
+                if hasattr(e, 'app_logger'):
+                    raise
+                self.app_logger.structured_log( logging.ERROR, "Unexpected error occurred",
                                error_message=str(e), error_type=type(e).__name__)
-                raise ScrapingError(f"Unexpected error during scraping: {str(e)}")
+                raise self.error_handler.create_error_handler('scraping', f"Unexpected error during scraping: {str(e)}")
 
     @log_performance
     def _find_games_for_day(self, search_day: str) -> Optional[WebElement]:
@@ -121,27 +119,29 @@ class ScheduleScraper(AbstractScheduleScraper):
             ScrapingError: If there's an error during the scraping process.
         """
         try:
-            structured_log(logger, logging.INFO, "Searching for games", search_day=search_day)
+            self.app_logger.structured_log( logging.INFO, "Searching for games", search_day=search_day)
             
             game_days = self.page_scraper.get_elements_by_class(self.config.day_class_name)
             games_containers = self.page_scraper.get_elements_by_class(self.config.games_per_day_class_name)
 
             if not game_days or not games_containers:
-                raise ElementNotFoundError("Game days or games containers not found on the page")
+                raise self.error_handler.create_error_handler('element_not_found', "Game days or games containers not found on the page")
             
             for day, days_games in zip(game_days, games_containers):
                 if search_day.upper() == day.text[:3].upper():
-                    structured_log(logger, logging.INFO, "Found games for the specified day", search_day=search_day)
+                    self.app_logger.structured_log( logging.INFO, "Found games for the specified day", search_day=search_day)
                     return days_games
-            
-            structured_log(logger, logging.WARNING, "No games found for the specified day", search_day=search_day)
+
+
+            self.app_logger.structured_log( logging.WARNING, "No games found for the specified day", search_day=search_day)
             return None
-        except ElementNotFoundError:
-            raise 
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error finding games for day", 
+            # Check if it's already one of our error types (has app_logger)
+            if hasattr(e, 'app_logger'):
+                raise
+            self.app_logger.structured_log( logging.ERROR, "Error finding games for day",
                            search_day=search_day, error_message=str(e), error_type=type(e).__name__)
-            raise ScrapingError(f"Error finding games for day {search_day}: {str(e)}")
+            raise self.error_handler.create_error_handler('scraping', f"Error finding games for day {search_day}: {str(e)}")
 
     @log_performance
     def _extract_team_ids_schedule(self, todays_games: WebElement) -> List[List[str]]:
@@ -159,12 +159,12 @@ class ScheduleScraper(AbstractScheduleScraper):
             DataExtractionError: If there's an error extracting team IDs.
         """
         try:
-            structured_log(logger, logging.INFO, "Extracting team IDs from schedule")
+            self.app_logger.structured_log( logging.INFO, "Extracting team IDs from schedule")
                         
             links = self.page_scraper.get_links_by_class(self.config.teams_links_class_name, todays_games)
-            
+
             if not links:
-                raise ElementNotFoundError("Team links not found on the page")
+                raise self.error_handler.create_error_handler('element_not_found', "Team links not found on the page")
 
             teams_list = [i.get_attribute("href") for i in links]
 
@@ -173,15 +173,17 @@ class ScheduleScraper(AbstractScheduleScraper):
                 visitor_id = teams_list[i].partition("team/")[2].partition("/")[0]
                 home_id = teams_list[i+1].partition("team/")[2].partition("/")[0]
                 matchups.append([visitor_id, home_id])
-            
-            structured_log(logger, logging.INFO, "Team IDs extracted successfully", matchups_count=len(matchups))
+
+
+            self.app_logger.structured_log( logging.INFO, "Team IDs extracted successfully", matchups_count=len(matchups))
             return matchups
-        except ElementNotFoundError:
-            raise
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error extracting team IDs", 
+            # Check if it's already one of our error types (has app_logger)
+            if hasattr(e, 'app_logger'):
+                raise
+            self.app_logger.structured_log( logging.ERROR, "Error extracting team IDs",
                            error_message=str(e), error_type=type(e).__name__)
-            raise DataExtractionError(f"Error extracting team IDs: {str(e)}")
+            raise self.error_handler.create_error_handler('data_extraction', f"Error extracting team IDs: {str(e)}")
 
     @log_performance
     def _extract_game_ids_schedule(self, todays_games: WebElement) -> List[str]:
@@ -199,12 +201,12 @@ class ScheduleScraper(AbstractScheduleScraper):
             DataExtractionError: If there's an error extracting game IDs.
         """
         try:
-            structured_log(logger, logging.INFO, "Extracting game IDs from schedule")
+            self.app_logger.structured_log( logging.INFO, "Extracting game IDs from schedule")
             
             links = self.page_scraper.get_links_by_class(self.config.game_links_class_name, todays_games)
-            
+
             if not links:
-                raise ElementNotFoundError("Game links not found on the page")
+                raise self.error_handler.create_error_handler('element_not_found', "Game links not found on the page")
 
             links = [i for i in links if self.config.schedule_preview_text in i.text]
             game_id_list = [i.get_attribute("href") for i in links]
@@ -214,15 +216,17 @@ class ScheduleScraper(AbstractScheduleScraper):
                 game_id = game.partition("-00")[2]
                 if len(game_id) > 0:               
                     games.append(game_id)
-            
-            structured_log(logger, logging.INFO, "Game IDs extracted successfully", games_count=len(games))
+
+
+            self.app_logger.structured_log( logging.INFO, "Game IDs extracted successfully", games_count=len(games))
             return games
-        except ElementNotFoundError:
-            raise
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error extracting game IDs", 
+            # Check if it's already one of our error types (has app_logger)
+            if hasattr(e, 'app_logger'):
+                raise
+            self.app_logger.structured_log( logging.ERROR, "Error extracting game IDs",
                            error_message=str(e), error_type=type(e).__name__)
-            raise DataExtractionError(f"Error extracting game IDs: {str(e)}")
+            raise self.error_handler.create_error_handler('data_extraction', f"Error extracting game IDs: {str(e)}")
 
     @log_performance
     def _save_matchups_and_games(self, matchups: List[List[str]], games: List[str]) -> None:
@@ -238,12 +242,12 @@ class ScheduleScraper(AbstractScheduleScraper):
             DataStorageError: If there's an error while saving the data.
         """
         try:
-            structured_log(logger, logging.INFO, "Saving matchups and games", 
+            self.app_logger.structured_log( logging.INFO, "Saving matchups and games", 
                            matchups_count=len(matchups), games_count=len(games))
             schedule_dataframes = []
             file_names = []
             if not matchups or not games:
-                raise DataValidationError("Matchups or games list is empty")
+                raise self.error_handler.create_error_handler('data_validation', "Matchups or games list is empty")
 
             matchups_df = pd.DataFrame(matchups, columns=[self.config.schedule_visitor_team_id_column, self.config.schedule_home_team_id_column])
             schedule_dataframes.append(matchups_df)
@@ -254,11 +258,12 @@ class ScheduleScraper(AbstractScheduleScraper):
             file_names.append(self.config.todays_games_ids_file)
 
             self.data_access.save_dataframes(schedule_dataframes, file_names)
-            structured_log(logger, logging.INFO, "Successfully saved matchups and game IDs data")
-            
-        except DataValidationError:
-            raise
+            self.app_logger.structured_log( logging.INFO, "Successfully saved matchups and game IDs data")
+
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error saving matchups and games data", 
+            # Check if it's already one of our error types (has app_logger)
+            if hasattr(e, 'app_logger'):
+                raise
+            self.app_logger.structured_log( logging.ERROR, "Error saving matchups and games data",
                            error_message=str(e), error_type=type(e).__name__)
-            raise DataStorageError(f"Error saving matchups and games data: {str(e)}")
+            raise self.error_handler.create_error_handler('data_storage', f"Error saving matchups and games data: {str(e)}")

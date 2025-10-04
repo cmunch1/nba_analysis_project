@@ -19,28 +19,30 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 from .abstract_scraper_classes import AbstractPageScraper
 from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler import WebDriverError, PageLoadError, ElementNotFoundError, DataExtractionError, DynamicContentLoadError
-from platform_core.core.app_logging import log_performance, structured_log
-
-logger = logging.getLogger(__name__)
+from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from platform_core.core.app_logging import log_performance, structured_log, AppLogger
 
 class PageScraper(AbstractPageScraper):
     @log_performance
-    def __init__(self, config: BaseConfigManager, web_driver: WebDriver) -> None:
+    def __init__(self, config: BaseConfigManager, web_driver: WebDriver, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
         """
         Initialize the PageScraper with configuration and web driver.
 
         Args:
             config (BaseConfigManager): Configuration object.
             web_driver (WebDriver): Web driver object.
+            app_logger (AppLogger): Application logger instance.
+            error_handler (ErrorHandlerFactory): Error handler factory instance.
 
         Raises:
             WebDriverError: If there's an issue initializing the WebDriver.
         """
         self.config = config
         self.web_driver = web_driver
+        self.app_logger = app_logger
+        self.error_handler = error_handler
         self.wait = WebDriverWait(self.web_driver, self.config.wait_time)
-        structured_log(logger, logging.INFO, "PageScraper initialized successfully",
+        self.app_logger.structured_log(logging.INFO, "PageScraper initialized successfully",
                        config_type=type(config).__name__,
                        web_driver_type=type(web_driver).__name__)
 
@@ -59,26 +61,27 @@ class PageScraper(AbstractPageScraper):
             PageLoadError: If there's an error loading the page.
         """
         if self.web_driver is None:
-            structured_log(logger, logging.ERROR, "WebDriver is not initialized")
+            self.app_logger.structured_log( logging.ERROR, "WebDriver is not initialized")
             return False
 
-        structured_log(logger, logging.INFO, "Navigating to URL", url=url)
-        
+        self.app_logger.structured_log( logging.INFO, "Navigating to URL", url=url)
+
         try:
             self.web_driver.get(url)
-            
 
-            structured_log(logger, logging.INFO, "Navigation to URL completed successfully", url=url)
+
+            self.app_logger.structured_log( logging.INFO, "Navigation to URL completed successfully", url=url)
             return True
-        
+
+
         except TimeoutException as e:
-            raise PageLoadError("Timeout occurred while loading URL", url=url, timeout=self.config.page_load_timeout)
-        
+            raise self.error_handler.create_error_handler('page_load', "Timeout occurred while loading URL", url=url, timeout=self.config.page_load_timeout)
+
         except WebDriverException as e:
-            raise PageLoadError("WebDriver exception occurred", url=url, error_message=str(e))
-        
+            raise self.error_handler.create_error_handler('page_load', "WebDriver exception occurred", url=url, error_message=str(e))
+
         except Exception as e:
-            raise PageLoadError(f"Unexpected error navigating to URL", url=url, error_message=str(e))
+            raise self.error_handler.create_error_handler('page_load', f"Unexpected error navigating to URL", url=url, error_message=str(e))
 
     @log_performance
     def wait_for_dynamic_content(self, locator: Tuple[str, str], timeout: int = None) -> bool:
@@ -98,13 +101,13 @@ class PageScraper(AbstractPageScraper):
         if timeout is None:
             timeout = self.config.dynamic_content_timeout
 
-        structured_log(logger, logging.INFO, "Waiting for dynamic content to load", locator=locator, timeout=timeout)
+        self.app_logger.structured_log( logging.INFO, "Waiting for dynamic content to load", locator=locator, timeout=timeout)
 
         try:
             WebDriverWait(self.web_driver, timeout).until(
                 EC.presence_of_element_located(locator)
             )
-            structured_log(logger, logging.INFO, "Dynamic content loaded successfully", locator=locator)
+            self.app_logger.structured_log( logging.INFO, "Dynamic content loaded successfully", locator=locator)
             return True
         except TimeoutException:
             # Collect additional information about the page state
@@ -119,10 +122,11 @@ class PageScraper(AbstractPageScraper):
                 "js_errors": js_errors,
                 "page_source_excerpt": page_source[:1000]  # First 1000 characters of page source
             }
-            
-            raise DynamicContentLoadError("Timeout while waiting for dynamic content", **error_info)
+
+
+            raise self.error_handler.create_error_handler('dynamic_content_load', "Timeout while waiting for dynamic content", **error_info)
         except Exception as e:
-            raise DynamicContentLoadError("Error while waiting for dynamic content", 
+            raise self.error_handler.create_error_handler('dynamic_content_load', "Error while waiting for dynamic content",
                                           locator=locator, error_message=str(e))
 
     @log_performance
@@ -137,25 +141,25 @@ class PageScraper(AbstractPageScraper):
         Raises:
             ElementNotFoundError: If the required elements are not found on the page.
         """
-        structured_log(logger, logging.INFO, "Handling pagination",
+        self.app_logger.structured_log( logging.INFO, "Handling pagination",
                        pagination_class=pagination_class, dropdown_class=dropdown_class)
         try:
             pagination = self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, pagination_class)))
-            structured_log(logger, logging.INFO, "Pagination element found")
+            self.app_logger.structured_log( logging.INFO, "Pagination element found")
             try:
                 page_dropdown = pagination.find_element(By.CLASS_NAME, dropdown_class)
-                structured_log(logger, logging.INFO, "Dropdown element found")
+                self.app_logger.structured_log( logging.INFO, "Dropdown element found")
                 page_dropdown.send_keys("ALL")
                 time.sleep(3)
                 self.web_driver.execute_script('arguments[0].click()', page_dropdown)
-                structured_log(logger, logging.INFO, "Selected 'ALL' in the pagination dropdown")
+                self.app_logger.structured_log( logging.INFO, "Selected 'ALL' in the pagination dropdown")
 
             except NoSuchElementException:
-                raise ElementNotFoundError("No dropdown found in pagination element", 
-                                           pagination_class=pagination_class, 
+                raise self.error_handler.create_error_handler('element_not_found', "No dropdown found in pagination element",
+                                           pagination_class=pagination_class,
                                            dropdown_class=dropdown_class)
         except:
-            structured_log(logger, logging.INFO, "No pagination found on the page",
+            self.app_logger.structured_log( logging.INFO, "No pagination found on the page",
                            pagination_class=pagination_class, dropdown_class=dropdown_class)
 
     @log_performance
@@ -173,7 +177,7 @@ class PageScraper(AbstractPageScraper):
         Raises:
             ElementNotFoundError: If the elements are not found after multiple attempts.
         """
-        structured_log(logger, logging.INFO, "Retrieving elements by class",
+        self.app_logger.structured_log( logging.INFO, "Retrieving elements by class",
                        class_name=class_name, has_parent=parent_element is not None)
         for attempt in range(self.config.max_retries):
             try:
@@ -182,22 +186,22 @@ class PageScraper(AbstractPageScraper):
                 else:
                     elements = self.wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, class_name)))
                 if not elements:
-                    structured_log(logger, logging.INFO, "No elements found",
+                    self.app_logger.structured_log( logging.INFO, "No elements found",
                                    class_name=class_name, attempt=attempt+1)
                     return None
-                structured_log(logger, logging.INFO, "Elements found",
+                self.app_logger.structured_log( logging.INFO, "Elements found",
                                class_name=class_name, element_count=len(elements))
                 return elements
             except (TimeoutException, NoSuchElementException, StaleElementReferenceException):
-                structured_log(logger, logging.INFO, "Element not found or stale",
+                self.app_logger.structured_log( logging.INFO, "Element not found or stale",
                                class_name=class_name, attempt=attempt+1)
             except Exception as e:
-                structured_log(logger, logging.INFO, "Unexpected error occurred",
+                self.app_logger.structured_log( logging.INFO, "Unexpected error occurred",
                                class_name=class_name, attempt=attempt+1,
                                error_message=str(e), error_type=type(e).__name__)
             if attempt < self.config.max_retries - 1:
                 time.sleep(self.config.retry_delay)
-        raise ElementNotFoundError(f"Failed to retrieve elements with class {class_name} after {self.config.max_retries} attempts")
+        raise self.error_handler.create_error_handler('element_not_found', f"Failed to retrieve elements with class {class_name} after {self.config.max_retries} attempts")
 
     @log_performance
     def scrape_page_table(self, url: str, table_class: str, pagination_class: str, dropdown_class: str) -> Optional[WebElement]:
@@ -219,43 +223,44 @@ class PageScraper(AbstractPageScraper):
             ElementNotFoundError: If the required elements are not found on the page.
             DataExtractionError: If there's an unexpected error during scraping.
         """
-        structured_log(logger, logging.INFO, "Starting page scrape", url=url)
+        self.app_logger.structured_log( logging.INFO, "Starting page scrape", url=url)
         try:
             if not self.go_to_url(url):
-                raise PageLoadError("Could not navigate to URL", url=url)
-            
+                raise self.error_handler.create_error_handler('page_load', "Could not navigate to URL", url=url)
+
             # see if a table is present, if not, check for a no data message (which liekly means there were no games played for these parameters)
             try:
                 if self.get_elements_by_class(table_class) is None:
-                    structured_log(logger, logging.INFO, "No table found, checking for no data message", url=url)
+                    self.app_logger.structured_log( logging.INFO, "No table found, checking for no data message", url=url)
             except:
                 try:
                     if self.get_elements_by_class(self.config.no_data_class_name) is not None:
-                        structured_log(logger, logging.INFO, "No data message found", url=url)
+                        self.app_logger.structured_log( logging.INFO, "No data message found", url=url)
                         return None
                 except:
-                    raise DynamicContentLoadError("Table did not load within the specified timeout", 
+                    raise self.error_handler.create_error_handler('dynamic_content_load', "Table did not load within the specified timeout",
                                                   table_class=table_class)
 
 
             self._handle_pagination(pagination_class, dropdown_class)
-            
+
             tables = self.get_elements_by_class(table_class)
             if tables is None:
-                raise ElementNotFoundError("Table not found after pagination", 
+                raise self.error_handler.create_error_handler('element_not_found', "Table not found after pagination",
                                            table_class=table_class)
-            
-            data_table = tables[0] 
+
+            data_table = tables[0]
             if data_table is not None:
-                structured_log(logger, logging.INFO, "Table found and scraped successfully")
+                self.app_logger.structured_log( logging.INFO, "Table found and scraped successfully")
                 return data_table
             else:
-                raise ElementNotFoundError("Table not found after retrieval", 
+                raise self.error_handler.create_error_handler('element_not_found', "Table not found after retrieval",
                                            table_class=table_class)
-        except (PageLoadError, DynamicContentLoadError, ElementNotFoundError):
-            raise
         except Exception as e:
-            raise DataExtractionError("Unexpected error during page scrape", 
+            # Check if it's already one of our error types (has app_logger)
+            if hasattr(e, 'app_logger'):
+                raise
+            raise self.error_handler.create_error_handler('data_extraction', "Unexpected error during page scrape",
                                       url=url, error_message=str(e))
 
     @log_performance
@@ -269,22 +274,22 @@ class PageScraper(AbstractPageScraper):
         Raises:
             ElementNotFoundError: If the element is not clickable after all retry attempts.
         """
-        structured_log(logger, logging.INFO, "Attempting to click element", locator=locator)
+        self.app_logger.structured_log( logging.INFO, "Attempting to click element", locator=locator)
         for attempt in range(self.config.max_retries):
             try:
                 element = self.wait.until(EC.element_to_be_clickable(locator))
                 element.click()
-                structured_log(logger, logging.DEBUG, "Successfully clicked element",
+                self.app_logger.structured_log( logging.DEBUG, "Successfully clicked element",
                                locator=locator, attempt=attempt+1)
                 return
             except (StaleElementReferenceException, TimeoutException):
-                structured_log(logger, logging.DEBUG, "Failed to click element",
+                self.app_logger.structured_log( logging.DEBUG, "Failed to click element",
                                locator=locator, attempt=attempt+1)
                 if attempt == self.config.max_retries - 1:
-                    structured_log(logger, logging.ERROR, "Element not clickable after all attempts",
+                    self.app_logger.structured_log( logging.ERROR, "Element not clickable after all attempts",
                                    locator=locator, max_retries=self.config.max_retries)
-                    raise ElementNotFoundError(f"Element {locator} was not clickable after {self.config.max_retries} attempts")
-                structured_log(logger, logging.DEBUG, "Retrying click attempt",
+                    raise self.error_handler.create_error_handler('element_not_found', f"Element {locator} was not clickable after {self.config.max_retries} attempts")
+                self.app_logger.structured_log( logging.DEBUG, "Retrying click attempt",
                                locator=locator, retry_delay=self.config.retry_delay)
                 time.sleep(self.config.retry_delay)
 
@@ -303,9 +308,9 @@ class PageScraper(AbstractPageScraper):
         Raises:
             ElementNotFoundError: If the elements are not found after multiple attempts.
         """
-        structured_log(logger, logging.INFO, "Retrieving link elements by class",
+        self.app_logger.structured_log( logging.INFO, "Retrieving link elements by class",
                        class_name=class_name, has_parent=parent_element is not None)
-        
+
         for attempt in range(self.config.max_retries):
             try:
                 xpath = f".//a[@class='{class_name}']" if parent_element else f"//a[@class='{class_name}']"
@@ -313,29 +318,29 @@ class PageScraper(AbstractPageScraper):
                     elements = parent_element.find_elements(By.XPATH, xpath)
                 else:
                     elements = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, xpath)))
-                
+
                 if not elements:
-                    structured_log(logger, logging.INFO, "No link elements found",
+                    self.app_logger.structured_log( logging.INFO, "No link elements found",
                                    class_name=class_name, attempt=attempt+1)
                     return None
-                
-                structured_log(logger, logging.INFO, "Link elements found",
+
+                self.app_logger.structured_log( logging.INFO, "Link elements found",
                                class_name=class_name, element_count=len(elements))
                 return elements
-                
+
             except (TimeoutException, NoSuchElementException, StaleElementReferenceException):
-                structured_log(logger, logging.INFO, "Link elements not found or stale",
+                self.app_logger.structured_log( logging.INFO, "Link elements not found or stale",
                                class_name=class_name, attempt=attempt+1)
-                
+
             except Exception as e:
-                structured_log(logger, logging.INFO, "Unexpected error occurred",
+                self.app_logger.structured_log( logging.INFO, "Unexpected error occurred",
                                class_name=class_name, attempt=attempt+1,
                                error_message=str(e), error_type=type(e).__name__)
                 
             if attempt < self.config.max_retries - 1:
                 time.sleep(self.config.retry_delay)
-                
-        raise ElementNotFoundError(f"Failed to retrieve link elements with class {class_name} after {self.config.max_retries} attempts")
+
+        raise self.error_handler.create_error_handler('element_not_found', f"Failed to retrieve link elements with class {class_name} after {self.config.max_retries} attempts")
 
 
                 

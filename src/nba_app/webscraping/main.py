@@ -27,14 +27,7 @@ from .utils import (
     get_start_date_and_seasons,
 )
 from .di_container import DIContainer
-from platform_core.core.error_handling.error_handler import (
-    ConfigurationError,
-    ScrapingError,
-    DataValidationError,
-    DataStorageError,
-    DataProcessingError,
-    WebDriverError,
-)
+from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
 
 LOG_FILE = "webscraping.log"
 
@@ -81,16 +74,17 @@ def main() -> None:
         nba_scraper = container.nba_scraper()
         web_driver = container.web_driver_factory()
         data_validator = container.data_validator()
+        error_handler = container.error_handler_factory()
 
-        structured_log(logger, logging.INFO, "Starting web scraping process", 
-                       app_version=config.app_version, 
+        structured_log(logger, logging.INFO, "Starting web scraping process",
+                       app_version=config.app_version,
                        environment=config.environment,
-                       log_level=config.log_level,
+                       log_level=config.core.app_logging_config.log_level if hasattr(config, 'core') else 'INFO',
                        config_summary=str(config.__dict__))
 
         with log_context(app_version=config.app_version, environment=config.environment):
-            
-            first_start_date, seasons = get_start_date_and_seasons(config, data_access)
+
+            first_start_date, seasons = get_start_date_and_seasons(config, data_access, error_handler)
             scrape_boxscores(nba_scraper, seasons, first_start_date, logger)
             scrape_matchups(nba_scraper, logger)
             
@@ -100,18 +94,19 @@ def main() -> None:
                 concatenated_data = newly_scraped #no need to concatenate if full scrape is true
             else:        
                 cumulative_scraped, file_names = data_access.load_scraped_data(cumulative=True)
-                if validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, logger):
-                    concatenated_data = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger)
+                if validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, error_handler, logger):
+                    concatenated_data = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_handler, logger)
                     
             data_access.save_dataframes(concatenated_data, file_names, cumulative=True)
 
         structured_log(logger, logging.INFO, "Web scraping process completed successfully")
 
-    except (ConfigurationError, ScrapingError, DataValidationError, 
-            DataStorageError, DataProcessingError) as e:
-        _handle_known_error(logger, e)
     except Exception as e:
-        _handle_unexpected_error(logger, e)
+        # Check if it's one of our custom error types (has app_logger and exit_code)
+        if hasattr(e, 'app_logger') and hasattr(e, 'exit_code'):
+            _handle_known_error(logger, e)
+        else:
+            _handle_unexpected_error(logger, e)
     finally:
         _close_web_driver(container.web_driver_factory() if 'container' in locals() else None, logger)
 
@@ -132,30 +127,32 @@ def scrape_matchups(nba_scraper, logger):
     else:
         structured_log(logger, logging.INFO, "No matchups found for today")
 
-def validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, logger) -> bool:
+def validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, error_handler, logger) -> bool:
 
     if not newly_scraped or not cumulative_scraped:
-        raise DataValidationError("Either newly scraped or cumulative data is missing")
+        raise error_handler.create_error_handler('data_validation', "Either newly scraped or cumulative data is missing")
 
     structured_log(logger, logging.INFO, "Validating newly scraped data")
     if not data_validator.validate_scraped_dataframes(newly_scraped, file_names):
-        raise DataValidationError("Data validation failed")
-    
+        raise error_handler.create_error_handler('data_validation', "Data validation failed")
+
     structured_log(logger, logging.INFO, "Validating cumulative scraped data")
     if not data_validator.validate_scraped_dataframes(cumulative_scraped, file_names):
-        raise DataValidationError("Data validation failed")
+        raise error_handler.create_error_handler('data_validation', "Data validation failed")
 
     structured_log(logger, logging.INFO, "Data validation completed")
 
     return True
 
-def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger) -> list[pd.DataFrame]:
+def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_handler, logger) -> list[pd.DataFrame]:
     """
     Concatenate newly scraped data with cumulative scraped data.
 
     Args:
         config (BaseConfigManager): The configuration object.
-        data_access (BaseDataAccess): The data access object.
+        newly_scraped (list): List of newly scraped dataframes.
+        cumulative_scraped (list): List of cumulative scraped dataframes.
+        error_handler (ErrorHandlerFactory): Error handler factory instance.
         logger (logging.Logger): The logger object for structured logging.
 
     Raises:
@@ -182,10 +179,11 @@ def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, logger) 
         structured_log(logger, logging.INFO, "Completed concatenation of all scraped data files")
 
         return combined_dataframes
-    except DataValidationError:
-        raise
     except Exception as e:
-        raise DataProcessingError(f"Error in concatenate_scraped_data: {str(e)}")
+        # Check if it's already one of our error types (has app_logger)
+        if hasattr(e, 'app_logger'):
+            raise
+        raise error_handler.create_error_handler('data_processing', f"Error in concatenate_scraped_data: {str(e)}")
 
 def _handle_known_error(error_logger, e):
     structured_log(error_logger, logging.ERROR, f"{type(e).__name__} occurred", 
@@ -206,8 +204,8 @@ def _close_web_driver(web_driver, error_logger):
         return
     try:
         web_driver.close_driver()
-    except WebDriverError as e:
-        structured_log(error_logger, logging.ERROR, "Error closing WebDriver", 
+    except Exception as e:
+        structured_log(error_logger, logging.ERROR, "Error closing WebDriver",
                        error_message=str(e),
                        error_type=type(e).__name__)
 

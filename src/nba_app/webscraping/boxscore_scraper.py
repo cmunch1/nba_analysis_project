@@ -20,19 +20,20 @@ import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
 
 from .abstract_scraper_classes import (
-    AbstractBoxscoreScraper, 
+    AbstractBoxscoreScraper,
     AbstractPageScraper,
 )
 from platform_core.framework.data_access.base_data_access import BaseDataAccess
 from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler import (
-    ScrapingError, DataExtractionError, DataProcessingError, DataValidationError,
-    ConfigurationError, ElementNotFoundError
-)
-from platform_core.core.app_logging import log_performance, log_context, structured_log
-from .matchup_validator import MatchupValidator
+from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from platform_core.core.app_logging import log_performance, log_context, structured_log, AppLogger
 
-logger = logging.getLogger(__name__)
+
+# Make matchup_validator import optional
+try:
+    from .matchup_validator import MatchupValidator
+except ImportError:
+    MatchupValidator = None
 
 class BoxscoreScraper(AbstractBoxscoreScraper):
     """
@@ -47,29 +48,36 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         matchup_validator (MatchupValidator): An instance of MatchupValidator.
     """
 
-    @log_performance
-    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: AbstractPageScraper, matchup_validator: MatchupValidator) -> None:
+    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: AbstractPageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory, matchup_validator: Optional[MatchupValidator] = None) -> None:
         """
-        Initialize the BoxscoreScraper with configuration, data access, page scraper, and matchup validator.
+        Initialize the BoxscoreScraper with configuration, data access, page scraper, and optional matchup validator.
 
         Args:
             config (BaseConfigManager): Configuration object.
             data_access (BaseDataAccess): Data access object.
             page_scraper (AbstractPageScraper): Page scraper object.
-            matchup_validator (MatchupValidator): Matchup validator object.
+            app_logger (AppLogger): Application logger instance.
+            error_handler (ErrorHandlerFactory): Error handler factory instance.
+            matchup_validator (Optional[MatchupValidator]): Matchup validator object. If None, validation will be skipped.
 
         Raises:
             ConfigurationError: If there's an issue with the provided configuration or dependencies.
         """
-        if not all([config, data_access, page_scraper, matchup_validator]):
-            raise ConfigurationError("All dependencies must be provided: config, data_access, page_scraper, and matchup_validator")
+        if not all([config, data_access, page_scraper]):
+            raise error_handler.create_error_handler('configuration', "Required dependencies must be provided: config, data_access, page_scraper")
         self.config = config
         self.data_access = data_access
         self.page_scraper = page_scraper
+        self.app_logger = app_logger
+        self.error_handler = error_handler
         self.matchup_validator = matchup_validator
 
-        structured_log(logger, logging.INFO, "BoxscoreScraper initialized successfully", 
-                       page_scraper_type=type(page_scraper).__name__)
+        if matchup_validator is None:
+            self.app_logger.structured_log(logging.WARNING, "BoxscoreScraper initialized without matchup validator - validation will be skipped")
+
+        self.app_logger.structured_log(logging.INFO, "BoxscoreScraper initialized successfully",
+                       page_scraper_type=type(page_scraper).__name__,
+                       has_matchup_validator=matchup_validator is not None)
 
     @log_performance
     def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
@@ -85,9 +93,9 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             ScrapingError: If there's an error during scraping process.
         """
         if not seasons:
-            raise DataValidationError("Seasons list cannot be empty")
+            raise self.error_handler.create_error_handler('data_validation', "Seasons list cannot be empty")
         if not self._is_valid_date(first_start_date):
-            raise DataValidationError(f"Invalid first_start_date: {first_start_date}")
+            raise self.error_handler.create_error_handler('data_validation', f"Invalid first_start_date: {first_start_date}")
 
         with log_context(operation="scrape_all_boxscores", seasons=seasons, start_date=first_start_date):
             #cycle through each stat type, then each season, then each sub-season type
@@ -95,15 +103,15 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             file_names = []
             for stat_type in self.config.stat_types:
                 try:
-                    structured_log(logger, logging.INFO, f"Scraping {stat_type} stats", stat_type=stat_type)
+                    self.app_logger.structured_log(logging.INFO, f"Scraping {stat_type} stats", stat_type=stat_type)
                     new_games = self.scrape_stat_type(seasons, first_start_date, stat_type)
                     file_name = f"games_{stat_type}.csv"
                     boxscores_dataframes.append(new_games)
                     file_names.append(file_name)
-                    structured_log(logger, logging.INFO, f"Successfully scraped and saved {stat_type} stats", 
+                    self.app_logger.structured_log(logging.INFO, f"Successfully scraped and saved {stat_type} stats",
                                    stat_type=stat_type, seasons_count=len(seasons))
-                except ScrapingError as e:
-                    structured_log(logger, logging.ERROR, f"Error scraping {stat_type} stats", 
+                except Exception as e:
+                    self.app_logger.structured_log(logging.ERROR, f"Error scraping {stat_type} stats",
                                    stat_type=stat_type, error_message=str(e))
                     raise
             self.data_access.save_dataframes(boxscores_dataframes, file_names)
@@ -125,7 +133,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             DataProcessingError: If there's an error processing the scraped data.
         """
         if stat_type not in self.config.stat_types:
-            raise DataValidationError(f"Unsupported stat type: {stat_type}")
+            raise self.error_handler.create_error_handler('data_validation', f"Unsupported stat type: {stat_type}")
 
         try:
             with log_context(operation="scrape_stat_type", stat_type=stat_type):
@@ -139,20 +147,20 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
                     if datetime.strptime(end_date, "%m/%d/%Y").date() > datetime.now().date():
                         end_date = datetime.now().strftime("%m/%d/%Y")
 
-                    structured_log(logger, logging.INFO, f"Scraping {stat_type} stats for {season}", 
+                    self.app_logger.structured_log( logging.INFO, f"Scraping {stat_type} stats for {season}", 
                                    stat_type=stat_type, season=season, start_date=start_date, end_date=end_date)
                         
                     df_season = self.scrape_sub_seasons(str(season), str(start_date), str(end_date), stat_type)
                     new_games = pd.concat([new_games, df_season], axis=0)
                     start_date = f"{self.config.regular_season_start_month}/01/{season_year+1}" #update start date for next season
 
-                structured_log(logger, logging.INFO, f"Successfully scraped {stat_type} stats for all seasons", 
+                self.app_logger.structured_log( logging.INFO, f"Successfully scraped {stat_type} stats for all seasons", 
                                stat_type=stat_type, seasons_count=len(seasons))
                 return new_games
         except Exception as e:
-            structured_log(logger, logging.ERROR, f"Error processing scraped data for {stat_type}", 
+            self.app_logger.structured_log( logging.ERROR, f"Error processing scraped data for {stat_type}",
                            stat_type=stat_type, error_message=str(e))
-            raise DataProcessingError(f"Error processing scraped data for {stat_type}: {str(e)}")
+            raise self.error_handler.create_error_handler('data_processing', f"Error processing scraped data for {stat_type}: {str(e)}")
 
     @log_performance
     def scrape_sub_seasons(self, season: str, start_date: str, end_date: str, stat_type: str) -> pd.DataFrame:
@@ -172,7 +180,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             ScrapingError: If there's an error during the scraping process.
         """
         with log_context(operation="scrape_sub_seasons", season=season, start_date=start_date, end_date=end_date, stat_type=stat_type):
-            structured_log(logger, logging.INFO, f"Scraping {season} from {start_date} to {end_date} for {stat_type} stats")
+            self.app_logger.structured_log( logging.INFO, f"Scraping {season} from {start_date} to {end_date} for {stat_type} stats")
             
             all_sub_seasons = pd.DataFrame()
             sub_season_types = self._determine_sub_season_types(season,start_date, end_date)
@@ -182,10 +190,10 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
                     df = self.scrape_to_dataframe(Season=season, DateFrom=start_date, DateTo=end_date, stat_type=stat_type, season_type=sub_season_type)
                     if not df.empty:
                         all_sub_seasons = pd.concat([all_sub_seasons, df], axis=0)
-                    structured_log(logger, logging.INFO, f"Successfully scraped {sub_season_type} for {season}", 
+                    self.app_logger.structured_log( logging.INFO, f"Successfully scraped {sub_season_type} for {season}",
                                    sub_season_type=sub_season_type, season=season)
-                except ScrapingError as e:
-                    structured_log(logger, logging.ERROR, f"Error scraping {sub_season_type} for {season}", 
+                except Exception as e:
+                    self.app_logger.structured_log( logging.ERROR, f"Error scraping {sub_season_type} for {season}",
                                    sub_season_type=sub_season_type, season=season, error_message=str(e))
                     raise
 
@@ -207,7 +215,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         """
         try:
 
-            structured_log(logger, logging.INFO, "Determining sub-season types", 
+            self.app_logger.structured_log( logging.INFO, "Determining sub-season types", 
                            start_date=start_date, end_date=end_date)
             sub_season_types = []
             season_year = int(season[:4])
@@ -215,7 +223,7 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             end_date = datetime.strptime(end_date, "%m/%d/%Y")
             play_in_date = datetime(season_year + 1, self.config.play_in_month, 1)
 
-            structured_log(logger, logging.INFO, "Play-in date", 
+            self.app_logger.structured_log( logging.INFO, "Play-in date", 
                            play_in_date=str(play_in_date))
 
             if start_date < play_in_date and end_date < play_in_date:
@@ -227,13 +235,13 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
                 sub_season_types.append(self.config.playoffs_season_text)
                 sub_season_types.append(self.config.play_in_season_text)
 
-            structured_log(logger, logging.INFO, "Determined sub-season types", 
+            self.app_logger.structured_log( logging.INFO, "Determined sub-season types", 
                            sub_season_types=sub_season_types)
             return sub_season_types
         except ValueError as e:
-            structured_log(logger, logging.ERROR, "Invalid date format", 
+            self.app_logger.structured_log( logging.ERROR, "Invalid date format",
                            start_date=start_date, end_date=end_date, error_message=str(e))
-            raise DataValidationError(f"Invalid date format: {str(e)}")
+            raise self.error_handler.create_error_handler('data_validation', f"Invalid date format: {str(e)}")
 
     @log_performance
     def scrape_to_dataframe(self, Season: str, DateFrom: str = "NONE", DateTo: str = "NONE", stat_type: str = 'traditional', season_type: str = "Regular+Season") -> pd.DataFrame:
@@ -258,18 +266,18 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
                 data_table = self.scrape_boxscores_table(Season, DateFrom, DateTo, stat_type, season_type)
                 
                 if data_table is None:
-                    structured_log(logger, logging.WARNING, f"No data found", 
+                    self.app_logger.structured_log( logging.WARNING, f"No data found", 
                                    Season=Season, season_type=season_type, stat_type=stat_type)
                     return pd.DataFrame()
                 
                 df = self._convert_table_to_df(data_table)
-                structured_log(logger, logging.INFO, "Successfully scraped and converted data to DataFrame", 
+                self.app_logger.structured_log( logging.INFO, "Successfully scraped and converted data to DataFrame",
                                rows=len(df), columns=len(df.columns))
                 return df
-            except ElementNotFoundError as e:
-                structured_log(logger, logging.ERROR, "Error extracting data", 
+            except Exception as e:
+                self.app_logger.structured_log( logging.ERROR, "Error extracting data",
                                error_message=str(e))
-                raise DataExtractionError(f"Error extracting data: {str(e)}")
+                raise self.error_handler.create_error_handler('data_extraction', f"Error extracting data: {str(e)}")
 
     @log_performance
     def scrape_boxscores_table(self, Season: str, DateFrom: str = "NONE", DateTo: str = "NONE", stat_type: str = 'traditional', season_type: str = "Regular+Season") -> Optional[WebElement]:
@@ -291,26 +299,27 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
         """
         with log_context(operation="scrape_boxscores_table", Season=Season, DateFrom=DateFrom, DateTo=DateTo, stat_type=stat_type, season_type=season_type):
             nba_url = self._construct_nba_url(stat_type, season_type, Season, DateFrom, DateTo)
-            structured_log(logger, logging.INFO, f"Scraping URL", url=nba_url)
+            self.app_logger.structured_log( logging.INFO, f"Scraping URL", url=nba_url)
 
             try:
                 table = self.page_scraper.scrape_page_table(nba_url, self.config.table_class_name, self.config.pagination_class_name, self.config.dropdown_class_name)
                 
-                if table:
-                    # Validate matchups
+                if table and self.matchup_validator:
+                    # Validate matchups only if validator is available
                     is_valid, invalid_game_ids = self.matchup_validator.validate_matchup_designations(table)
                     
                     if not is_valid:
                         corrected_matchups = self.matchup_validator.fetch_alternative_matchup_data(invalid_game_ids)
                         self.matchup_validator.update_files_with_corrections(corrected_matchups)
-                    
-                    return table
+                elif table and not self.matchup_validator:
+                    self.app_logger.structured_log( logging.WARNING, "Matchup validation skipped - no validator available")
                 
-                return None
+                return table
+                
             except Exception as e:
-                structured_log(logger, logging.ERROR, "Error scraping table", 
+                self.app_logger.structured_log( logging.ERROR, "Error scraping table",
                                error_message=str(e))
-                raise ScrapingError(f"Error scraping table: {str(e)}")
+                raise self.error_handler.create_error_handler('scraping', f"Error scraping table: {str(e)}")
 
     def _convert_table_to_df(self, data_table: WebElement) -> pd.DataFrame:
         """
@@ -334,13 +343,13 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             df[self.config.team_id_column] = team_id
             df[self.config.game_id_column] = game_id
 
-            structured_log(logger, logging.INFO, "Successfully converted table to DataFrame", 
+            self.app_logger.structured_log( logging.INFO, "Successfully converted table to DataFrame", 
                            rows=len(df), columns=len(df.columns))
             return df
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error converting table to DataFrame", 
+            self.app_logger.structured_log( logging.ERROR, "Error converting table to DataFrame",
                            error_message=str(e))
-            raise DataExtractionError(f"Error converting table to DataFrame: {str(e)}")
+            raise self.error_handler.create_error_handler('data_extraction', f"Error converting table to DataFrame: {str(e)}")
 
     def _construct_nba_url(self, stat_type: str, season_type: str, Season: str, DateFrom: str, DateTo: str) -> str:
         """
@@ -378,15 +387,15 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
                     else:
                         nba_url = f"{nba_url}&Season={Season}&DateFrom={DateFrom}&DateTo={DateTo}"
             
-            structured_log(logger, logging.INFO, "Constructed NBA URL", url=nba_url)
+            self.app_logger.structured_log( logging.INFO, "Constructed NBA URL", url=nba_url)
 
             nba_url = nba_url.rstrip('\\').strip()
             
             return nba_url
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error constructing NBA URL", 
+            self.app_logger.structured_log( logging.ERROR, "Error constructing NBA URL",
                            error_message=str(e))
-            raise ConfigurationError(f"Error constructing NBA URL: {str(e)}")
+            raise self.error_handler.create_error_handler('configuration', f"Error constructing NBA URL: {str(e)}")
 
     def _extract_team_and_game_ids_boxscores(self, data_table: WebElement) -> Tuple[pd.Series, pd.Series]:
         """
@@ -408,13 +417,13 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
             team_id = pd.Series([i[-10:] for i in links_list if ('stats' in i)])
             game_id = pd.Series([i[-10:] for i in links_list if ('/game/' in i)])
         
-            structured_log(logger, logging.INFO, "Successfully extracted team and game IDs", 
+            self.app_logger.structured_log( logging.INFO, "Successfully extracted team and game IDs", 
                            team_ids_count=len(team_id), game_ids_count=len(game_id))
             return team_id, game_id
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error extracting team and game IDs", 
+            self.app_logger.structured_log( logging.ERROR, "Error extracting team and game IDs",
                            error_message=str(e))
-            raise DataExtractionError(f"Error extracting team and game IDs: {str(e)}")
+            raise self.error_handler.create_error_handler('data_extraction', f"Error extracting team and game IDs: {str(e)}")
 
     @staticmethod
     def _is_valid_date(date_string: str) -> bool:

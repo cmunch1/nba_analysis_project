@@ -22,37 +22,37 @@ from selenium.webdriver.remote.webelement import WebElement
 from .abstract_scraper_classes import AbstractPageScraper
 from platform_core.core.config_management.base_config_manager import BaseConfigManager
 from platform_core.framework.data_access.base_data_access import BaseDataAccess
-from platform_core.core.error_handling.error_handler import (
-    DataValidationError, DataExtractionError, DataStorageError
-)
-from platform_core.core.app_logging import log_performance, structured_log
-
-logger = logging.getLogger(__name__)
+from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from platform_core.core.app_logging import log_performance, structured_log, AppLogger
 
 class MatchupValidator:
     """
     A class for validating and correcting NBA matchup designations.
-    
+
     Attributes:
         config (BaseConfigManager): Configuration object
         data_access (BaseDataAccess): Data access object
         page_scraper (AbstractPageScraper): Page scraper object
     """
-    
+
     def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess,
-                 page_scraper: AbstractPageScraper) -> None:
+                 page_scraper: AbstractPageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
         """
         Initialize the MatchupValidator.
-        
+
         Args:
             config (BaseConfigManager): Configuration object
             data_access (BaseDataAccess): Data access object
             page_scraper (AbstractPageScraper): Page scraper object
+            app_logger (AppLogger): Application logger instance
+            error_handler (ErrorHandlerFactory): Error handler factory instance
         """
         self.config = config
         self.data_access = data_access
         self.page_scraper = page_scraper
-        structured_log(logger, logging.INFO, "MatchupValidator initialized")
+        self.app_logger = app_logger
+        self.error_handler = error_handler
+        self.app_logger.structured_log(logging.INFO, "MatchupValidator initialized")
 
     @log_performance
     def validate_matchup_designations(self, table_element: WebElement) -> Tuple[bool, List[str]]:
@@ -81,7 +81,7 @@ class MatchupValidator:
                     # Get the game ID for this matchup
                     game_id = matchup.find_element(By.CSS_SELECTOR, "[class*='Anchor_anchor']").get_attribute('href').split('/')[-1]
                     invalid_game_ids.append(game_id)
-                    structured_log(logger, logging.WARNING, "Invalid matchup designation found",
+                    self.app_logger.structured_log( logging.WARNING, "Invalid matchup designation found",
                                  matchup_text=matchup_text,
                                  game_id=game_id,
                                  home_count=home_count,
@@ -91,9 +91,9 @@ class MatchupValidator:
             return is_valid, invalid_game_ids
             
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error validating matchup designations",
+            self.app_logger.structured_log( logging.ERROR, "Error validating matchup designations",
                           error_message=str(e))
-            raise DataValidationError(f"Error validating matchup designations: {str(e)}")
+            raise self.error_handler.create_error_handler('data_validation', f"Error validating matchup designations: {str(e)}")
 
     @log_performance
     def fetch_alternative_matchup_data(self, game_ids: List[str]) -> Dict[str, Dict[str, str]]:
@@ -122,7 +122,7 @@ class MatchupValidator:
                         'visitor_team': visitor_team
                     }
                     
-                    structured_log(logger, logging.INFO, "Retrieved corrected matchup data",
+                    self.app_logger.structured_log( logging.INFO, "Retrieved corrected matchup data",
                                  game_id=game_id,
                                  home_team=home_team,
                                  visitor_team=visitor_team)
@@ -130,9 +130,9 @@ class MatchupValidator:
             return corrected_matchups
             
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error fetching alternative matchup data",
+            self.app_logger.structured_log( logging.ERROR, "Error fetching alternative matchup data",
                           error_message=str(e))
-            raise DataExtractionError(f"Error fetching alternative matchup data: {str(e)}")
+            raise self.error_handler.create_error_handler('data_extraction', f"Error fetching alternative matchup data: {str(e)}")
 
     def _extract_home_team(self) -> str:
         """Extract home team from basketball-reference.com page."""
@@ -142,7 +142,7 @@ class MatchupValidator:
             home_element = self.page_scraper.get_elements_by_class("home-team-class")[0]
             return home_element.text
         except Exception as e:
-            raise DataExtractionError(f"Error extracting home team: {str(e)}")
+            raise self.error_handler.create_error_handler('data_extraction', f"Error extracting home team: {str(e)}")
 
     def _extract_visitor_team(self) -> str:
         """Extract visitor team from basketball-reference.com page."""
@@ -152,7 +152,7 @@ class MatchupValidator:
             visitor_element = self.page_scraper.get_elements_by_class("visitor-team-class")[0]
             return visitor_element.text
         except Exception as e:
-            raise DataExtractionError(f"Error extracting visitor team: {str(e)}")
+            raise self.error_handler.create_error_handler('data_extraction', f"Error extracting visitor team: {str(e)}")
 
     @log_performance
     def update_files_with_corrections(self, corrected_matchups: Dict[str, Dict[str, str]]) -> None:
@@ -178,11 +178,11 @@ class MatchupValidator:
                 
                 # Save the updated dataframe
                 self.data_access.save_dataframe(df, file_path)
-                structured_log(logger, logging.INFO, "Updated file with corrections",
+                self.app_logger.structured_log( logging.INFO, "Updated file with corrections",
                              file_name=file_path,
                              corrections_count=len(corrected_matchups))
                 
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Error updating files with corrections",
+            self.app_logger.structured_log( logging.ERROR, "Error updating files with corrections",
                           error_message=str(e))
-            raise DataStorageError(f"Error updating files with corrections: {str(e)}") 
+            raise self.error_handler.create_error_handler('data_storage', f"Error updating files with corrections: {str(e)}") 
