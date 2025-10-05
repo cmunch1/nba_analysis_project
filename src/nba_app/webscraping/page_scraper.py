@@ -2,7 +2,7 @@
 page_scraper.py
 
 This module provides a PageScraper class for web scraping operations using Selenium.
-It implements the AbstractPageScraper interface and includes enhanced logging and error handling.
+It implements the BasePageScraper interface and includes enhanced logging and error handling.
 """
 
 import sys
@@ -17,12 +17,12 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from .abstract_scraper_classes import AbstractPageScraper
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
-from platform_core.core.app_logging import log_performance, structured_log, AppLogger
+from .base_scraper_classes import BasePageScraper
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.app_logging import log_performance, structured_log, AppLogger
 
-class PageScraper(AbstractPageScraper):
+class PageScraper(BasePageScraper):
     @log_performance
     def __init__(self, config: BaseConfigManager, web_driver: WebDriver, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
         """

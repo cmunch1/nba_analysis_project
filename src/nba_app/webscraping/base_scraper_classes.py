@@ -1,8 +1,8 @@
 """
-abstract_scraper_classes.py
+base_scraper_classes.py
 
-This module defines abstract base classes for various scraper components used in the NBA data scraping application.
-These abstract classes provide a common interface for different scraper implementations.
+This module defines base classes for various scraper components used in the NBA data scraping application.
+These base classes provide a common interface for different scraper implementations.
 """
 
 from abc import ABC, abstractmethod
@@ -10,10 +10,10 @@ from typing import Optional, List, Tuple
 from selenium.webdriver.remote.webelement import WebElement
 import pandas as pd
 
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.framework.data_access.base_data_access import BaseDataAccess
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.framework.data_access.base_data_access import BaseDataAccess
 
-class AbstractNbaScraper(ABC):
+class BaseNbaScraper(ABC):
     @abstractmethod
     def scrape_and_save_all_boxscores(self, seasons: List[str], first_start_date: str) -> None:
         pass
@@ -22,7 +22,7 @@ class AbstractNbaScraper(ABC):
     def scrape_and_save_matchups_for_day(self, search_day: str) -> None:
         pass
 
-class AbstractBoxscoreScraper(ABC):
+class BaseBoxscoreScraper(ABC):
     @abstractmethod
     def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess):
         pass
@@ -42,7 +42,7 @@ class AbstractBoxscoreScraper(ABC):
         """Scrape data for all sub-seasons within a given season."""
         pass
 
-class AbstractScheduleScraper(ABC):
+class BaseScheduleScraper(ABC):
     @abstractmethod
     def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess):
         pass
@@ -52,14 +52,14 @@ class AbstractScheduleScraper(ABC):
         """Scrape and save matchups for a specific day."""
         pass
 
-class AbstractWebDriver(ABC):
+class BaseWebDriver(ABC):
     @abstractmethod
     def __init__(self, config: BaseConfigManager):
         pass
 
-class AbstractPageScraper(ABC):
+class BasePageScraper(ABC):
     @abstractmethod
-    def __init__(self, config: BaseConfigManager, web_driver: AbstractWebDriver):
+    def __init__(self, config: BaseConfigManager, web_driver: BaseWebDriver):
         pass
     
     @abstractmethod

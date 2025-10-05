@@ -6,7 +6,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 from selenium.webdriver.support.ui import WebDriverWait
 
 from nba_app.webscraping.page_scraper import PageScraper
-from platform_core.core.error_handling.error_handler import (
+from ml_framework.core.error_handling.error_handler import (
     WebDriverError, PageLoadError, ElementNotFoundError,
     DataExtractionError, DynamicContentLoadError
 )

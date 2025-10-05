@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
 from typing import Tuple, Any, Dict, List
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.base_error_handler import BaseErrorHandler
-from platform_core.framework.data_classes import ModelTrainingResults, PreprocessingResults
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.framework.data_classes import ModelTrainingResults, PreprocessingResults
 
 class BaseModelTester(ABC):
     @abstractmethod

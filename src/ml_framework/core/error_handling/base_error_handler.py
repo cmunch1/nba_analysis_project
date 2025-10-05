@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 
 class BaseErrorHandler(ABC, Exception):
     def __init__(self, message: str, app_logger: BaseAppLogger, log_level: int = logging.ERROR, **kwargs):

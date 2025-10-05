@@ -1,1 +1,1 @@
-"""Tests for platform_core package."""
+"""Tests for ml_framework package."""

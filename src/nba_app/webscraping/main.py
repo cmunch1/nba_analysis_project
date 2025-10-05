@@ -22,12 +22,12 @@ import logging
 import pandas as pd
 
 # Using standard logging configuration
-from platform_core.core.app_logging import log_performance, log_context, structured_log
+from ml_framework.core.app_logging import log_performance, log_context, structured_log
 from .utils import (
     get_start_date_and_seasons,
 )
 from .di_container import DIContainer
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
 
 LOG_FILE = "webscraping.log"
 
@@ -51,22 +51,21 @@ def main() -> None:
     """
 
     container = DIContainer()
-    
+
     # Configure basic logging first
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(LOG_FILE),
             logging.StreamHandler()
         ]
     )
     logger = logging.getLogger(__name__)
-    
+
     try:
         config = container.config()
 
-        # Setup the app logger
+        # Setup the app logger (will use log_path from config)
         app_logger = container.app_logger()
         app_logger.setup(LOG_FILE)
 

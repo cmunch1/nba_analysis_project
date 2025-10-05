@@ -15,14 +15,14 @@ from typing import List, Dict, Tuple
 from sklearn.feature_selection import VarianceThreshold, RFE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging import log_performance, structured_log
-from platform_core.core.error_handling.error_handler import FeatureSelectionError
-from .abstract_feature_engineering import AbstractFeatureSelector
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging import log_performance, structured_log
+from ml_framework.core.error_handling.error_handler import FeatureSelectionError
+from .base_feature_engineering import BaseFeatureSelector
 
 logger = logging.getLogger(__name__)
 
-class FeatureSelector(AbstractFeatureSelector):
+class FeatureSelector(BaseFeatureSelector):
     @log_performance
     def __init__(self, config: BaseConfigManager):
         """

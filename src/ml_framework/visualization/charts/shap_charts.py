@@ -5,9 +5,9 @@ from typing import Any, Optional, List
 import shap
 from .base_chart import BaseChart
 from .chart_utils import ChartUtils
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.base_error_handler import BaseErrorHandler
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 import logging
 
 class SHAPCharts(BaseChart):

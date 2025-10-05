@@ -11,16 +11,16 @@ from sklearn.model_selection import TimeSeriesSplit, StratifiedKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve
 
 
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.base_error_handler import BaseErrorHandler
-from platform_core.framework.data_classes import (
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.framework.data_classes import (
     ModelTrainingResults,
     ClassificationMetrics,
     PreprocessingResults
 )
-from platform_core.preprocessing.base_preprocessor import BasePreprocessor
-from platform_core.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
+from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
+from ml_framework.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 
 from .base_model_testing import BaseModelTester
 from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager

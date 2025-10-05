@@ -6,97 +6,97 @@ This document provides a comprehensive overview of all abstract base classes and
 ## Platform Core - Reusable ML Infrastructure
 
 ### Core Infrastructure
-Located in `src/platform_core/core/` - Generic application infrastructure components.
+Located in `src/ml_framework/core/` - Generic application infrastructure components.
 
 #### Configuration Management
-- **BaseConfigManager** - `src/platform_core/core/config_management/base_config_manager.py`
+- **BaseConfigManager** - `src/ml_framework/core/config_management/base_config_manager.py`
   - Manages configuration loading and merging from multiple sources
   - Provides nested configuration support with deep merging capabilities
   - Converts configurations to SimpleNamespace objects for easy access
 
 #### Logging
-- **BaseAppLogger** - `src/platform_core/core/app_logging/base_app_logger.py`
+- **BaseAppLogger** - `src/ml_framework/core/app_logging/base_app_logger.py`
   - Structured logging interface with performance monitoring
   - Provides decorators for function performance tracking
   - Context manager support for adding contextual information to logs
 
 #### File Handling
-- **BaseAppFileHandler** - `src/platform_core/core/app_file_handling/base_app_file_handler.py`
+- **BaseAppFileHandler** - `src/ml_framework/core/app_file_handling/base_app_file_handler.py`
   - Abstract interface for file I/O operations
   - Standardizes file handling across the application
 
 #### Error Management
-- **BaseErrorHandler** - `src/platform_core/core/error_handling/base_error_handler.py`
+- **BaseErrorHandler** - `src/ml_framework/core/error_handling/base_error_handler.py`
   - Centralized error handling and reporting
   - Standardized error management across all components
 
 ### Framework Layer
-Located in `src/platform_core/framework/` - ML framework components and base classes.
+Located in `src/ml_framework/framework/` - ML framework components and base classes.
 
 #### Data Access
-- **BaseDataAccess** - `src/platform_core/framework/data_access/base_data_access.py`
+- **BaseDataAccess** - `src/ml_framework/framework/data_access/base_data_access.py`
   - Abstract interface for data persistence and retrieval operations
   - Database and file system abstraction layer
 
 #### Data Validation
-- **BaseDataValidator** - `src/platform_core/framework/base_data_validator.py`
+- **BaseDataValidator** - `src/ml_framework/framework/base_data_validator.py`
   - Data validation and integrity checking interface
   - Ensures data quality throughout the pipeline
 
 ### Preprocessing
-- **BasePreprocessor** - `src/platform_core/preprocessing/base_preprocessor.py`
+- **BasePreprocessor** - `src/ml_framework/preprocessing/base_preprocessor.py`
   - Data preprocessing pipeline interface
   - Methods: `fit_transform()`, `transform()`
   - Integrates with PreprocessingResults for tracking transformations
 
 ### Uncertainty Quantification
-- **UncertaintyCalibrator** - `src/platform_core/uncertainty/uncertainty_calibrator.py`
+- **UncertaintyCalibrator** - `src/ml_framework/uncertainty/uncertainty_calibrator.py`
   - Model uncertainty quantification and calibration
   - Supports various calibration methods for prediction confidence
 
 ### Model Testing & Training
-Located in `src/platform_core/model_testing/` - Generic ML testing and training infrastructure.
+Located in `src/ml_framework/model_testing/` - Generic ML testing and training infrastructure.
 
 #### Model Testing
-- **BaseModelTester** - `src/platform_core/model_testing/base_model_testing.py`
+- **BaseModelTester** - `src/ml_framework/model_testing/base_model_testing.py`
   - Core model evaluation and testing interface
   - Methods: `prepare_data()`, `perform_oof_cross_validation()`
   - Integrates with ModelTrainingResults for comprehensive result tracking
 
 #### Training
-- **BaseTrainer** - `src/platform_core/model_testing/trainers/base_trainer.py`
+- **BaseTrainer** - `src/ml_framework/model_testing/trainers/base_trainer.py`
   - Model training interface for different ML algorithms
   - Methods: `train()`, feature importance calculation, metric conversion
   - Handles learning curves and performance metrics
 
 #### Hyperparameter Optimization
-- **BaseHyperparamsOptimizer** - `src/platform_core/model_testing/hyperparams_optimizers/base_hyperparams_optimizer.py`
+- **BaseHyperparamsOptimizer** - `src/ml_framework/model_testing/hyperparams_optimizers/base_hyperparams_optimizer.py`
   - Hyperparameter optimization interface (supports Optuna, etc.)
   - Methods: `optimize()`, `get_best_params()`
 
-- **BaseHyperparamsManager** - `src/platform_core/model_testing/hyperparams_managers/base_hyperparams_manager.py`
+- **BaseHyperparamsManager** - `src/ml_framework/model_testing/hyperparams_managers/base_hyperparams_manager.py`
   - Hyperparameter management and persistence interface
 
 #### Experiment Logging
-- **BaseExperimentLogger** - `src/platform_core/model_testing/experiment_loggers/base_experiment_logger.py`
+- **BaseExperimentLogger** - `src/ml_framework/model_testing/experiment_loggers/base_experiment_logger.py`
   - Experiment tracking and result logging interface
   - Supports MLflow, Weights & Biases, and other experiment tracking systems
 
 ### Visualization
-Located in `src/platform_core/visualization/` - Generic visualization components.
+Located in `src/ml_framework/visualization/` - Generic visualization components.
 
 #### Charts
-- **BaseChart** - `src/platform_core/visualization/charts/base_chart.py`
+- **BaseChart** - `src/ml_framework/visualization/charts/base_chart.py`
   - Base interface for creating visualization charts
   - Methods: `create_figure()`
   - Integrates with matplotlib for consistent chart generation
 
 #### Chart Orchestration
-- **BaseChartOrchestrator** - `src/platform_core/visualization/orchestration/base_chart_orchestrator.py`
+- **BaseChartOrchestrator** - `src/ml_framework/visualization/orchestration/base_chart_orchestrator.py`
   - Coordinates multiple chart creation and layout management
 
 #### Exploratory Analysis
-- **BaseExplorer** - `src/platform_core/visualization/exploratory/base_explorer.py`
+- **BaseExplorer** - `src/ml_framework/visualization/exploratory/base_explorer.py`
   - Interface for exploratory data analysis and visualization
 
 ## NBA Application - Domain-Specific Implementation
@@ -104,18 +104,18 @@ Located in `src/platform_core/visualization/` - Generic visualization components
 ### Data Processing
 Located in `src/nba_app/data_processing/` - NBA-specific data processing operations.
 
-- **AbstractNBADataProcessor** - `src/nba_app/data_processing/abstract_data_processing_classes.py`
+- **BaseNBADataProcessor** - `src/nba_app/data_processing/base_data_processing_classes.py`
   - Core interface for NBA data processing operations
   - Methods: `process_data()`, `merge_team_data()`
 
 ### Feature Engineering
 Located in `src/nba_app/feature_engineering/` - NBA-specific feature creation and selection.
 
-- **AbstractFeatureEngineer** - `src/nba_app/feature_engineering/abstract_feature_engineering.py`
+- **BaseFeatureEngineer** - `src/nba_app/feature_engineering/base_feature_engineering.py`
   - Feature creation and transformation interface
   - Methods: `engineer_features()`, `merge_team_data()`
 
-- **AbstractFeatureSelector** - `src/nba_app/feature_engineering/abstract_feature_engineering.py`
+- **BaseFeatureSelector** - `src/nba_app/feature_engineering/base_feature_engineering.py`
   - Feature selection and data splitting interface
   - Methods: `select_features()`, `split_data()`
 
@@ -123,23 +123,23 @@ Located in `src/nba_app/feature_engineering/` - NBA-specific feature creation an
 Located in `src/nba_app/webscraping/` - NBA-specific web scraping components.
 
 #### Core Scraping
-- **AbstractNbaScraper** - `src/nba_app/webscraping/abstract_scraper_classes.py`
+- **BaseNbaScraper** - `src/nba_app/webscraping/base_scraper_classes.py`
   - High-level NBA data scraping interface
   - Methods: `scrape_and_save_all_boxscores()`, `scrape_and_save_matchups_for_day()`
 
 #### Specialized Scrapers
-- **AbstractBoxscoreScraper** - `src/nba_app/webscraping/abstract_scraper_classes.py`
+- **BaseBoxscoreScraper** - `src/nba_app/webscraping/base_scraper_classes.py`
   - Boxscore data extraction interface
   - Methods: `scrape_stat_type()`, `scrape_sub_seasons()`
 
-- **AbstractScheduleScraper** - `src/nba_app/webscraping/abstract_scraper_classes.py`
+- **BaseScheduleScraper** - `src/nba_app/webscraping/base_scraper_classes.py`
   - Game schedule scraping interface
 
 #### Web Infrastructure
-- **AbstractWebDriver** - `src/nba_app/webscraping/abstract_scraper_classes.py`
+- **BaseWebDriver** - `src/nba_app/webscraping/base_scraper_classes.py`
   - Web driver abstraction for Selenium operations
 
-- **AbstractPageScraper** - `src/nba_app/webscraping/abstract_scraper_classes.py`
+- **BasePageScraper** - `src/nba_app/webscraping/base_scraper_classes.py`
   - Low-level page scraping operations interface
   - Methods: `go_to_url()`, `get_elements_by_class()`, `scrape_page_table()`
 
@@ -150,7 +150,7 @@ Located in `src/nba_app/webscraping/` - NBA-specific web scraping components.
 
 ## Key Data Classes
 
-Located in `src/platform_core/framework/data_classes/`:
+Located in `src/ml_framework/framework/data_classes/`:
 
 ### Metrics
 - **LearningCurvePoint** - Individual learning curve data point
@@ -167,7 +167,7 @@ Located in `src/platform_core/framework/data_classes/`:
 ## Architecture Principles
 
 ### Three-Tier Platform Architecture
-1. **Platform Core** (`src/platform_core/`) - Reusable ML infrastructure for any domain
+1. **Platform Core** (`src/ml_framework/`) - Reusable ML infrastructure for any domain
    - **Core**: Application infrastructure (config, logging, error handling)
    - **Framework**: ML framework components (data access, base classes)
    - **Model Testing**: Generic training, optimization, and evaluation
@@ -186,7 +186,7 @@ Located in `src/platform_core/framework/data_classes/`:
    - **NBA**: Basketball-specific configurations (scraping endpoints, features)
 
 ### Dependency Management
-- **One-way dependencies**: nba_app → platform_core (never reverse)
+- **One-way dependencies**: nba_app → ml_framework (never reverse)
 - **Scalable design**: Easy to add new sports (MLB, NFL) as separate app packages
 - **Clean separation**: Platform core remains domain-agnostic
 
@@ -210,18 +210,18 @@ Located in `src/platform_core/framework/data_classes/`:
 - **Platform Core**: Use for reusable ML infrastructure components
 - **NBA App**: Use for basketball-specific implementations
 - Focus on abstract base classes to understand component contracts
-- Follow the one-way dependency rule (nba_app → platform_core)
+- Follow the one-way dependency rule (nba_app → ml_framework)
 - Leverage the platform architecture for scalable design
 
 ### For Developers
-- **Adding New Sports**: Create new app packages (e.g., `mlb_app`) that import platform_core
-- **Extending Platform**: Add new generic capabilities to platform_core
+- **Adding New Sports**: Create new app packages (e.g., `mlb_app`) that import ml_framework
+- **Extending Platform**: Add new generic capabilities to ml_framework
 - Implement abstract base classes for new components
 - Use existing interfaces as contracts for component communication
 - Follow the established patterns for logging, error handling, and configuration
 
 ### For MLOps Teams
-- **Training Pipelines**: Use platform_core for infrastructure, nba_app for domain logic
-- **Inference Services**: Deploy minimal containers with platform_core + specific app
-- **CI/CD**: Separate testing for platform_core (unit tests) and nba_app (integration tests)
+- **Training Pipelines**: Use ml_framework for infrastructure, nba_app for domain logic
+- **Inference Services**: Deploy minimal containers with ml_framework + specific app
+- **CI/CD**: Separate testing for ml_framework (unit tests) and nba_app (integration tests)
 - **Scalability**: Platform design supports multiple domains in single monorepo

@@ -2,23 +2,23 @@ import pytest
 from unittest.mock import Mock, patch
 
 from nba_app.webscraping.nba_scraper import NbaScraper
-from nba_app.webscraping.abstract_scraper_classes import (
-    AbstractBoxscoreScraper,
-    AbstractScheduleScraper
+from nba_app.webscraping.base_scraper_classes import (
+    BaseBoxscoreScraper,
+    BaseScheduleScraper
 )
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler import (
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.error_handling.error_handler import (
     ConfigurationError,
     DataValidationError,
     ScrapingError,
     DataStorageError
 )
 
-class MockBoxscoreScraper(AbstractBoxscoreScraper):
+class MockBoxscoreScraper(BaseBoxscoreScraper):
     def scrape_and_save_all_boxscores(self, seasons, first_start_date):
         pass
 
-class MockScheduleScraper(AbstractScheduleScraper):
+class MockScheduleScraper(BaseScheduleScraper):
     def scrape_and_save_matchups_for_day(self, search_day):
         pass
 

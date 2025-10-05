@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-from platform_core.framework.data_classes import (
+from ml_framework.framework.data_classes import (
     ClassificationMetrics,
     ModelTrainingResults,
     PreprocessingResults

@@ -4,9 +4,9 @@ and proper logging/error handling injection.
 """
 
 from dependency_injector import containers, providers
-from platform_core.core.common_di_container import CommonDIContainer
-from platform_core.visualization.orchestration.chart_orchestrator import ChartOrchestrator
-from platform_core.preprocessing.preprocessor import Preprocessor
+from ml_framework.core.common_di_container import CommonDIContainer
+from ml_framework.visualization.orchestration.chart_orchestrator import ChartOrchestrator
+from ml_framework.preprocessing.preprocessor import Preprocessor
 
 from .model_tester import ModelTester
 from .hyperparams_managers.hyperparams_manager import HyperparamsManager

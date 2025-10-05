@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import logging
 from typing import Dict, Any, Optional
 from yaml.constructor import Constructor, ConstructorError
-from platform_core.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from ml_framework.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
 
 logger = logging.getLogger(__name__)
 

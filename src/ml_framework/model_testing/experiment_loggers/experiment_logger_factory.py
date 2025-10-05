@@ -3,11 +3,11 @@ from typing import Type, Dict
 import logging
 from .base_experiment_logger import BaseExperimentLogger
 from .mlflow_logger import MLFlowLogger
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.base_error_handler import BaseErrorHandler
-from platform_core.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
-from platform_core.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
+from ml_framework.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 
 class LoggerType(Enum):
     """Enum for supported experiment logger types."""

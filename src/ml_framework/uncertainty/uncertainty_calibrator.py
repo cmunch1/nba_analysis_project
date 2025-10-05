@@ -6,9 +6,9 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.model_selection import StratifiedKFold
 import xgboost as xgb
 from sklearn.base import BaseEstimator, ClassifierMixin
-from platform_core.core.app_logging import log_performance, structured_log
-from platform_core.core.error_handling.error_handler import ModelTestingError
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging import log_performance, structured_log
+from ml_framework.core.error_handling.error_handler import ModelTestingError
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 import lightgbm as lgb
 import catboost as cb
 

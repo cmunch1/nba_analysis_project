@@ -13,17 +13,17 @@ from webdriver_manager.firefox import GeckoDriverManager
 from typing import Dict, Any, Optional, List
 import logging
 
-from .abstract_scraper_classes import AbstractWebDriver
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.error_handler import (
+from .base_scraper_classes import BaseWebDriver
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.error_handler import (
     WebDriverError,
     ConfigurationError
 )
 
 logger = logging.getLogger(__name__)
 
-class CustomWebDriver(AbstractWebDriver):
+class CustomWebDriver(BaseWebDriver):
     def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger):
         """
         Initialize the WebDriver with configuration.

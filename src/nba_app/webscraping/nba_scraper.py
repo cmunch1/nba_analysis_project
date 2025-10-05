@@ -10,7 +10,7 @@ Key Classes:
     - NbaScraper: Main class that orchestrates NBA data scraping operations.
 
 Dependencies:
-    - AbstractBoxscoreScraper and AbstractScheduleScraper from abstract_scraper_classes module
+    - BaseBoxscoreScraper and BaseScheduleScraper from base_scraper_classes module
     - Custom exceptions from error_handling module
     - Logging utilities from logging_utils module
 """
@@ -19,16 +19,16 @@ from typing import List, Dict
 import logging
 import re
 
-from .abstract_scraper_classes import (
-    AbstractNbaScraper,
-    AbstractBoxscoreScraper,
-    AbstractScheduleScraper,
+from .base_scraper_classes import (
+    BaseNbaScraper,
+    BaseBoxscoreScraper,
+    BaseScheduleScraper,
 )
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
-from platform_core.core.app_logging import log_performance, log_context, structured_log, AppLogger
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.app_logging import log_performance, log_context, structured_log, AppLogger
 
-class NbaScraper(AbstractNbaScraper):
+class NbaScraper(BaseNbaScraper):
     """
     A facade class that combines boxscore and schedule scraping functionality for NBA data.
 
@@ -36,19 +36,19 @@ class NbaScraper(AbstractNbaScraper):
 
     Attributes:
         _config (BaseConfigManager): Configuration object.
-        _boxscore_scraper (AbstractBoxscoreScraper): An instance of BoxscoreScraper.
-        _schedule_scraper (AbstractScheduleScraper): An instance of ScheduleScraper.
+        _boxscore_scraper (BaseBoxscoreScraper): An instance of BoxscoreScraper.
+        _schedule_scraper (BaseScheduleScraper): An instance of ScheduleScraper.
     """
 
     @log_performance
-    def __init__(self, config: BaseConfigManager, boxscore_scraper: AbstractBoxscoreScraper, schedule_scraper: AbstractScheduleScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory):
+    def __init__(self, config: BaseConfigManager, boxscore_scraper: BaseBoxscoreScraper, schedule_scraper: BaseScheduleScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory):
         """
         Initialize the NbaScraper with configuration and scraper instances.
 
         Args:
             config (BaseConfigManager): Configuration object.
-            boxscore_scraper (AbstractBoxscoreScraper): BoxscoreScraper instance.
-            schedule_scraper (AbstractScheduleScraper): ScheduleScraper instance.
+            boxscore_scraper (BaseBoxscoreScraper): BoxscoreScraper instance.
+            schedule_scraper (BaseScheduleScraper): ScheduleScraper instance.
             app_logger (AppLogger): Application logger instance.
             error_handler (ErrorHandlerFactory): Error handler factory instance.
 
@@ -62,9 +62,9 @@ class NbaScraper(AbstractNbaScraper):
             self.app_logger = app_logger
             self.error_handler = error_handler
 
-            if not isinstance(boxscore_scraper, AbstractBoxscoreScraper):
+            if not isinstance(boxscore_scraper, BaseBoxscoreScraper):
                 raise error_handler.create_error_handler('configuration', "Invalid boxscore_scraper instance")
-            if not isinstance(schedule_scraper, AbstractScheduleScraper):
+            if not isinstance(schedule_scraper, BaseScheduleScraper):
                 raise error_handler.create_error_handler('configuration', "Invalid schedule_scraper instance")
 
             self.app_logger.structured_log(logging.INFO, "NbaScraper initialized successfully",

@@ -14,15 +14,15 @@ import pandas as pd
 import numpy as np
 import logging
 from typing import List, Dict
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging import log_performance, structured_log
-from platform_core.core.error_handling.error_handler import FeatureEngineeringError
-from .abstract_feature_engineering import AbstractFeatureEngineer
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging import log_performance, structured_log
+from ml_framework.core.error_handling.error_handler import FeatureEngineeringError
+from .base_feature_engineering import BaseFeatureEngineer
 
 logger = logging.getLogger(__name__)
 
 
-class FeatureEngineer(AbstractFeatureEngineer):
+class FeatureEngineer(BaseFeatureEngineer):
     @log_performance
     def __init__(self, config: BaseConfigManager):
         """

@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple, Optional
 import pandas as pd
 
-from platform_core.framework.data_classes import PreprocessingResults
+from ml_framework.framework.data_classes import PreprocessingResults
 
 
 class BasePreprocessor(ABC):

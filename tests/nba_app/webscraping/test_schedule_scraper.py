@@ -4,7 +4,7 @@ from selenium.webdriver.remote.webelement import WebElement
 import pandas as pd
 
 from nba_app.webscraping.schedule_scraper import ScheduleScraper
-from platform_core.core.error_handling.error_handler import (
+from ml_framework.core.error_handling.error_handler import (
     ScrapingError, DataExtractionError, DataValidationError, ElementNotFoundError,
     PageLoadError, DataStorageError
 )

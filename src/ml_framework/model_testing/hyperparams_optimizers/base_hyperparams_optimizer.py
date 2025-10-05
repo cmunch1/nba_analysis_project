@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Callable
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
 from ..hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
 
 

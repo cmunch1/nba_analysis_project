@@ -1,6 +1,6 @@
 from dependency_injector import containers, providers
 
-from platform_core.core.common_di_container import CommonDIContainer
+from ml_framework.core.common_di_container import CommonDIContainer
 from ..data_validator import DataValidator
 
 from .web_driver import CustomWebDriver

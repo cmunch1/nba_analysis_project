@@ -1,6 +1,6 @@
 from typing import Type, Optional
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.error_handler import (
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.error_handler import (
     ConfigurationError,
     WebDriverError,
     ScrapingError,

@@ -1,7 +1,7 @@
 from dependency_injector import containers, providers
 
-from platform_core.core.config_management.config_manager import ConfigManager
-from platform_core.framework.data_access.csv_data_access import CSVDataAccess
+from ml_framework.core.config_management.config_manager import ConfigManager
+from ml_framework.framework.data_access.csv_data_access import CSVDataAccess
 from ..data_validation.data_validator import DataValidator
 from .feature_engineer import FeatureEngineer
 from .feature_selector import FeatureSelector

@@ -19,11 +19,11 @@ import pandas as pd
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
-from .abstract_scraper_classes import AbstractPageScraper
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.framework.data_access.base_data_access import BaseDataAccess
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
-from platform_core.core.app_logging import log_performance, structured_log, AppLogger
+from .base_scraper_classes import BasePageScraper
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.framework.data_access.base_data_access import BaseDataAccess
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.app_logging import log_performance, structured_log, AppLogger
 
 class MatchupValidator:
     """
@@ -32,18 +32,18 @@ class MatchupValidator:
     Attributes:
         config (BaseConfigManager): Configuration object
         data_access (BaseDataAccess): Data access object
-        page_scraper (AbstractPageScraper): Page scraper object
+        page_scraper (BasePageScraper): Page scraper object
     """
 
     def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess,
-                 page_scraper: AbstractPageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
+                 page_scraper: BasePageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
         """
         Initialize the MatchupValidator.
 
         Args:
             config (BaseConfigManager): Configuration object
             data_access (BaseDataAccess): Data access object
-            page_scraper (AbstractPageScraper): Page scraper object
+            page_scraper (BasePageScraper): Page scraper object
             app_logger (AppLogger): Application logger instance
             error_handler (ErrorHandlerFactory): Error handler factory instance
         """

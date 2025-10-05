@@ -1,14 +1,14 @@
 import pandas as pd
 import logging
 from typing import List, Tuple, Dict
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.app_logging import log_performance, structured_log
-from platform_core.core.error_handling.error_handler import DataProcessingError
-from .abstract_data_processing_classes import AbstractNBADataProcessor
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging import log_performance, structured_log
+from ml_framework.core.error_handling.error_handler import DataProcessingError
+from .base_data_processing_classes import BaseNBADataProcessor
 
 logger = logging.getLogger(__name__)
 
-class ProcessScrapedNBAData(AbstractNBADataProcessor):
+class ProcessScrapedNBAData(BaseNBADataProcessor):
     @log_performance
     def __init__(self,  config: BaseConfigManager):
         """

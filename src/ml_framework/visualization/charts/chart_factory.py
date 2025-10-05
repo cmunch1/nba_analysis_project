@@ -6,9 +6,9 @@ from .metrics_charts import MetricsCharts
 from .learning_curve_charts import LearningCurveCharts
 from .shap_charts import SHAPCharts
 from .model_interpretation_charts import ModelInterpretationCharts
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
-from platform_core.core.error_handling.base_error_handler import BaseErrorHandler
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 
 class ChartFactory:
     """Factory for creating chart instances with proper dependency injection."""

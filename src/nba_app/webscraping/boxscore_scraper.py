@@ -2,8 +2,8 @@
 boxscore_scraper.py
 
 This module contains the BoxscoreScraper class, which is responsible for scraping NBA boxscore data
-from the official NBA stats website. It implements the AbstractBoxscoreScraper interface and uses
-custom exceptions for more specific error handling. The module now includes enhanced logging for 
+from the official NBA stats website. It implements the BaseBoxscoreScraper interface and uses
+custom exceptions for more specific error handling. The module now includes enhanced logging for
 better debugging and monitoring.
 
 Key features:
@@ -19,14 +19,14 @@ from datetime import datetime
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
 
-from .abstract_scraper_classes import (
-    AbstractBoxscoreScraper,
-    AbstractPageScraper,
+from .base_scraper_classes import (
+    BaseBoxscoreScraper,
+    BasePageScraper,
 )
-from platform_core.framework.data_access.base_data_access import BaseDataAccess
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
-from platform_core.core.app_logging import log_performance, log_context, structured_log, AppLogger
+from ml_framework.framework.data_access.base_data_access import BaseDataAccess
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.app_logging import log_performance, log_context, structured_log, AppLogger
 
 
 # Make matchup_validator import optional
@@ -35,7 +35,7 @@ try:
 except ImportError:
     MatchupValidator = None
 
-class BoxscoreScraper(AbstractBoxscoreScraper):
+class BoxscoreScraper(BaseBoxscoreScraper):
     """
     A class for scraping NBA boxscore data.
 
@@ -44,18 +44,18 @@ class BoxscoreScraper(AbstractBoxscoreScraper):
     Attributes:
         config (BaseConfigManager): Configuration object.
         data_access (BaseDataAccess): Data access object.
-        page_scraper (AbstractPageScraper): An instance of PageScraper.
+        page_scraper (BasePageScraper): An instance of PageScraper.
         matchup_validator (MatchupValidator): An instance of MatchupValidator.
     """
 
-    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: AbstractPageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory, matchup_validator: Optional[MatchupValidator] = None) -> None:
+    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: BasePageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory, matchup_validator: Optional[MatchupValidator] = None) -> None:
         """
         Initialize the BoxscoreScraper with configuration, data access, page scraper, and optional matchup validator.
 
         Args:
             config (BaseConfigManager): Configuration object.
             data_access (BaseDataAccess): Data access object.
-            page_scraper (AbstractPageScraper): Page scraper object.
+            page_scraper (BasePageScraper): Page scraper object.
             app_logger (AppLogger): Application logger instance.
             error_handler (ErrorHandlerFactory): Error handler factory instance.
             matchup_validator (Optional[MatchupValidator]): Matchup validator object. If None, validation will be skipped.

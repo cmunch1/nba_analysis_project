@@ -3,10 +3,10 @@ import traceback
 import logging
 
 # Using standard logging configuration
-from platform_core.core.app_logging import log_performance, log_context, structured_log
+from ml_framework.core.app_logging import log_performance, log_context, structured_log
 
 from .di_container import DIContainer
-from platform_core.core.error_handling.error_handler import (
+from ml_framework.core.error_handling.error_handler import (
     ConfigurationError,
     DataValidationError,
     DataStorageError,

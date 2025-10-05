@@ -5,8 +5,8 @@ import contextlib
 from typing import Any, Dict, Optional, Callable
 from dataclasses import dataclass
 from contextvars import ContextVar
-from platform_core.core.config_management.config_manager import BaseConfigManager
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.config_management.config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 
 
 # Context variable to store logging context
@@ -30,19 +30,27 @@ class AppLogger(BaseAppLogger):
     def setup(self, log_file: str) -> logging.Logger:
         """
         Setup logging configuration with file and console handlers
-        
+
         Args:
-            log_file: Path to log file
-            
+            log_file: Name of log file (will be placed in configured log_path directory)
+
         Returns:
             Configured logger instance
         """
         logger = logging.getLogger(__name__)
-        
+
         # Use config log level if available, otherwise default to INFO
         log_level = getattr(self.config, 'log_level', logging.INFO) if self.config else logging.INFO
         logger.setLevel(log_level)
-        
+
+        # Construct full log file path from config
+        if self.config and hasattr(self.config, 'core') and hasattr(self.config.core, 'app_logging_config'):
+            log_path = getattr(self.config.core.app_logging_config, 'log_path', './logs')
+            from pathlib import Path
+            log_file_path = Path(log_path) / log_file
+        else:
+            log_file_path = Path('./logs') / log_file
+
         # Create formatters
         file_formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -50,9 +58,9 @@ class AppLogger(BaseAppLogger):
         console_formatter = logging.Formatter(
             '%(levelname)s: %(message)s'
         )
-        
+
         # File handler
-        log_file_handler = logging.FileHandler(log_file)
+        log_file_handler = logging.FileHandler(log_file_path)
         log_file_handler.setFormatter(file_formatter)
         logger.addHandler(log_file_handler)
         

@@ -4,15 +4,15 @@ from typing import List, Any
 
 
 
-class AbstractNBADataProcessor(ABC):
+class BaseNBADataProcessor(ABC):
     @abstractmethod
     def process_data(self, data: List[pd.DataFrame]) -> pd.DataFrame:
         """
-        Abstract method to process NBA data.
-        
+        Base method to process NBA data.
+
         Args:
             data (List[pd.DataFrame]): The data to process.
-        
+
         Returns:
             pd.DataFrame: Processed data as a single DataFrame.
         """
@@ -21,11 +21,11 @@ class AbstractNBADataProcessor(ABC):
     @abstractmethod
     def merge_team_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Abstract method to merge team data.
-        
+        Base method to merge team data.
+
         Args:
             df (pd.DataFrame): The dataframe to merge.
-        
+
         Returns:
             pd.DataFrame: Merged dataframe.
         """

@@ -7,7 +7,7 @@ from datetime import datetime
 from nba_app.webscraping.nba_scraper import NbaScraper
 from nba_app.webscraping.boxscore_scraper import BoxscoreScraper
 from nba_app.webscraping.schedule_scraper import ScheduleScraper
-from platform_core.core.error_handling.error_handler import (
+from ml_framework.core.error_handling.error_handler import (
     ScrapingError,
     PageLoadError,
     ElementNotFoundError,

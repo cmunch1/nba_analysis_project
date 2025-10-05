@@ -3,7 +3,7 @@ schedule_scraper.py
 
 This module contains the ScheduleScraper class, which is responsible for scraping NBA schedule data.
 It provides functionality to extract matchups and game IDs for specific days from the NBA website.
-The class implements the AbstractScheduleScraper interface and uses custom exceptions for more
+The class implements the BaseScheduleScraper interface and uses custom exceptions for more
 specific error handling. It also includes enhanced logging for better debugging and monitoring.
 """
 
@@ -12,16 +12,16 @@ from typing import List, Optional
 import pandas as pd
 from selenium.webdriver.remote.webelement import WebElement
 
-from .abstract_scraper_classes import (
-    AbstractScheduleScraper,
-    AbstractPageScraper,
+from .base_scraper_classes import (
+    BaseScheduleScraper,
+    BasePageScraper,
 )
-from platform_core.framework.data_access.base_data_access import BaseDataAccess
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
-from platform_core.core.app_logging import log_performance, log_context, structured_log, AppLogger
+from ml_framework.framework.data_access.base_data_access import BaseDataAccess
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.app_logging import log_performance, log_context, structured_log, AppLogger
 
-class ScheduleScraper(AbstractScheduleScraper):
+class ScheduleScraper(BaseScheduleScraper):
     """
     A class for scraping NBA schedule data.
 
@@ -30,18 +30,18 @@ class ScheduleScraper(AbstractScheduleScraper):
     Attributes:
         config (BaseConfigManager): Configuration object.
         data_access (BaseDataAccess): Data access object.
-        page_scraper (AbstractPageScraper): An instance of PageScraper.
+        page_scraper (BasePageScraper): An instance of PageScraper.
     """
 
     @log_performance
-    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: AbstractPageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
+    def __init__(self, config: BaseConfigManager, data_access: BaseDataAccess, page_scraper: BasePageScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory) -> None:
         """
         Initialize the ScheduleScraper with configuration, data access, and page scraper.
 
         Args:
             config (BaseConfigManager): Configuration object.
             data_access (BaseDataAccess): Data access object.
-            page_scraper (AbstractPageScraper): Page scraper object.
+            page_scraper (BasePageScraper): Page scraper object.
             app_logger (AppLogger): Application logger instance.
             error_handler (ErrorHandlerFactory): Error handler factory instance.
         """

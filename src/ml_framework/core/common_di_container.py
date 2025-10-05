@@ -3,12 +3,12 @@ from typing import Type, Any
 from pathlib import Path
 
 # concrete classes
-from platform_core.core.config_management.config_manager import ConfigManager
-from platform_core.framework.data_access.csv_data_access import CSVDataAccess
-from platform_core.core.app_logging.app_logger import AppLogger
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
-from platform_core.core.app_file_handling.app_file_handler import LocalAppFileHandler
-from platform_core.framework.base_data_validator import BaseDataValidator
+from ml_framework.core.config_management.config_manager import ConfigManager
+from ml_framework.framework.data_access.csv_data_access import CSVDataAccess
+from ml_framework.core.app_logging.app_logger import AppLogger
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.app_file_handling.app_file_handler import LocalAppFileHandler
+from ml_framework.framework.base_data_validator import BaseDataValidator
 
 class CommonDIContainer(containers.DeclarativeContainer):
     """Container for common application dependencies."""

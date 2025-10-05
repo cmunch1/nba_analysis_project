@@ -271,11 +271,11 @@ model_testing_config:
     - h_team_id
     - v_team_id
   cross_validation_type: TimeSeriesSplit (str)
-  current_hyperparameters: /home/chris/projects/nba_analysis_project/src/platform_core/configs/hyperparameters.json (str)
+  current_hyperparameters: /home/chris/projects/nba_analysis_project/src/ml_framework/configs/hyperparameters.json (str)
   experiment_description: NBA Predictor (str)
   experiment_name: NBA Predictor (str)
   generate_learning_curve_data: True (bool)
-  hyperparameter_history_dir: /home/chris/projects/nba_analysis_project/src/platform_core/hyperparameter_history (str)
+  hyperparameter_history_dir: /home/chris/projects/nba_analysis_project/src/ml_framework/hyperparameter_history (str)
   hyperparameter_metadata: [list with 9 items]
     - name
     - metrics

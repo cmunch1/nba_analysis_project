@@ -1,4 +1,4 @@
-from platform_core.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from .base_error_handler import BaseErrorHandler
 import logging
 

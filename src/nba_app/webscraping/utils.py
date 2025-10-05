@@ -22,9 +22,9 @@ import numpy as np
 import pandas as pd
 from pytz import timezone
 
-from platform_core.core.config_management.base_config_manager import BaseConfigManager
-from platform_core.framework.data_access.base_data_access import BaseDataAccess
-from platform_core.core.error_handling.error_handler_factory import ErrorHandlerFactory
+from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.framework.data_access.base_data_access import BaseDataAccess
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
 
 logger = logging.getLogger(__name__)
 
