@@ -15,26 +15,37 @@ import numpy as np
 import logging
 from typing import List, Dict
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
-from ml_framework.core.app_logging import log_performance, structured_log
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.error_handler import FeatureEngineeringError
 from .base_feature_engineering import BaseFeatureEngineer
 
-logger = logging.getLogger(__name__)
-
 
 class FeatureEngineer(BaseFeatureEngineer):
-    @log_performance
-    def __init__(self, config: BaseConfigManager):
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger):
         """
         Initialize the FeatureEngineer class.
 
         Args:
             config (BaseConfigManager): Configuration object containing feature engineering parameters.
+            app_logger (BaseAppLogger): Logger instance for error handling.
         """
         self.config = config
-        
-        structured_log(logger, logging.INFO, "FeatureEngineer initialized",
-                       config_type=type(config).__name__)
+        self.app_logger = app_logger
+
+        self.app_logger.structured_log(
+            logging.INFO,
+            "FeatureEngineer initialized",
+            config_type=type(config).__name__
+        )
+
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
 
     @log_performance
     def engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -50,8 +61,11 @@ class FeatureEngineer(BaseFeatureEngineer):
         Raises:
             FeatureEngineeringError: If there's an error during feature engineering.
         """
-        structured_log(logger, logging.INFO, "Starting feature engineering",
-                       input_shape=df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Starting feature engineering",
+            input_shape=df.shape
+        )
         try:
             if self.config.include_postseason:
                 df = df[df[self.config.is_playoff_column] == False]
@@ -88,14 +102,18 @@ class FeatureEngineer(BaseFeatureEngineer):
             del df_streaks 
             del df 
 
-            structured_log(logger, logging.INFO, "Feature engineering completed",
-                           output_shape=df_merged.shape)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Feature engineering completed",
+                output_shape=df_merged.shape
+            )
             
             return df_merged
         
         except Exception as e:
 
             raise FeatureEngineeringError("Error in feature engineering",
+                                          self.app_logger,
                                           error_message=str(e),
                                           dataframe_shape=df.shape)
 
@@ -111,7 +129,7 @@ class FeatureEngineer(BaseFeatureEngineer):
         Returns:
             pd.DataFrame: Dataframe with rolling averages.
         """
-        structured_log(logger, logging.INFO, "Creating rolling averages -" + home_or_visitor_suffix)
+        self.app_logger.structured_log(logging.INFO, "Creating rolling averages -" + home_or_visitor_suffix)
         all_columns = set(df.columns)
         stats_columns = all_columns.difference(self.config.game_info_columns + self.config.team_info_columns)
         periods = self.config.team_rolling_avg_periods
@@ -148,8 +166,11 @@ class FeatureEngineer(BaseFeatureEngineer):
         # drop stats_columns - they were used to calculate rolling averages, but are no longer needed
         result_df = result_df.drop(columns=stats_columns)
 
-        structured_log(logger, logging.INFO, "Rolling averages created",
-                       output_shape=result_df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Rolling averages created",
+            output_shape=result_df.shape
+        )
         
         return result_df
 
@@ -165,7 +186,7 @@ class FeatureEngineer(BaseFeatureEngineer):
         Returns:
             pd.DataFrame: Dataframe with added streak columns.
         """
-        structured_log(logger, logging.INFO, "Calculating win/lose streaks -" + home_or_visitor_suffix)
+        self.app_logger.structured_log(logging.INFO, "Calculating win/lose streaks -" + home_or_visitor_suffix)
 
         
         # Sort the dataframe by team and date
@@ -197,8 +218,11 @@ class FeatureEngineer(BaseFeatureEngineer):
 
         df[f'win_streak_{home_or_visitor_suffix}'] = streak
 
-        structured_log(logger, logging.INFO, "Win/lose streaks calculated",
-                       output_shape=df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Win/lose streaks calculated",
+            output_shape=df.shape
+        )
 
         return df
 
@@ -217,7 +241,7 @@ class FeatureEngineer(BaseFeatureEngineer):
             pd.DataFrame: Dataframe with merged features.
         """
 
-        structured_log(logger, logging.INFO, "Merging features -" + suffix)
+        self.app_logger.structured_log(logging.INFO, "Merging features -" + suffix)
 
         
         columns_to_keep = [self.config.new_game_id_column, self.config.new_team_id_column] + merge_columns
@@ -231,8 +255,11 @@ class FeatureEngineer(BaseFeatureEngineer):
             suffixes=('', "_" + suffix) # suffixes should be handled already, but just in case
         )
 
-        structured_log(logger, logging.INFO, "Features merged -" + suffix,
-                       output_shape=merged_df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Features merged -" + suffix,
+            output_shape=merged_df.shape
+        )
 
         return merged_df
 
@@ -249,7 +276,7 @@ class FeatureEngineer(BaseFeatureEngineer):
         Returns:
             pd.DataFrame: Dataframe with added home/visitor streak column.
         """
-        structured_log(logger, logging.INFO, f"Calculating home/visitor streaks")
+        self.app_logger.structured_log(logging.INFO, "Calculating home/visitor streaks")
 
         # Sort the dataframe by team and date
         df_sorted = df.sort_values([self.config.new_team_id_column, self.config.new_date_column])
@@ -280,8 +307,11 @@ class FeatureEngineer(BaseFeatureEngineer):
 
         df[f'home_visitor_streak'] = streak
 
-        structured_log(logger, logging.INFO, "Home/visitor streaks calculated",
-                       output_shape=df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Home/visitor streaks calculated",
+            output_shape=df.shape
+        )
 
         return df
     
@@ -297,8 +327,11 @@ class FeatureEngineer(BaseFeatureEngineer):
         Returns:
             pd.DataFrame: Dataframe with merged home and visitor team data.
         """
-        structured_log(logger, logging.INFO, "Starting merge_team_data",
-                       dataframe_shape=df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Starting merge_team_data",
+            dataframe_shape=df.shape
+        )
         
 
         try:    
@@ -346,11 +379,15 @@ class FeatureEngineer(BaseFeatureEngineer):
             # move the new_game_id_column to the front
             final_df = final_df[[self.config.new_game_id_column] + [col for col in final_df.columns if col != self.config.new_game_id_column]]
 
-            structured_log(logger, logging.INFO, "Team data combined successfully",
-                           dataframe_shape=final_df.shape)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Team data combined successfully",
+                dataframe_shape=final_df.shape
+            )
             return final_df
         except Exception as e:
             raise FeatureEngineeringError ("Error in combine_team_data",
+                                      self.app_logger,
                                       error_message=str(e),
                                       dataframe_shape=df.shape)
         
@@ -369,8 +406,11 @@ class FeatureEngineer(BaseFeatureEngineer):
         Raises:
             FeatureEngineeringError: If there's an error during date encoding.
         """
-        structured_log(logger, logging.INFO, "Starting game date encoding",
-                       input_shape=df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Starting game date encoding",
+            input_shape=df.shape
+        )
 
         try:
             # Convert date column to datetime if it's not already
@@ -402,14 +442,18 @@ class FeatureEngineer(BaseFeatureEngineer):
             # Reorder columns
             df = df[game_info_columns + [col for col in df.columns if col not in game_info_columns]]
 
-            structured_log(logger, logging.INFO, "Game date encoding completed",
-                           output_shape=df.shape,
-                           new_columns=new_date_columns)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Game date encoding completed",
+                output_shape=df.shape,
+                new_columns=new_date_columns
+            )
         
             return df
 
         except Exception as e:
             raise FeatureEngineeringError("Error in game date encoding",
+                                          self.app_logger,
                                           error_message=str(e),
                                           dataframe_shape=df.shape)
         
@@ -427,8 +471,11 @@ class FeatureEngineer(BaseFeatureEngineer):
         Raises:
             FeatureEngineeringError: If there's an error during ELO rating updates.
         """
-        structured_log(logger, logging.INFO, "Starting ELO ratings update",
-                        input_shape=df.shape)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Starting ELO ratings update",
+            input_shape=df.shape
+        )
 
         try:
             # Ensure the DataFrame is sorted by date
@@ -468,12 +515,30 @@ class FeatureEngineer(BaseFeatureEngineer):
             # Iterate through each game
 
 
-            logger.info(f"Sample of home_team_column values: {df[self.config.home_team_column].value_counts()}")
-    
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Sample of home_team_column values",
+                value_counts=str(df[self.config.home_team_column].value_counts())
+            )
+
             for game_id, game in grouped:
-                home_team = game[game[self.config.home_team_column] == 1].iloc[0]
-                away_team = game[game[self.config.home_team_column] == 0].iloc[0]
-                
+                home_teams = game[game[self.config.home_team_column] == 1]
+                away_teams = game[game[self.config.home_team_column] == 0]
+
+                # Skip games that don't have both home and away teams
+                if len(home_teams) == 0 or len(away_teams) == 0:
+                    self.app_logger.structured_log(
+                        logging.WARNING,
+                        "Skipping game - missing home or away team",
+                        game_id=game_id,
+                        home_teams_count=len(home_teams),
+                        away_teams_count=len(away_teams)
+                    )
+                    continue
+
+                home_team = home_teams.iloc[0]
+                away_team = away_teams.iloc[0]
+
                 # Get or set initial ELO ratings
                 home_elo = team_elos.get(home_team[self.config.new_team_id_column], self.config.initial_elo)
                 away_elo = team_elos.get(away_team[self.config.new_team_id_column], self.config.initial_elo)
@@ -511,14 +576,18 @@ class FeatureEngineer(BaseFeatureEngineer):
                 team_elos[home_team[self.config.new_team_id_column]] = new_home_elo
                 team_elos[away_team[self.config.new_team_id_column]] = new_away_elo
             
-            structured_log(logger, logging.INFO, "ELO ratings update completed",
-                        output_shape=df.shape,
-                        new_columns=new_columns)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "ELO ratings update completed",
+                output_shape=df.shape,
+                new_columns=new_columns
+            )
             
             return df
 
         except Exception as e:
             raise FeatureEngineeringError("Error in updating ELO ratings",
+                                            self.app_logger,
                                             error_message=str(e),
                                             game_id=game_id,
                                             dataframe_shape=df.shape)

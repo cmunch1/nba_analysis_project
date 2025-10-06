@@ -5145,3 +5145,976 @@
 {"timestamp": "2024-12-16T14:40:50.904652+00:00", "level": "INFO", "name": "src.logging.logging_utils", "message": "Function performance", "function_name": "save_dataframes", "execution_time": "0.94", "unit": "seconds"}
 {"timestamp": "2024-12-16T14:40:50.904652+00:00", "level": "INFO", "name": "__main__", "message": "{\"message\": \"Web scraping process completed successfully\"}"}
 {"timestamp": "2024-12-16T14:40:50.909653+00:00", "level": "INFO", "name": "src.logging.logging_utils", "message": "Function performance", "function_name": "main", "execution_time": "51.27", "unit": "seconds"}
+2025-10-05 08:58:39,967 - ml_framework.core.app_logging.app_logger - INFO - PageScraper initialized successfully | Context: {'config_type': 'ConfigManager', 'web_driver_type': 'WebDriver'}
+2025-10-05 08:58:39,967 - ml_framework.core.app_logging.app_logger - WARNING - BoxscoreScraper initialized without matchup validator - validation will be skipped | Context: {}
+2025-10-05 08:58:39,967 - ml_framework.core.app_logging.app_logger - INFO - BoxscoreScraper initialized successfully | Context: {'page_scraper_type': 'PageScraper', 'has_matchup_validator': False}
+2025-10-05 08:58:39,967 - ml_framework.core.app_logging.app_logger - INFO - PageScraper initialized successfully | Context: {'config_type': 'ConfigManager', 'web_driver_type': 'WebDriver'}
+2025-10-05 08:58:39,967 - ml_framework.core.app_logging.app_logger - INFO - ScheduleScraper initialized | Context: {'config_type': 'ConfigManager', 'data_access_type': 'CSVDataAccess', 'page_scraper_type': 'PageScraper'}
+2025-10-05 08:58:39,967 - ml_framework.core.app_logging.app_logger - INFO - NbaScraper initialized successfully | Context: {'boxscore_scraper_type': 'BoxscoreScraper', 'schedule_scraper_type': 'ScheduleScraper'}
+2025-10-05 08:58:39,968 - ml_framework.core.app_logging.app_logger - INFO - Loading scraped data | Context: {}
+2025-10-05 08:58:39,968 - ml_framework.core.app_logging.app_logger - INFO - Getting load directory | Context: {'cumulative': True, 'file_name': 'None'}
+2025-10-05 08:58:39,968 - ml_framework.core.app_logging.app_logger - INFO - Loading dataframes | Context: {}
+2025-10-05 08:58:40,219 - ml_framework.core.app_logging.app_logger - INFO - Dataframes loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 08:58:40,219 - ml_framework.core.app_logging.app_logger - INFO - Function _load_dataframes completed | Context: {'duration_seconds': 0.25130558013916016, 'status': 'success'}
+2025-10-05 08:58:40,219 - ml_framework.core.app_logging.app_logger - INFO - Data loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 08:58:40,219 - ml_framework.core.app_logging.app_logger - INFO - Function load_scraped_data completed | Context: {'duration_seconds': 0.2514984607696533, 'status': 'success'}
+2025-10-05 08:58:40,262 - ml_framework.core.app_logging.app_logger - INFO - Starting to scrape boxscores | Context: {'seasons': ['2024-25', '2025-26'], 'start_date': '12/16/2024'}
+2025-10-05 08:58:40,262 - ml_framework.core.app_logging.app_logger - INFO - Scraping traditional stats | Context: {'stat_type': 'traditional'}
+2025-10-05 08:58:40,262 - ml_framework.core.app_logging.app_logger - INFO - Scraping traditional stats for 2024-25 | Context: {'stat_type': 'traditional', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 08:58:40,262 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for traditional stats | Context: {}
+2025-10-05 08:58:40,263 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 08:58:40,263 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 08:58:40,263 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 08:58:40,263 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:58:40,263 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:58:40,263 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:58:40,263 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:58:46,881 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:58:46,881 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:58:46,932 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:58:46,932 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 08:58:46,941 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 08:58:46,951 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 08:58:51,406 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 08:58:51,406 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:58:51,411 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:58:51,412 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 08:58:51,412 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 08:58:51,875 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 08:58:52,007 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 08:59:12,197 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 08:59:12,198 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 26}
+2025-10-05 08:59:12,198 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 26}
+2025-10-05 08:59:12,198 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 08:59:12,198 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:12,198 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:12,198 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:12,199 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:15,154 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:15,154 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:59:16,174 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:59:16,174 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 08:59:16,177 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 08:59:16,183 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 08:59:19,291 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 08:59:19,291 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:59:19,296 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:59:19,296 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 08:59:19,296 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 08:59:19,336 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 08:59:19,353 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 08:59:20,746 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 08:59:20,746 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 26}
+2025-10-05 08:59:20,747 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 26}
+2025-10-05 08:59:20,747 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 08:59:20,747 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:20,747 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:20,747 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:20,747 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:22,408 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:22,409 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:59:24,462 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:59:24,462 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 08:59:24,467 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 08:59:24,470 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 08:59:24,495 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 08:59:24,495 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:59:24,499 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:59:24,500 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 08:59:24,500 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 08:59:24,508 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 08:59:24,514 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 08:59:24,615 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 08:59:24,616 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 26}
+2025-10-05 08:59:24,616 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 26}
+2025-10-05 08:59:24,616 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 08:59:24,616 - ml_framework.core.app_logging.app_logger - INFO - Scraping traditional stats for 2025-26 | Context: {'stat_type': 'traditional', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for traditional stats | Context: {}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 08:59:24,617 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 08:59:25,499 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 08:59:25,499 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:59:36,943 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 08:59:49,059 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 08:59:49,059 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 08:59:49,059 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 08:59:49,067 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 08:59:49,067 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 08:59:49,067 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'traditional'}
+2025-10-05 08:59:49,068 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 08:59:49,068 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped traditional stats for all seasons | Context: {'stat_type': 'traditional', 'seasons_count': 2}
+2025-10-05 08:59:49,068 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved traditional stats | Context: {'stat_type': 'traditional', 'seasons_count': 2}
+2025-10-05 08:59:49,068 - ml_framework.core.app_logging.app_logger - INFO - Scraping advanced stats | Context: {'stat_type': 'advanced'}
+2025-10-05 08:59:49,068 - ml_framework.core.app_logging.app_logger - INFO - Scraping advanced stats for 2024-25 | Context: {'stat_type': 'advanced', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for advanced stats | Context: {}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:49,069 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:51,018 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 08:59:51,019 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:59:55,080 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:59:55,080 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 08:59:55,087 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 08:59:55,099 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 08:59:58,679 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 08:59:58,679 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 08:59:58,684 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 08:59:58,684 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 08:59:58,684 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 08:59:58,819 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 08:59:58,947 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:00:18,705 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:00:18,706 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 21}
+2025-10-05 09:00:18,706 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 21}
+2025-10-05 09:00:18,706 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:00:18,706 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:18,706 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:18,706 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:18,706 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:19,645 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:19,645 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:00:25,318 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:00:25,319 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:00:25,322 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:00:25,326 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:00:28,449 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:00:28,450 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:00:28,453 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:00:28,454 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:00:28,454 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:00:28,470 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:00:28,488 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:00:29,900 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:00:29,900 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 21}
+2025-10-05 09:00:29,900 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 21}
+2025-10-05 09:00:29,901 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:00:29,901 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:29,901 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:29,901 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:29,901 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:31,216 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:00:31,216 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:00:37,015 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:00:37,015 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:00:37,019 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:00:37,023 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:00:37,049 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:00:37,049 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:00:37,053 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:00:37,053 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:00:37,054 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:00:37,060 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:00:37,066 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:00:37,178 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:00:37,179 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 21}
+2025-10-05 09:00:37,179 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 21}
+2025-10-05 09:00:37,179 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:00:37,179 - ml_framework.core.app_logging.app_logger - INFO - Scraping advanced stats for 2025-26 | Context: {'stat_type': 'advanced', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for advanced stats | Context: {}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:00:37,180 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:00:38,307 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:00:38,309 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:00:48,505 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:01:00,643 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:01:00,643 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:01:00,643 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:01:00,649 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:01:00,649 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:01:00,649 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'advanced'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped advanced stats for all seasons | Context: {'stat_type': 'advanced', 'seasons_count': 2}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved advanced stats | Context: {'stat_type': 'advanced', 'seasons_count': 2}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Scraping four-factors stats | Context: {'stat_type': 'four-factors'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Scraping four-factors stats for 2024-25 | Context: {'stat_type': 'four-factors', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for four-factors stats | Context: {}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:00,650 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:00,651 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:01,918 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:01,918 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:01:05,717 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:01:05,717 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:01:05,722 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:01:05,729 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:01:09,181 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:01:09,181 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:01:09,185 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:01:09,185 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:01:09,185 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:01:09,284 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:01:09,405 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:01:23,733 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:01:23,734 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:01:23,734 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:01:23,734 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:01:23,734 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:23,734 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:23,734 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:23,734 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:25,055 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:25,056 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:01:27,213 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:01:27,213 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:01:27,217 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:01:27,222 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:01:30,290 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:01:30,290 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:01:30,294 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:01:30,294 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:01:30,294 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:01:30,311 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:01:30,328 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:01:31,738 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:01:31,738 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:01:31,738 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:01:31,739 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:01:31,739 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:31,739 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:31,739 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:31,739 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:32,874 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:01:32,875 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:01:36,728 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:01:36,728 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:01:36,732 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:01:36,735 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:01:36,759 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:01:36,759 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:01:36,763 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:01:36,763 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:01:36,763 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:01:36,769 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:01:36,776 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:01:36,877 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:01:36,877 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:01:36,877 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:01:36,878 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:01:36,878 - ml_framework.core.app_logging.app_logger - INFO - Scraping four-factors stats for 2025-26 | Context: {'stat_type': 'four-factors', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:01:36,878 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for four-factors stats | Context: {}
+2025-10-05 09:01:36,878 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:01:36,878 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:01:36,878 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:01:36,878 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:01:36,879 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:01:36,879 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:01:36,879 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:01:37,936 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:01:37,937 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:01:48,255 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:02:00,401 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:02:00,401 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:02:00,401 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:02:00,407 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:02:00,407 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:02:00,407 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'four-factors'}
+2025-10-05 09:02:00,407 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:02:00,407 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped four-factors stats for all seasons | Context: {'stat_type': 'four-factors', 'seasons_count': 2}
+2025-10-05 09:02:00,407 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved four-factors stats | Context: {'stat_type': 'four-factors', 'seasons_count': 2}
+2025-10-05 09:02:00,407 - ml_framework.core.app_logging.app_logger - INFO - Scraping misc stats | Context: {'stat_type': 'misc'}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Scraping misc stats for 2024-25 | Context: {'stat_type': 'misc', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for misc stats | Context: {}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:00,408 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:01,998 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:01,998 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:02:05,071 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:02:05,071 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:02:05,076 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:02:05,081 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:02:09,806 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:02:09,807 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:02:09,811 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:02:09,811 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:02:09,811 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:02:09,993 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:02:10,116 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:02:24,501 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:02:24,501 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:02:24,501 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:02:24,502 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:02:24,502 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:24,502 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:24,502 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:24,502 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:25,785 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:25,785 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:02:27,949 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:02:27,949 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:02:27,953 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:02:27,956 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:02:31,035 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:02:31,035 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:02:31,039 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:02:31,039 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:02:31,040 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:02:31,062 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:02:31,080 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:02:32,436 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:02:32,436 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:02:32,436 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:02:32,437 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:02:32,437 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:32,437 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:32,437 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:32,437 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:33,576 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:02:33,576 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:02:35,556 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:02:35,556 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:02:35,560 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:02:35,564 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:02:35,585 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:02:35,585 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:02:35,589 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:02:35,589 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:02:35,589 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:02:35,597 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:02:35,603 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:02:35,711 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:02:35,711 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:02:35,711 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Scraping misc stats for 2025-26 | Context: {'stat_type': 'misc', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for misc stats | Context: {}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:02:35,712 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:02:37,598 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:02:37,601 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:02:49,063 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:03:01,196 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:03:01,196 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:03:01,196 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:03:01,202 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:03:01,202 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:03:01,202 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'misc'}
+2025-10-05 09:03:01,202 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:03:01,202 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped misc stats for all seasons | Context: {'stat_type': 'misc', 'seasons_count': 2}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved misc stats | Context: {'stat_type': 'misc', 'seasons_count': 2}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Scraping scoring stats | Context: {'stat_type': 'scoring'}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Scraping scoring stats for 2024-25 | Context: {'stat_type': 'scoring', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for scoring stats | Context: {}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:03:01,203 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:03:12,910 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:03:12,910 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:03:23,111 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:03:35,322 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:03:35,322 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:03:35,322 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:03:46,756 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'NoDataMessage_base__xUA61', 'attempt': 1}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'NoDataMessage_base__xUA61', 'attempt': 2}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class NoDataMessage_base__xUA61 after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Table did not load within the specified timeout | Context: {'error_type': 'DynamicContentLoadError', 'table_class': 'Crom_table__p1iZz'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error scraping table | Context: {'error_message': 'Table did not load within the specified timeout'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error scraping table: Table did not load within the specified timeout | Context: {'error_type': 'ScrapingError'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error extracting data | Context: {'error_message': 'Error scraping table: Table did not load within the specified timeout'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error extracting data: Error scraping table: Table did not load within the specified timeout | Context: {'error_type': 'DataExtractionError'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error scraping Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25', 'error_message': 'Error extracting data: Error scraping table: Table did not load within the specified timeout'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error processing scraped data for scoring | Context: {'stat_type': 'scoring', 'error_message': 'Error extracting data: Error scraping table: Table did not load within the specified timeout'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error processing scraped data for scoring: Error extracting data: Error scraping table: Table did not load within the specified timeout | Context: {'error_type': 'DataProcessingError'}
+2025-10-05 09:03:58,917 - ml_framework.core.app_logging.app_logger - ERROR - Error scraping scoring stats | Context: {'stat_type': 'scoring', 'error_message': 'Error processing scraped data for scoring: Error extracting data: Error scraping table: Table did not load within the specified timeout'}
+2025-10-05 09:12:12,758 - ml_framework.core.app_logging.app_logger - INFO - PageScraper initialized successfully | Context: {'config_type': 'ConfigManager', 'web_driver_type': 'WebDriver'}
+2025-10-05 09:12:12,758 - ml_framework.core.app_logging.app_logger - WARNING - BoxscoreScraper initialized without matchup validator - validation will be skipped | Context: {}
+2025-10-05 09:12:12,758 - ml_framework.core.app_logging.app_logger - INFO - BoxscoreScraper initialized successfully | Context: {'page_scraper_type': 'PageScraper', 'has_matchup_validator': False}
+2025-10-05 09:12:12,758 - ml_framework.core.app_logging.app_logger - INFO - PageScraper initialized successfully | Context: {'config_type': 'ConfigManager', 'web_driver_type': 'WebDriver'}
+2025-10-05 09:12:12,758 - ml_framework.core.app_logging.app_logger - INFO - ScheduleScraper initialized | Context: {'config_type': 'ConfigManager', 'data_access_type': 'CSVDataAccess', 'page_scraper_type': 'PageScraper'}
+2025-10-05 09:12:12,758 - ml_framework.core.app_logging.app_logger - INFO - NbaScraper initialized successfully | Context: {'boxscore_scraper_type': 'BoxscoreScraper', 'schedule_scraper_type': 'ScheduleScraper'}
+2025-10-05 09:12:12,759 - ml_framework.core.app_logging.app_logger - INFO - Loading scraped data | Context: {}
+2025-10-05 09:12:12,759 - ml_framework.core.app_logging.app_logger - INFO - Getting load directory | Context: {'cumulative': True, 'file_name': 'None'}
+2025-10-05 09:12:12,759 - ml_framework.core.app_logging.app_logger - INFO - Loading dataframes | Context: {}
+2025-10-05 09:12:12,978 - ml_framework.core.app_logging.app_logger - INFO - Dataframes loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 09:12:12,978 - ml_framework.core.app_logging.app_logger - INFO - Function _load_dataframes completed | Context: {'duration_seconds': 0.21858978271484375, 'status': 'success'}
+2025-10-05 09:12:12,978 - ml_framework.core.app_logging.app_logger - INFO - Data loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 09:12:12,978 - ml_framework.core.app_logging.app_logger - INFO - Function load_scraped_data completed | Context: {'duration_seconds': 0.21888184547424316, 'status': 'success'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Starting to scrape boxscores | Context: {'seasons': ['2024-25', '2025-26'], 'start_date': '12/16/2024'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Scraping traditional stats | Context: {'stat_type': 'traditional'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Scraping traditional stats for 2024-25 | Context: {'stat_type': 'traditional', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for traditional stats | Context: {}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:13,010 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:18,697 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:18,698 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:12:18,708 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:12:18,708 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:12:18,715 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:12:18,726 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:12:22,957 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:12:22,958 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:12:22,963 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:12:22,964 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:12:22,964 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:12:23,436 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:12:23,613 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:12:43,255 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:12:43,255 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 26}
+2025-10-05 09:12:43,255 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 26}
+2025-10-05 09:12:43,255 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:12:43,256 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:43,256 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:43,256 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:43,256 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:44,702 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:44,702 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:12:44,706 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:12:44,706 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:12:44,715 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:12:44,723 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:12:48,605 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:12:48,605 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:12:48,610 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:12:48,610 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:12:48,610 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:12:48,650 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:12:48,667 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:12:50,176 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:12:50,176 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 26}
+2025-10-05 09:12:50,176 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 26}
+2025-10-05 09:12:50,177 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:12:50,177 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:50,177 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:50,177 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:50,177 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:51,922 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:12:51,922 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:12:51,941 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:12:51,942 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:12:52,052 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:12:52,164 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:12:52,348 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:12:52,350 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:12:52,434 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:12:52,435 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:12:52,435 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:12:52,453 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:12:52,459 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:12:52,609 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:12:52,609 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 26}
+2025-10-05 09:12:52,610 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 26}
+2025-10-05 09:12:52,610 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:12:52,610 - ml_framework.core.app_logging.app_logger - INFO - Scraping traditional stats for 2025-26 | Context: {'stat_type': 'traditional', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:12:52,610 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for traditional stats | Context: {}
+2025-10-05 09:12:52,611 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:12:52,611 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:12:52,611 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:12:52,611 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:12:52,611 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:12:52,611 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:12:52,611 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:12:53,422 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:12:53,422 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:13:04,846 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:13:04,847 - ml_framework.core.app_logging.app_logger - INFO - Waiting before retry | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1, 'delay_seconds': 2}
+2025-10-05 09:13:16,951 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:13:16,952 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:13:16,952 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:13:16,959 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:13:16,959 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-traditional?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:13:16,960 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'traditional'}
+2025-10-05 09:13:16,960 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:13:16,960 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped traditional stats for all seasons | Context: {'stat_type': 'traditional', 'seasons_count': 2}
+2025-10-05 09:13:16,960 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved traditional stats | Context: {'stat_type': 'traditional', 'seasons_count': 2}
+2025-10-05 09:13:16,960 - ml_framework.core.app_logging.app_logger - INFO - Scraping advanced stats | Context: {'stat_type': 'advanced'}
+2025-10-05 09:13:16,960 - ml_framework.core.app_logging.app_logger - INFO - Scraping advanced stats for 2024-25 | Context: {'stat_type': 'advanced', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:13:16,960 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for advanced stats | Context: {}
+2025-10-05 09:13:16,961 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:13:16,961 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:13:16,961 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:13:16,961 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:16,961 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:16,961 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:16,961 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:19,444 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:19,444 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:13:19,449 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:13:19,449 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:13:19,453 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:13:19,459 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:13:23,069 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:13:23,069 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:13:23,073 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:13:23,074 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:13:23,074 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:13:23,205 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:13:23,338 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:13:43,299 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:13:43,299 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 21}
+2025-10-05 09:13:43,299 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 21}
+2025-10-05 09:13:43,300 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:13:43,300 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:43,300 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:43,300 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:43,300 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:44,733 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:44,733 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:13:44,737 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:13:44,737 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:13:44,749 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:13:44,758 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:13:48,164 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:13:48,164 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:13:48,168 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:13:48,168 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:13:48,169 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:13:48,185 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:13:48,202 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:13:49,595 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:13:49,595 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 21}
+2025-10-05 09:13:49,595 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 21}
+2025-10-05 09:13:49,596 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:13:49,596 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:49,596 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:49,596 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:49,596 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:50,367 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:13:50,367 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:13:50,372 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:13:50,372 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:13:50,381 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:13:50,386 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:13:50,537 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:13:50,537 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:13:50,578 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:13:50,579 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:13:50,579 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:13:50,587 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:13:50,599 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:13:50,950 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:13:50,951 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 21}
+2025-10-05 09:13:50,951 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 21}
+2025-10-05 09:13:50,951 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:13:50,951 - ml_framework.core.app_logging.app_logger - INFO - Scraping advanced stats for 2025-26 | Context: {'stat_type': 'advanced', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:13:50,951 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for advanced stats | Context: {}
+2025-10-05 09:13:50,951 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:13:50,951 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:13:50,952 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:13:50,952 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:13:50,952 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:13:50,952 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:13:50,952 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:13:51,797 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:13:51,797 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:02,057 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:14:02,057 - ml_framework.core.app_logging.app_logger - INFO - Waiting before retry | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1, 'delay_seconds': 2}
+2025-10-05 09:14:15,499 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:14:15,499 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:14:15,499 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:14:15,506 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:14:15,506 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-advanced?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:14:15,506 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'advanced'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped advanced stats for all seasons | Context: {'stat_type': 'advanced', 'seasons_count': 2}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved advanced stats | Context: {'stat_type': 'advanced', 'seasons_count': 2}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Scraping four-factors stats | Context: {'stat_type': 'four-factors'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Scraping four-factors stats for 2024-25 | Context: {'stat_type': 'four-factors', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for four-factors stats | Context: {}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:15,507 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:18,400 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:18,401 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:18,455 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:14:18,456 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:14:18,548 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:14:18,553 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:14:22,089 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:14:22,089 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:22,093 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:14:22,093 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:14:22,094 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:14:22,199 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:14:22,326 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:14:37,984 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:14:37,984 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:14:37,984 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:14:37,985 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:14:37,985 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:37,985 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:37,985 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:37,985 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:40,448 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:40,448 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:40,455 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:14:40,455 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:14:40,462 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:14:40,471 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:14:43,863 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:14:43,864 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:43,867 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:14:43,867 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:14:43,868 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:14:43,882 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:14:43,899 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:14:45,292 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:14:45,293 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:14:45,293 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:14:45,293 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:14:45,293 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:45,293 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:45,293 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:45,293 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:46,228 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:14:46,228 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:46,232 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:14:46,233 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:14:46,268 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:14:46,378 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:14:46,544 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:14:46,545 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:46,553 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:14:46,553 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:14:46,553 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:14:46,590 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:14:46,598 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:14:46,834 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:14:46,834 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:14:46,834 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:14:46,835 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:14:46,835 - ml_framework.core.app_logging.app_logger - INFO - Scraping four-factors stats for 2025-26 | Context: {'stat_type': 'four-factors', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:14:46,835 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for four-factors stats | Context: {}
+2025-10-05 09:14:46,835 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:14:46,836 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:14:46,836 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:14:46,836 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:14:46,836 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:14:46,836 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:14:46,836 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:14:47,888 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:14:47,888 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:14:58,048 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:14:58,049 - ml_framework.core.app_logging.app_logger - INFO - Waiting before retry | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1, 'delay_seconds': 2}
+2025-10-05 09:15:11,442 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:15:11,442 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:15:11,442 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:15:11,448 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:15:11,448 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-four-factors?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:15:11,448 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'four-factors'}
+2025-10-05 09:15:11,448 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:15:11,449 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped four-factors stats for all seasons | Context: {'stat_type': 'four-factors', 'seasons_count': 2}
+2025-10-05 09:15:11,449 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved four-factors stats | Context: {'stat_type': 'four-factors', 'seasons_count': 2}
+2025-10-05 09:15:11,449 - ml_framework.core.app_logging.app_logger - INFO - Scraping misc stats | Context: {'stat_type': 'misc'}
+2025-10-05 09:15:11,449 - ml_framework.core.app_logging.app_logger - INFO - Scraping misc stats for 2024-25 | Context: {'stat_type': 'misc', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:15:11,449 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for misc stats | Context: {}
+2025-10-05 09:15:11,450 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:15:11,450 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:15:11,450 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:15:11,450 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:11,450 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:11,450 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:11,450 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:13,020 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:13,020 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:15:13,025 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:15:13,025 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:15:13,030 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:15:13,037 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:15:16,835 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:15:16,836 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:15:16,840 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:15:16,840 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:15:16,841 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:15:17,028 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:15:17,148 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:15:31,584 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:15:31,585 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:15:31,585 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 15}
+2025-10-05 09:15:31,585 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:15:31,585 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:31,585 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:31,585 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:31,585 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:32,837 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:32,837 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:15:32,843 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:15:32,843 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:15:32,850 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:15:32,854 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:15:36,125 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:15:36,125 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:15:36,129 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:15:36,129 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:15:36,129 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:15:36,151 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:15:36,168 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:15:37,536 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:15:37,536 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:15:37,536 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 15}
+2025-10-05 09:15:37,537 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:15:37,537 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:37,537 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:37,537 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:37,537 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:39,834 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:15:39,834 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:15:39,843 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:15:39,844 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:15:39,849 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:15:39,854 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:15:40,011 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:15:40,012 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:15:40,016 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:15:40,016 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:15:40,016 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:15:40,025 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:15:40,198 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:15:40,489 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:15:40,489 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:15:40,490 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 15}
+2025-10-05 09:15:40,490 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Scraping misc stats for 2025-26 | Context: {'stat_type': 'misc', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for misc stats | Context: {}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:15:40,491 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:15:41,565 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:15:41,566 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:15:51,804 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:15:51,805 - ml_framework.core.app_logging.app_logger - INFO - Waiting before retry | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1, 'delay_seconds': 2}
+2025-10-05 09:16:03,954 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:16:03,954 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:16:03,954 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:16:03,960 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:16:03,960 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-misc?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:16:03,960 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'misc'}
+2025-10-05 09:16:03,960 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped misc stats for all seasons | Context: {'stat_type': 'misc', 'seasons_count': 2}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved misc stats | Context: {'stat_type': 'misc', 'seasons_count': 2}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Scraping scoring stats | Context: {'stat_type': 'scoring'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Scraping scoring stats for 2024-25 | Context: {'stat_type': 'scoring', 'season': '2024-25', 'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2024-25 from 12/16/2024 to 8/01/2025 for scoring stats | Context: {}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '12/16/2024', 'end_date': '8/01/2025'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2025-04-01 00:00:00'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season', 'Playoffs', 'PlayIn']}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:03,961 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:05,100 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:05,100 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:16:05,107 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:16:05,107 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:16:05,113 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:16:05,117 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:16:08,818 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:16:08,818 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:16:08,830 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:16:08,830 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:16:08,830 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:16:08,960 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:16:09,089 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 5082}
+2025-10-05 09:16:30,216 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 1694, 'game_ids_count': 1694}
+2025-10-05 09:16:30,217 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 1694, 'columns': 22}
+2025-10-05 09:16:30,217 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 1694, 'columns': 22}
+2025-10-05 09:16:30,217 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2024-25 | Context: {'sub_season_type': 'Regular+Season', 'season': '2024-25'}
+2025-10-05 09:16:30,217 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:30,217 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:30,217 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:30,217 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:31,333 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Playoffs&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:31,334 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:16:32,981 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:16:32,981 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:16:32,987 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:16:32,992 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:16:36,084 - ml_framework.core.app_logging.app_logger - INFO - Selected 'ALL' in the pagination dropdown | Context: {}
+2025-10-05 09:16:36,084 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:16:36,088 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:16:36,088 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:16:36,088 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:16:36,104 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:16:36,121 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 504}
+2025-10-05 09:16:37,552 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 168, 'game_ids_count': 168}
+2025-10-05 09:16:37,553 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 168, 'columns': 22}
+2025-10-05 09:16:37,553 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 168, 'columns': 22}
+2025-10-05 09:16:37,553 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Playoffs for 2024-25 | Context: {'sub_season_type': 'Playoffs', 'season': '2024-25'}
+2025-10-05 09:16:37,553 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:37,553 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:37,553 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:37,553 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:38,473 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=PlayIn&Season=2024-25&DateFrom=12/16/2024&DateTo=8/01/2025'}
+2025-10-05 09:16:38,474 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:16:43,167 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:16:43,167 - ml_framework.core.app_logging.app_logger - INFO - Handling pagination | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:16:43,171 - ml_framework.core.app_logging.app_logger - INFO - Pagination element found | Context: {}
+2025-10-05 09:16:43,174 - ml_framework.core.app_logging.app_logger - INFO - Dropdown element found | Context: {}
+2025-10-05 09:16:43,197 - ml_framework.core.app_logging.app_logger - INFO - No pagination found on the page | Context: {'pagination_class': 'Pagination_pageDropdown__KgjBU', 'dropdown_class': 'DropDown_select__4pIg9'}
+2025-10-05 09:16:43,198 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:16:43,202 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Crom_table__p1iZz', 'element_count': 1}
+2025-10-05 09:16:43,202 - ml_framework.core.app_logging.app_logger - INFO - Table found and scraped successfully | Context: {}
+2025-10-05 09:16:43,202 - ml_framework.core.app_logging.app_logger - WARNING - Matchup validation skipped - no validator available | Context: {}
+2025-10-05 09:16:43,208 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P', 'has_parent': True}
+2025-10-05 09:16:43,214 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'Anchor_anchor__cSc3P', 'element_count': 36}
+2025-10-05 09:16:43,316 - ml_framework.core.app_logging.app_logger - INFO - Successfully extracted team and game IDs | Context: {'team_ids_count': 12, 'game_ids_count': 12}
+2025-10-05 09:16:43,316 - ml_framework.core.app_logging.app_logger - INFO - Successfully converted table to DataFrame | Context: {'rows': 12, 'columns': 22}
+2025-10-05 09:16:43,316 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and converted data to DataFrame | Context: {'rows': 12, 'columns': 22}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped PlayIn for 2024-25 | Context: {'sub_season_type': 'PlayIn', 'season': '2024-25'}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Scraping scoring stats for 2025-26 | Context: {'stat_type': 'scoring', 'season': '2025-26', 'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Scraping 2025-26 from 10/01/2025 to 10/05/2025 for scoring stats | Context: {}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Determining sub-season types | Context: {'start_date': '10/01/2025', 'end_date': '10/05/2025'}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Play-in date | Context: {'play_in_date': '2026-04-01 00:00:00'}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Determined sub-season types | Context: {'sub_season_types': ['Regular+Season']}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Constructed NBA URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Scraping URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Starting page scrape | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:16:43,317 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:16:44,355 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:16:44,355 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'Crom_table__p1iZz', 'has_parent': False}
+2025-10-05 09:16:54,550 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1}
+2025-10-05 09:16:54,551 - ml_framework.core.app_logging.app_logger - INFO - Waiting before retry | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 1, 'delay_seconds': 2}
+2025-10-05 09:17:06,704 - ml_framework.core.app_logging.app_logger - INFO - Element not found or stale | Context: {'class_name': 'Crom_table__p1iZz', 'attempt': 2}
+2025-10-05 09:17:06,705 - ml_framework.core.app_logging.app_logger - ERROR - Failed to retrieve elements with class Crom_table__p1iZz after 2 attempts | Context: {'error_type': 'ElementNotFoundError'}
+2025-10-05 09:17:06,705 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'NoDataMessage_base__xUA61', 'has_parent': False}
+2025-10-05 09:17:06,710 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'NoDataMessage_base__xUA61', 'element_count': 1}
+2025-10-05 09:17:06,711 - ml_framework.core.app_logging.app_logger - INFO - No data message found | Context: {'url': 'https://www.nba.com/stats/teams/boxscores-scoring?SeasonType=Regular+Season&DateFrom=10/01/2025&DateTo=10/05/2025'}
+2025-10-05 09:17:06,711 - ml_framework.core.app_logging.app_logger - WARNING - No data found | Context: {'Season': '2025-26', 'season_type': 'Regular+Season', 'stat_type': 'scoring'}
+2025-10-05 09:17:06,711 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped Regular+Season for 2025-26 | Context: {'sub_season_type': 'Regular+Season', 'season': '2025-26'}
+2025-10-05 09:17:06,711 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped scoring stats for all seasons | Context: {'stat_type': 'scoring', 'seasons_count': 2}
+2025-10-05 09:17:06,711 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved scoring stats | Context: {'stat_type': 'scoring', 'seasons_count': 2}
+2025-10-05 09:17:06,711 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 3.0994415283203125e-05, 'status': 'success'}
+2025-10-05 09:17:06,721 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 3.266334533691406e-05, 'status': 'success'}
+2025-10-05 09:17:06,732 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.7894973754882812e-05, 'status': 'success'}
+2025-10-05 09:17:06,739 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 3.075599670410156e-05, 'status': 'success'}
+2025-10-05 09:17:06,743 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.2649765014648438e-05, 'status': 'success'}
+2025-10-05 09:17:06,754 - ml_framework.core.app_logging.app_logger - INFO - Dataframes saved successfully | Context: {}
+2025-10-05 09:17:06,754 - ml_framework.core.app_logging.app_logger - INFO - Function save_dataframes completed | Context: {'duration_seconds': 0.04250144958496094, 'status': 'success'}
+2025-10-05 09:17:06,754 - ml_framework.core.app_logging.app_logger - INFO - Boxscore scraping completed successfully | Context: {}
+2025-10-05 09:17:06,754 - ml_framework.core.app_logging.app_logger - INFO - Starting to scrape matchups | Context: {'search_day': 'Sun'}
+2025-10-05 09:17:06,754 - ml_framework.core.app_logging.app_logger - INFO - Starting to scrape matchups | Context: {'search_day': 'Sun'}
+2025-10-05 09:17:06,754 - ml_framework.core.app_logging.app_logger - INFO - Navigating to URL | Context: {'url': 'https://www.nba.com/schedule'}
+2025-10-05 09:17:07,802 - ml_framework.core.app_logging.app_logger - INFO - Navigation to URL completed successfully | Context: {'url': 'https://www.nba.com/schedule'}
+2025-10-05 09:17:07,802 - ml_framework.core.app_logging.app_logger - INFO - Navigated to NBA schedule URL | Context: {}
+2025-10-05 09:17:07,802 - ml_framework.core.app_logging.app_logger - INFO - Searching for games | Context: {'search_day': 'Sun'}
+2025-10-05 09:17:07,802 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'ScheduleDay_sdDay__3s2Xt', 'has_parent': False}
+2025-10-05 09:17:08,377 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'ScheduleDay_sdDay__3s2Xt', 'element_count': 25}
+2025-10-05 09:17:08,377 - ml_framework.core.app_logging.app_logger - INFO - Retrieving elements by class | Context: {'class_name': 'ScheduleDay_sdGames__NGdO5', 'has_parent': False}
+2025-10-05 09:17:08,404 - ml_framework.core.app_logging.app_logger - INFO - Elements found | Context: {'class_name': 'ScheduleDay_sdGames__NGdO5', 'element_count': 25}
+2025-10-05 09:17:08,453 - ml_framework.core.app_logging.app_logger - INFO - Found games for the specified day | Context: {'search_day': 'Sun'}
+2025-10-05 09:17:08,454 - ml_framework.core.app_logging.app_logger - INFO - Extracting team IDs from schedule | Context: {}
+2025-10-05 09:17:08,454 - ml_framework.core.app_logging.app_logger - INFO - Retrieving link elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P Link_styled__okbXW', 'has_parent': True}
+2025-10-05 09:17:08,474 - ml_framework.core.app_logging.app_logger - INFO - Link elements found | Context: {'class_name': 'Anchor_anchor__cSc3P Link_styled__okbXW', 'element_count': 4}
+2025-10-05 09:17:08,503 - ml_framework.core.app_logging.app_logger - INFO - Team IDs extracted successfully | Context: {'matchups_count': 2}
+2025-10-05 09:17:08,503 - ml_framework.core.app_logging.app_logger - INFO - Extracting game IDs from schedule | Context: {}
+2025-10-05 09:17:08,504 - ml_framework.core.app_logging.app_logger - INFO - Retrieving link elements by class | Context: {'class_name': 'Anchor_anchor__cSc3P TabLink_link__f_15h', 'has_parent': True}
+2025-10-05 09:17:08,515 - ml_framework.core.app_logging.app_logger - INFO - Link elements found | Context: {'class_name': 'Anchor_anchor__cSc3P TabLink_link__f_15h', 'element_count': 4}
+2025-10-05 09:17:08,610 - ml_framework.core.app_logging.app_logger - INFO - Game IDs extracted successfully | Context: {'games_count': 2}
+2025-10-05 09:17:08,611 - ml_framework.core.app_logging.app_logger - INFO - Saving matchups and games | Context: {'matchups_count': 2, 'games_count': 2}
+2025-10-05 09:17:08,611 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.6941299438476562e-05, 'status': 'success'}
+2025-10-05 09:17:08,612 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 7.05718994140625e-05, 'status': 'success'}
+2025-10-05 09:17:08,613 - ml_framework.core.app_logging.app_logger - INFO - Dataframes saved successfully | Context: {}
+2025-10-05 09:17:08,613 - ml_framework.core.app_logging.app_logger - INFO - Function save_dataframes completed | Context: {'duration_seconds': 0.0016140937805175781, 'status': 'success'}
+2025-10-05 09:17:08,613 - ml_framework.core.app_logging.app_logger - INFO - Successfully saved matchups and game IDs data | Context: {}
+2025-10-05 09:17:08,614 - ml_framework.core.app_logging.app_logger - INFO - Successfully scraped and saved matchups | Context: {'matchups_count': 2, 'games_count': 2}
+2025-10-05 09:17:08,614 - ml_framework.core.app_logging.app_logger - INFO - Matchup scraping completed successfully | Context: {}
+2025-10-05 09:17:08,614 - ml_framework.core.app_logging.app_logger - INFO - Loading scraped data | Context: {}
+2025-10-05 09:17:08,614 - ml_framework.core.app_logging.app_logger - INFO - Getting load directory | Context: {'cumulative': False, 'file_name': 'None'}
+2025-10-05 09:17:08,614 - ml_framework.core.app_logging.app_logger - INFO - Loading dataframes | Context: {}
+2025-10-05 09:17:08,637 - ml_framework.core.app_logging.app_logger - INFO - Dataframes loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/newly_scraped'}
+2025-10-05 09:17:08,638 - ml_framework.core.app_logging.app_logger - INFO - Function _load_dataframes completed | Context: {'duration_seconds': 0.023145675659179688, 'status': 'success'}
+2025-10-05 09:17:08,638 - ml_framework.core.app_logging.app_logger - INFO - Data loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/newly_scraped'}
+2025-10-05 09:17:08,638 - ml_framework.core.app_logging.app_logger - INFO - Function load_scraped_data completed | Context: {'duration_seconds': 0.023396968841552734, 'status': 'success'}
+2025-10-05 09:17:08,638 - ml_framework.core.app_logging.app_logger - INFO - Loading scraped data | Context: {}
+2025-10-05 09:17:08,638 - ml_framework.core.app_logging.app_logger - INFO - Getting load directory | Context: {'cumulative': True, 'file_name': 'None'}
+2025-10-05 09:17:08,638 - ml_framework.core.app_logging.app_logger - INFO - Loading dataframes | Context: {}
+2025-10-05 09:17:08,960 - ml_framework.core.app_logging.app_logger - INFO - Dataframes loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 09:17:08,960 - ml_framework.core.app_logging.app_logger - INFO - Function _load_dataframes completed | Context: {'duration_seconds': 0.32195591926574707, 'status': 'success'}
+2025-10-05 09:17:08,960 - ml_framework.core.app_logging.app_logger - INFO - Data loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 09:17:08,960 - ml_framework.core.app_logging.app_logger - INFO - Function load_scraped_data completed | Context: {'duration_seconds': 0.32224559783935547, 'status': 'success'}
+2025-10-05 09:17:08,960 - ml_framework.core.app_logging.app_logger - INFO - Starting validation of scraped dataframes | Context: {'dataframe_count': 5}
+2025-10-05 09:17:08,960 - ml_framework.core.app_logging.app_logger - INFO - Checking games_traditional.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:08,971 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv passes initial checks | Context: {'rows': 1874, 'columns': 26}
+2025-10-05 09:17:08,971 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:08,973 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv validated successfully | Context: {'rows': 1874, 'columns': 26}
+2025-10-05 09:17:08,973 - ml_framework.core.app_logging.app_logger - INFO - Checking games_advanced.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:08,976 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv passes initial checks | Context: {'rows': 1874, 'columns': 21}
+2025-10-05 09:17:08,976 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:08,976 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv validated successfully | Context: {'rows': 1874, 'columns': 21}
+2025-10-05 09:17:08,976 - ml_framework.core.app_logging.app_logger - INFO - Checking games_four-factors.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:08,978 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv passes initial checks | Context: {'rows': 1874, 'columns': 15}
+2025-10-05 09:17:08,978 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:08,979 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv validated successfully | Context: {'rows': 1874, 'columns': 15}
+2025-10-05 09:17:08,979 - ml_framework.core.app_logging.app_logger - INFO - Checking games_misc.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:08,980 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv passes initial checks | Context: {'rows': 1874, 'columns': 15}
+2025-10-05 09:17:08,980 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:08,980 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv validated successfully | Context: {'rows': 1874, 'columns': 15}
+2025-10-05 09:17:08,980 - ml_framework.core.app_logging.app_logger - INFO - Checking games_scoring.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:08,982 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv passes initial checks | Context: {'rows': 1874, 'columns': 22}
+2025-10-05 09:17:08,982 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:08,982 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv validated successfully | Context: {'rows': 1874, 'columns': 22}
+2025-10-05 09:17:08,982 - ml_framework.core.app_logging.app_logger - INFO - All dataframes validated successfully | Context: {}
+2025-10-05 09:17:08,982 - ml_framework.core.app_logging.app_logger - INFO - Function validate_scraped_dataframes completed | Context: {'duration_seconds': 0.022242069244384766, 'status': 'success'}
+2025-10-05 09:17:08,982 - ml_framework.core.app_logging.app_logger - INFO - Starting validation of scraped dataframes | Context: {'dataframe_count': 5}
+2025-10-05 09:17:08,982 - ml_framework.core.app_logging.app_logger - INFO - Checking games_traditional.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:08,997 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv passes initial checks | Context: {'rows': 46658, 'columns': 26}
+2025-10-05 09:17:08,998 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:09,000 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv validated successfully | Context: {'rows': 46658, 'columns': 26}
+2025-10-05 09:17:09,000 - ml_framework.core.app_logging.app_logger - INFO - Checking games_advanced.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:09,015 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv passes initial checks | Context: {'rows': 46658, 'columns': 21}
+2025-10-05 09:17:09,016 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:09,018 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv validated successfully | Context: {'rows': 46658, 'columns': 21}
+2025-10-05 09:17:09,018 - ml_framework.core.app_logging.app_logger - INFO - Checking games_four-factors.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:09,032 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv passes initial checks | Context: {'rows': 46658, 'columns': 15}
+2025-10-05 09:17:09,033 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:09,034 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv validated successfully | Context: {'rows': 46658, 'columns': 15}
+2025-10-05 09:17:09,034 - ml_framework.core.app_logging.app_logger - INFO - Checking games_misc.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:09,046 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv passes initial checks | Context: {'rows': 46658, 'columns': 15}
+2025-10-05 09:17:09,047 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:09,048 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv validated successfully | Context: {'rows': 46658, 'columns': 15}
+2025-10-05 09:17:09,048 - ml_framework.core.app_logging.app_logger - INFO - Checking games_scoring.csv for nulls and duplicates | Context: {}
+2025-10-05 09:17:09,064 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv passes initial checks | Context: {'rows': 46658, 'columns': 22}
+2025-10-05 09:17:09,064 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 09:17:09,065 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv validated successfully | Context: {'rows': 46658, 'columns': 22}
+2025-10-05 09:17:09,066 - ml_framework.core.app_logging.app_logger - INFO - All dataframes validated successfully | Context: {}
+2025-10-05 09:17:09,066 - ml_framework.core.app_logging.app_logger - INFO - Function validate_scraped_dataframes completed | Context: {'duration_seconds': 0.08335113525390625, 'status': 'success'}
+2025-10-05 09:17:09,133 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.8371810913085938e-05, 'status': 'success'}
+2025-10-05 09:17:09,284 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 3.0994415283203125e-05, 'status': 'success'}
+2025-10-05 09:17:09,548 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.765655517578125e-05, 'status': 'success'}
+2025-10-05 09:17:09,706 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 3.0040740966796875e-05, 'status': 'success'}
+2025-10-05 09:17:09,779 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.86102294921875e-05, 'status': 'success'}
+2025-10-05 09:17:10,089 - ml_framework.core.app_logging.app_logger - INFO - Dataframes saved successfully | Context: {}
+2025-10-05 09:17:10,089 - ml_framework.core.app_logging.app_logger - INFO - Function save_dataframes completed | Context: {'duration_seconds': 0.9560661315917969, 'status': 'success'}

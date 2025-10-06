@@ -1,0 +1,76 @@
+# NBA Team ID to Basketball-Reference Abbreviation Mapping
+# This mapping is used by ValidationScraper to convert NBA team IDs to
+# basketball-reference.com team abbreviations for validation data scraping.
+
+# Format:
+# nba_team_id: bbref_abbreviation
+
+# Current NBA Teams (30 teams)
+team_id_to_abbrev:
+  '1610612737': 'ATL'  # Atlanta Hawks
+  '1610612738': 'BOS'  # Boston Celtics
+  '1610612751': 'BRK'  # Brooklyn Nets
+  '1610612766': 'CHA'  # Charlotte Hornets
+  '1610612741': 'CHI'  # Chicago Bulls
+  '1610612739': 'CLE'  # Cleveland Cavaliers
+  '1610612742': 'DAL'  # Dallas Mavericks
+  '1610612743': 'DEN'  # Denver Nuggets
+  '1610612765': 'DET'  # Detroit Pistons
+  '1610612744': 'GSW'  # Golden State Warriors
+  '1610612745': 'HOU'  # Houston Rockets
+  '1610612754': 'IND'  # Indiana Pacers
+  '1610612746': 'LAC'  # LA Clippers
+  '1610612747': 'LAL'  # LA Lakers
+  '1610612763': 'MEM'  # Memphis Grizzlies
+  '1610612748': 'MIA'  # Miami Heat
+  '1610612749': 'MIL'  # Milwaukee Bucks
+  '1610612750': 'MIN'  # Minnesota Timberwolves
+  '1610612740': 'NOP'  # New Orleans Pelicans
+  '1610612752': 'NYK'  # New York Knicks
+  '1610612760': 'OKC'  # Oklahoma City Thunder
+  '1610612753': 'ORL'  # Orlando Magic
+  '1610612755': 'PHI'  # Philadelphia 76ers
+  '1610612756': 'PHX'  # Phoenix Suns
+  '1610612757': 'POR'  # Portland Trail Blazers
+  '1610612758': 'SAC'  # Sacramento Kings
+  '1610612759': 'SAS'  # San Antonio Spurs
+  '1610612761': 'TOR'  # Toronto Raptors
+  '1610612762': 'UTA'  # Utah Jazz
+  '1610612764': 'WAS'  # Washington Wizards
+
+# Historical Teams / Relocations
+# For games played when teams had different locations/names
+# Use the abbreviation that basketball-reference used at the time
+historical_teams:
+  # Seattle SuperSonics (moved to Oklahoma City in 2008)
+  # For games 2008 and earlier, some may still use SEA
+  # NBA uses same team ID for OKC/SEA continuity
+  'SEA': '1610612760'  # Seattle → OKC Thunder
+
+  # New Jersey Nets (moved to Brooklyn in 2012)
+  # For games 2012 and earlier
+  'NJN': '1610612751'  # New Jersey → Brooklyn
+
+  # New Orleans Hornets (became Pelicans in 2013)
+  # For games 2013 and earlier
+  'NOH': '1610612740'  # New Orleans Hornets → Pelicans
+
+  # Charlotte Hornets (original, moved to New Orleans in 2002)
+  # For games 2002 and earlier
+  # Note: Current Charlotte Hornets use same ID as original
+  'CHH': '1610612766'  # Charlotte Hornets (original)
+
+  # Vancouver Grizzlies (moved to Memphis in 2001)
+  # For games 2001 and earlier
+  'VAN': '1610612763'  # Vancouver → Memphis
+
+  # New Orleans/Oklahoma City Hornets (2005-2007)
+  # Temporarily played in Oklahoma City due to Hurricane Katrina
+  'NOK': '1610612740'  # New Orleans/OKC Hornets
+
+# Notes:
+# - Team IDs are NBA's official team IDs (never change, even with relocation)
+# - Abbreviations match basketball-reference.com's format
+# - For historical games, basketball-reference uses the abbreviation from that era
+# - When adding new teams, add to team_id_to_abbrev
+# - When teams relocate, add old abbreviation to historical_teams

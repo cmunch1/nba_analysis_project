@@ -50,4 +50,5 @@ elo_change_column: elo_change
 validation_split: 0.2
 stratify_column: month # used to ensure that seasonality is maintained in the validation set (e.g. same number of games from each month)
 validation_last_n_seasons: 3 # number of most recent completed seasons to include in the validation set
+random_state: 42
 

@@ -2,26 +2,38 @@ import pandas as pd
 import logging
 from typing import List, Tuple, Dict
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
-from ml_framework.core.app_logging import log_performance, structured_log
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.error_handler import DataProcessingError
 from .base_data_processing_classes import BaseNBADataProcessor
 
-logger = logging.getLogger(__name__)
 
 class ProcessScrapedNBAData(BaseNBADataProcessor):
-    @log_performance
-    def __init__(self,  config: BaseConfigManager):
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger):
         """
         Initialize the ProcessScrapedNBAData class.
 
         Args:
             config (BaseConfigManager): Configuration object containing processing parameters.
+            app_logger (BaseAppLogger): Logger instance for structured logging.
         """
         self.config = config
-        
-        structured_log(logger, logging.INFO, "ProcessScrapedNBAData initialized",
-                       config_type=type(config).__name__)
-        
+        self.app_logger = app_logger
+
+        self.app_logger.structured_log(
+            logging.INFO,
+            "ProcessScrapedNBAData initialized",
+            config_type=type(config).__name__
+        )
+
+    @staticmethod
+    def log_performance(func):
+        """Decorator factory for performance logging"""
+        def wrapper(*args, **kwargs):
+            # Get the self instance from args since this is now a static method
+            instance = args[0]
+            return instance.app_logger.log_performance(func)(*args, **kwargs)
+        return wrapper
+
     @log_performance
     def process_data(self, scraped_dataframes: List[pd.DataFrame]) -> Tuple[pd.DataFrame, Dict[str, str]]:
         """
@@ -37,7 +49,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             DataProcessingError: If there's an error during any step of the data processing.
         """
         
-        structured_log(logger, logging.INFO, "Starting process_data",
+        self.app_logger.structured_log(logging.INFO, "Starting process_data",
                        dataframe_count=len(scraped_dataframes))
         try:
                         
@@ -48,17 +60,17 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             df[self.config.new_date_column] = pd.to_datetime(df[self.config.new_date_column])
             df = df.sort_values(by=[self.config.new_date_column, self.config.new_game_id_column, self.config.home_team_column], ascending=[True, True, True])
                       
-            structured_log(logger, logging.INFO, "Data processing completed successfully",
+            self.app_logger.structured_log(logging.INFO, "Data processing completed successfully",
                            final_dataframe_shape=df.shape)
             return df, column_mapping
         
         except (DataProcessingError) as e:
-            structured_log(logger, logging.ERROR, "Error in process_data",
+            self.app_logger.structured_log(logging.ERROR, "Error in process_data",
                            error_message=str(e),
                            error_type=type(e).__name__)
             raise
         except Exception as e:
-            structured_log(logger, logging.ERROR, "Unexpected error in process_data",
+            self.app_logger.structured_log(logging.ERROR, "Unexpected error in process_data",
                            error_message=str(e),
                            error_type=type(e).__name__)
             raise DataProcessingError("Unexpected error in process_data",
@@ -66,7 +78,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
         
     @log_performance
     def merge_team_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        structured_log(logger, logging.INFO, "Starting merge_team_data",
+        self.app_logger.structured_log(logging.INFO, "Starting merge_team_data",
                        dataframe_shape=df.shape)
         try:    
             # separate out the game info columns but keep the new_game_id_column so we can merge on it
@@ -89,7 +101,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             # move the new_game_id_column to the front
             final_df = final_df[[self.config.new_game_id_column] + [col for col in final_df.columns if col != self.config.new_game_id_column]]
 
-            structured_log(logger, logging.INFO, "Team data combined successfully",
+            self.app_logger.structured_log(logging.INFO, "Team data combined successfully",
                            dataframe_shape=final_df.shape)
             return final_df
         except Exception as e:
@@ -113,7 +125,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
         Raises:
             DataProcessingError: If there's an error during the merging process.
         """
-        structured_log(logger, logging.INFO, "Starting merge_dataframes",
+        self.app_logger.structured_log(logging.INFO, "Starting merge_dataframes",
                        dataframe_count=len(scraped_dataframes))
         try:
 
@@ -127,7 +139,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
                     merged = pd.merge(merged, df, on=[self.config.game_id_column, self.config.team_id_column], suffixes=('', '_dupe'))
 
             merged = merged.drop(columns=merged.filter(regex='_dupe').columns)
-            structured_log(logger, logging.INFO, "Dataframes merged successfully",
+            self.app_logger.structured_log(logging.INFO, "Dataframes merged successfully",
                            merged_shape=merged.shape)    
                                                  
             return merged
@@ -151,7 +163,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
         Raises:
             DataProcessingError: If there's an error during missing data handling.
         """
-        structured_log(logger, logging.INFO, "Starting handle_anomalous_data",
+        self.app_logger.structured_log(logging.INFO, "Starting handle_anomalous_data",
                        initial_nan_count=int(df.isna().sum().sum()))  
         try:
             # Drop rows where 'W/L' is NaN. These games were not played. Normally these are not included in the data, but there was a case where this happened.
@@ -167,7 +179,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
 
             # check that all the nans are gone
             remaining_nans = int(df.isna().sum().sum())
-            structured_log(logger, logging.INFO, "Anomalous data handling complete",
+            self.app_logger.structured_log(logging.INFO, "Anomalous data handling complete",
                            remaining_nan_count=remaining_nans)
             return df
         except Exception as e:
@@ -189,7 +201,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
         Raises:
             DataProcessingError: If there's an error during data transformation.
         """
-        structured_log(logger, logging.INFO, "Starting transform_data",
+        self.app_logger.structured_log(logging.INFO, "Starting transform_data",
                        initial_column_count=len(df.columns))
         try:
             df, column_mapping = self._rename_columns(df)
@@ -197,7 +209,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             df = self._reorder_columns(df)
 
             
-            structured_log(logger, logging.INFO, "Data transformation complete",
+            self.app_logger.structured_log(logging.INFO, "Data transformation complete",
                            final_column_count=len(df.columns))
             return df, column_mapping
         except Exception as e:
@@ -221,7 +233,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
         Raises:
             DataProcessingError: If there's an error during column renaming.
         """
-        structured_log(logger, logging.INFO, "Starting rename_columns",
+        self.app_logger.structured_log(logging.INFO, "Starting rename_columns",
                        original_column_count=len(df.columns))
         try:
             original_columns = df.columns.tolist()
@@ -236,7 +248,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             df.columns = df.columns.str.replace('ast/to', 'ast_turnover_ratio')
 
             column_mapping = dict(zip(original_columns, df.columns.tolist()))
-            structured_log(logger, logging.INFO, "Columns renamed successfully",
+            self.app_logger.structured_log(logging.INFO, "Columns renamed successfully",
                            renamed_column_count=len(column_mapping))
             return df, column_mapping
         except Exception as e:
@@ -259,7 +271,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             DataProcessingError: If there's an error during new column extraction.
         """
         initial_column_count=len(df.columns)
-        structured_log(logger, logging.INFO, "Starting extract_new_columns",
+        self.app_logger.structured_log(logging.INFO, "Starting extract_new_columns",
                        initial_column_count=initial_column_count)
         try:
             # note that a previous step converted column names to lowercase and substituted an underscore for a space
@@ -278,7 +290,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             
 
             new_column_count = len(df.columns) - initial_column_count
-            structured_log(logger, logging.INFO, "New columns extracted successfully",
+            self.app_logger.structured_log(logging.INFO, "New columns extracted successfully",
                            new_column_count=new_column_count)
             return df
         except Exception as e:
@@ -303,7 +315,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
         Raises:
             DataProcessingError: If there's an error during column reordering.
         """
-        structured_log(logger, logging.INFO, "Starting reorder_columns",
+        self.app_logger.structured_log(logging.INFO, "Starting reorder_columns",
                        initial_column_count=len(df.columns))
         try:
             all_columns = df.columns.tolist()
@@ -313,7 +325,7 @@ class ProcessScrapedNBAData(BaseNBADataProcessor):
             team_stats = [col for col in all_columns if col not in game_info + team_info]
 
             reordered_df = df[game_info + team_info + team_stats]
-            structured_log(logger, logging.INFO, "Columns reordered successfully",
+            self.app_logger.structured_log(logging.INFO, "Columns reordered successfully",
                            reordered_column_count=len(reordered_df.columns))
             return reordered_df
         except Exception as e:

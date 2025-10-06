@@ -14,6 +14,11 @@ off_season_start_month: 8
 regular_season_start_month: 10
 play_in_month: 4
 
+# Validation settings
+enable_validation_scraping: True  # Set to False to skip validation data collection
+validation_data_file: validation_data.csv  # File to store validation data from basketball-reference.com
+team_mapping_file: team_mapping.yaml  # Team ID to abbreviation mapping for basketball-reference.com
+
 # NBA URLs
 nba_boxscores_url: https://www.nba.com/stats/teams/boxscores
 nba_schedule_url: https://www.nba.com/schedule

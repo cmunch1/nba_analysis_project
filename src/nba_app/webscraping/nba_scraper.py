@@ -15,9 +15,10 @@ Dependencies:
     - Logging utilities from logging_utils module
 """
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 import logging
 import re
+import pandas as pd
 
 from .base_scraper_classes import (
     BaseNbaScraper,
@@ -27,6 +28,12 @@ from .base_scraper_classes import (
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
 from ml_framework.core.app_logging import log_performance, log_context, structured_log, AppLogger
+
+# Make validation_scraper import optional
+try:
+    from .validation_scraper import ValidationScraper
+except ImportError:
+    ValidationScraper = None
 
 class NbaScraper(BaseNbaScraper):
     """
@@ -38,10 +45,11 @@ class NbaScraper(BaseNbaScraper):
         _config (BaseConfigManager): Configuration object.
         _boxscore_scraper (BaseBoxscoreScraper): An instance of BoxscoreScraper.
         _schedule_scraper (BaseScheduleScraper): An instance of ScheduleScraper.
+        _validation_scraper (Optional[ValidationScraper]): An instance of ValidationScraper (optional).
     """
 
     @log_performance
-    def __init__(self, config: BaseConfigManager, boxscore_scraper: BaseBoxscoreScraper, schedule_scraper: BaseScheduleScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory):
+    def __init__(self, config: BaseConfigManager, boxscore_scraper: BaseBoxscoreScraper, schedule_scraper: BaseScheduleScraper, app_logger: AppLogger, error_handler: ErrorHandlerFactory, validation_scraper: Optional[ValidationScraper] = None):
         """
         Initialize the NbaScraper with configuration and scraper instances.
 
@@ -51,6 +59,7 @@ class NbaScraper(BaseNbaScraper):
             schedule_scraper (BaseScheduleScraper): ScheduleScraper instance.
             app_logger (AppLogger): Application logger instance.
             error_handler (ErrorHandlerFactory): Error handler factory instance.
+            validation_scraper (Optional[ValidationScraper]): ValidationScraper instance (optional).
 
         Raises:
             ConfigurationError: If there's an issue with the provided configuration or scraper instances.
@@ -59,6 +68,7 @@ class NbaScraper(BaseNbaScraper):
             self._config = config
             self._boxscore_scraper = boxscore_scraper
             self._schedule_scraper = schedule_scraper
+            self._validation_scraper = validation_scraper
             self.app_logger = app_logger
             self.error_handler = error_handler
 
@@ -67,9 +77,13 @@ class NbaScraper(BaseNbaScraper):
             if not isinstance(schedule_scraper, BaseScheduleScraper):
                 raise error_handler.create_error_handler('configuration', "Invalid schedule_scraper instance")
 
+            if validation_scraper is None:
+                self.app_logger.structured_log(logging.WARNING, "NbaScraper initialized without validation scraper - validation data will not be collected")
+
             self.app_logger.structured_log(logging.INFO, "NbaScraper initialized successfully",
                            boxscore_scraper_type=type(boxscore_scraper).__name__,
-                           schedule_scraper_type=type(schedule_scraper).__name__)
+                           schedule_scraper_type=type(schedule_scraper).__name__,
+                           has_validation_scraper=validation_scraper is not None)
         except Exception as e:
             self.app_logger.structured_log(logging.ERROR, "Error initializing NbaScraper",
                            error_message=str(e),
@@ -148,6 +162,53 @@ class NbaScraper(BaseNbaScraper):
                            error_message=str(e),
                            error_type=type(e).__name__)
             raise self.error_handler.create_error_handler('scraping', f"Unexpected error occurred while scraping matchups: {str(e)}")
+
+    @log_performance
+    def scrape_and_save_validation_data(self, game_metadata: pd.DataFrame) -> bool:
+        """
+        Scrape and save validation data for specified games.
+
+        Args:
+            game_metadata (pd.DataFrame): DataFrame with columns:
+                - GAME_ID: NBA game ID
+                - GAME_DATE: Game date (MM/DD/YYYY format)
+                - HOME_TEAM_ID: Home team NBA ID
+
+        Returns:
+            bool: True if validation data was scraped successfully, False if validator not available.
+
+        Raises:
+            ScrapingError: If there's an error during the scraping process.
+            DataStorageError: If there's an error saving the validation data.
+        """
+        try:
+            if not self._validation_scraper:
+                self.app_logger.structured_log(logging.WARNING,
+                                             "Validation scraper not available - skipping validation data collection")
+                return False
+
+            if game_metadata is None or game_metadata.empty:
+                self.app_logger.structured_log(logging.WARNING,
+                                             "No game metadata provided for validation scraping")
+                return False
+
+            with log_context(operation="scrape_validation_data", game_count=len(game_metadata)):
+                self.app_logger.structured_log(logging.INFO, "Starting to scrape validation data",
+                                             game_count=len(game_metadata))
+
+                self._validation_scraper.scrape_and_save_validation_data(game_metadata)
+
+                self.app_logger.structured_log(logging.INFO, "Validation data scraping completed successfully")
+                return True
+
+        except Exception as e:
+            if hasattr(e, 'app_logger'):
+                raise
+            self.app_logger.structured_log(logging.ERROR, "Unexpected error in scrape_and_save_validation_data",
+                           error_message=str(e),
+                           error_type=type(e).__name__)
+            raise self.error_handler.create_error_handler('scraping',
+                f"Unexpected error occurred while scraping validation data: {str(e)}")
 
     def _validate_boxscore_input(self, seasons: List[str], first_start_date: str) -> None:
         """

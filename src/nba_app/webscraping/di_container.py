@@ -4,11 +4,12 @@ from ml_framework.core.common_di_container import CommonDIContainer
 from ..data_validator import DataValidator
 
 from .web_driver import CustomWebDriver
-from .page_scraper import PageScraper 
-from .boxscore_scraper import BoxscoreScraper 
-from .schedule_scraper import ScheduleScraper 
+from .page_scraper import PageScraper
+from .boxscore_scraper import BoxscoreScraper
+from .schedule_scraper import ScheduleScraper
 from .nba_scraper import NbaScraper
 from .matchup_validator import MatchupValidator
+from .validation_scraper import ValidationScraper
 
 
 class DIContainer(CommonDIContainer):
@@ -60,15 +61,6 @@ class DIContainer(CommonDIContainer):
         error_handler=CommonDIContainer.error_handler_factory
     )
 
-    nba_scraper = providers.Factory(
-        NbaScraper,
-        config=CommonDIContainer.config,
-        boxscore_scraper=boxscore_scraper,
-        schedule_scraper=schedule_scraper,
-        app_logger=CommonDIContainer.app_logger,
-        error_handler=CommonDIContainer.error_handler_factory
-    )
-
     matchup_validator = providers.Factory(
         MatchupValidator,
         config=CommonDIContainer.config,
@@ -76,4 +68,23 @@ class DIContainer(CommonDIContainer):
         page_scraper=page_scraper,
         app_logger=CommonDIContainer.app_logger,
         error_handler=CommonDIContainer.error_handler_factory
+    )
+
+    validation_scraper = providers.Factory(
+        ValidationScraper,
+        config=CommonDIContainer.config,
+        data_access=CommonDIContainer.data_access,
+        page_scraper=page_scraper,
+        app_logger=CommonDIContainer.app_logger,
+        error_handler=CommonDIContainer.error_handler_factory
+    )
+
+    nba_scraper = providers.Factory(
+        NbaScraper,
+        config=CommonDIContainer.config,
+        boxscore_scraper=boxscore_scraper,
+        schedule_scraper=schedule_scraper,
+        app_logger=CommonDIContainer.app_logger,
+        error_handler=CommonDIContainer.error_handler_factory,
+        validation_scraper=validation_scraper
     )

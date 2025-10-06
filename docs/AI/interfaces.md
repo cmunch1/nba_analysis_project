@@ -113,11 +113,17 @@ Located in `src/nba_app/feature_engineering/` - NBA-specific feature creation an
 
 - **BaseFeatureEngineer** - `src/nba_app/feature_engineering/base_feature_engineering.py`
   - Feature creation and transformation interface
-  - Methods: `engineer_features()`, `merge_team_data()`
+  - Constructor: `__init__(config: BaseConfigManager, app_logger: BaseAppLogger)`
+  - Methods: `engineer_features()`, `merge_team_data()`, `encode_game_date()`
+  - Creates rolling averages, win/lose streaks, ELO ratings, and temporal features
+  - Implements data validation to skip incomplete game records
 
 - **BaseFeatureSelector** - `src/nba_app/feature_engineering/base_feature_engineering.py`
   - Feature selection and data splitting interface
+  - Constructor: `__init__(config: BaseConfigManager, app_logger: BaseAppLogger)`
   - Methods: `select_features()`, `split_data()`
+  - Removes unnecessary features and handles missing config attributes gracefully
+  - Performs stratified train/validation splits maintaining temporal consistency
 
 ### Web Scraping
 Located in `src/nba_app/webscraping/` - NBA-specific web scraping components.

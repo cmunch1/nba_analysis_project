@@ -3256,3 +3256,95 @@
 {"timestamp": "2024-12-16T17:26:53.081140+00:00", "level": "INFO", "name": "src.logging.logging_utils", "message": "Function performance", "function_name": "save_dataframes", "execution_time": "0.95", "unit": "seconds"}
 {"timestamp": "2024-12-16T17:26:53.082141+00:00", "level": "INFO", "name": "__main__", "message": "{\"message\": \"Data processing completed successfully\"}"}
 {"timestamp": "2024-12-16T17:26:53.085140+00:00", "level": "INFO", "name": "src.logging.logging_utils", "message": "Function performance", "function_name": "main", "execution_time": "2.41", "unit": "seconds"}
+2025-10-05 10:08:46,691 - ml_framework.core.app_logging.app_logger - INFO - Loading scraped data | Context: {}
+2025-10-05 10:08:46,691 - ml_framework.core.app_logging.app_logger - INFO - Getting load directory | Context: {'cumulative': True, 'file_name': 'None'}
+2025-10-05 10:08:46,692 - ml_framework.core.app_logging.app_logger - INFO - Loading dataframes | Context: {}
+2025-10-05 10:08:46,913 - ml_framework.core.app_logging.app_logger - INFO - Dataframes loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 10:08:46,913 - ml_framework.core.app_logging.app_logger - INFO - Function _load_dataframes completed | Context: {'duration_seconds': 0.22130131721496582, 'status': 'success'}
+2025-10-05 10:08:46,913 - ml_framework.core.app_logging.app_logger - INFO - Data loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 10:08:46,913 - ml_framework.core.app_logging.app_logger - INFO - Function load_scraped_data completed | Context: {'duration_seconds': 0.22179555892944336, 'status': 'success'}
+2025-10-05 10:08:46,913 - ml_framework.core.app_logging.app_logger - INFO - Starting validation of scraped dataframes | Context: {'dataframe_count': 5}
+2025-10-05 10:08:46,913 - ml_framework.core.app_logging.app_logger - INFO - Checking games_traditional.csv for nulls and duplicates | Context: {}
+2025-10-05 10:08:46,930 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv passes initial checks | Context: {'rows': 48532, 'columns': 26}
+2025-10-05 10:08:46,930 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:08:46,933 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv validated successfully | Context: {'rows': 48532, 'columns': 26}
+2025-10-05 10:08:46,933 - ml_framework.core.app_logging.app_logger - INFO - Checking games_advanced.csv for nulls and duplicates | Context: {}
+2025-10-05 10:08:46,947 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv passes initial checks | Context: {'rows': 48532, 'columns': 21}
+2025-10-05 10:08:46,947 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:08:46,949 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv validated successfully | Context: {'rows': 48532, 'columns': 21}
+2025-10-05 10:08:46,949 - ml_framework.core.app_logging.app_logger - INFO - Checking games_four-factors.csv for nulls and duplicates | Context: {}
+2025-10-05 10:08:46,961 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv passes initial checks | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:08:46,961 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:08:46,962 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv validated successfully | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:08:46,962 - ml_framework.core.app_logging.app_logger - INFO - Checking games_misc.csv for nulls and duplicates | Context: {}
+2025-10-05 10:08:46,972 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv passes initial checks | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:08:46,972 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:08:46,973 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv validated successfully | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:08:46,973 - ml_framework.core.app_logging.app_logger - INFO - Checking games_scoring.csv for nulls and duplicates | Context: {}
+2025-10-05 10:08:46,987 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv passes initial checks | Context: {'rows': 48532, 'columns': 22}
+2025-10-05 10:08:46,987 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:08:46,988 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv validated successfully | Context: {'rows': 48532, 'columns': 22}
+2025-10-05 10:08:46,988 - ml_framework.core.app_logging.app_logger - INFO - All dataframes validated successfully | Context: {}
+2025-10-05 10:08:46,988 - ml_framework.core.app_logging.app_logger - INFO - Function validate_scraped_dataframes completed | Context: {'duration_seconds': 0.07556796073913574, 'status': 'success'}
+2025-10-05 10:08:47,171 - ml_framework.core.app_logging.app_logger - INFO - Starting validation of processed dataframe teams_boxscores.csv | Context: {}
+2025-10-05 10:08:47,171 - ml_framework.core.app_logging.app_logger - INFO - Checking teams_boxscores.csv for nulls and duplicates | Context: {}
+2025-10-05 10:08:47,201 - ml_framework.core.app_logging.app_logger - INFO - Dataframe teams_boxscores.csv passes initial checks | Context: {'rows': 48532, 'columns': 73}
+2025-10-05 10:08:47,201 - ml_framework.core.app_logging.app_logger - INFO - Checking teams_boxscores.csv for correct schema | Context: {}
+2025-10-05 10:08:47,201 - ml_framework.core.app_logging.app_logger - INFO - Dataframe teams_boxscores.csv passes schema checks | Context: {'columns': ['game_id', 'season', 'game_date', 'sub_season_id', 'is_playoff', 'is_overtime', 'min', 'team_id', 'is_home_team', 'team', 'match_up', 'pts', 'fgm', 'fga', 'fg_pct', '3pm', '3pa', '3p_pct', 'ftm', 'fta', 'ft_pct', 'oreb', 'dreb', 'reb', 'ast', 'tov', 'stl', 'blk', 'pf', 'plus_minus', 'off_rtg', 'def_rtg', 'net_rtg', 'ast_pct', 'ast_turnover_ratio', 'ast_ratio', 'oreb_pct', 'dreb_pct', 'reb_pct', 'tov_pct', 'efg_pct', 'ts_pct', 'pace', 'pie', 'fta_rate', 'opp_efg_pct', 'opp_fta_rate', 'opp_tov_pct', 'opp_oreb_pct', 'pts_off_to', '2nd_pts', 'fbps', 'pitp', 'opp_pts_off_to', 'opp_2nd_pts', 'opp_fbps', 'opp_pitp', 'pct_fga_2pt', 'pct_fga_3pt', 'pct_pts_2pt', 'pct_pts_2pt_mr', 'pct_pts_3pt', 'pct_pts_fbps', 'pct_pts_ft', 'pct_pts_off_to', 'pct_pts_pitp', '2fgm_pct_ast', '2fgm_pct_uast', '3fgm_pct_ast', '3fgm_pct_uast', 'fgm_pct_ast', 'fgm_pct_uast', 'is_win']}
+2025-10-05 10:08:47,201 - ml_framework.core.app_logging.app_logger - INFO - Dataframe teams_boxscores.csv validated successfully | Context: {'rows': 48532, 'columns': 73}
+2025-10-05 10:08:47,201 - ml_framework.core.app_logging.app_logger - INFO - Function validate_processed_dataframe completed | Context: {'duration_seconds': 0.030002117156982422, 'status': 'success'}
+2025-10-05 10:08:47,201 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.765655517578125e-05, 'status': 'success'}
+2025-10-05 10:08:47,924 - ml_framework.core.app_logging.app_logger - INFO - Dataframes saved successfully | Context: {}
+2025-10-05 10:08:47,924 - ml_framework.core.app_logging.app_logger - INFO - Function save_dataframes completed | Context: {'duration_seconds': 0.7228705883026123, 'status': 'success'}
+2025-10-05 10:08:47,924 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.5987625122070312e-05, 'status': 'success'}
+2025-10-05 10:08:47,924 - ml_framework.core.app_logging.app_logger - INFO - Column mapping saved successfully | Context: {'file_path': 'data/processed/column_mapping.json'}
+2025-10-05 10:08:47,924 - ml_framework.core.app_logging.app_logger - INFO - Function save_column_mapping completed | Context: {'duration_seconds': 0.0002551078796386719, 'status': 'success'}
+2025-10-05 10:08:48,053 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 3.147125244140625e-05, 'status': 'success'}
+2025-10-05 10:08:49,133 - ml_framework.core.app_logging.app_logger - INFO - Dataframes saved successfully | Context: {}
+2025-10-05 10:08:49,133 - ml_framework.core.app_logging.app_logger - INFO - Function save_dataframes completed | Context: {'duration_seconds': 1.0792655944824219, 'status': 'success'}
+2025-10-05 10:11:07,274 - ml_framework.core.app_logging.app_logger - INFO - Loading scraped data | Context: {}
+2025-10-05 10:11:07,274 - ml_framework.core.app_logging.app_logger - INFO - Getting load directory | Context: {'cumulative': True, 'file_name': 'None'}
+2025-10-05 10:11:07,274 - ml_framework.core.app_logging.app_logger - INFO - Loading dataframes | Context: {}
+2025-10-05 10:11:07,496 - ml_framework.core.app_logging.app_logger - INFO - Dataframes loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 10:11:07,497 - ml_framework.core.app_logging.app_logger - INFO - Function _load_dataframes completed | Context: {'duration_seconds': 0.22239446640014648, 'status': 'success'}
+2025-10-05 10:11:07,497 - ml_framework.core.app_logging.app_logger - INFO - Data loaded successfully | Context: {'dataframe_count': 5, 'scraped_path': 'data/cumulative_scraped'}
+2025-10-05 10:11:07,497 - ml_framework.core.app_logging.app_logger - INFO - Function load_scraped_data completed | Context: {'duration_seconds': 0.22262883186340332, 'status': 'success'}
+2025-10-05 10:11:07,497 - ml_framework.core.app_logging.app_logger - INFO - Starting validation of scraped dataframes | Context: {'dataframe_count': 5}
+2025-10-05 10:11:07,497 - ml_framework.core.app_logging.app_logger - INFO - Checking games_traditional.csv for nulls and duplicates | Context: {}
+2025-10-05 10:11:07,510 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv passes initial checks | Context: {'rows': 48532, 'columns': 26}
+2025-10-05 10:11:07,510 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:11:07,513 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_traditional.csv validated successfully | Context: {'rows': 48532, 'columns': 26}
+2025-10-05 10:11:07,514 - ml_framework.core.app_logging.app_logger - INFO - Checking games_advanced.csv for nulls and duplicates | Context: {}
+2025-10-05 10:11:07,527 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv passes initial checks | Context: {'rows': 48532, 'columns': 21}
+2025-10-05 10:11:07,528 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:11:07,530 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_advanced.csv validated successfully | Context: {'rows': 48532, 'columns': 21}
+2025-10-05 10:11:07,530 - ml_framework.core.app_logging.app_logger - INFO - Checking games_four-factors.csv for nulls and duplicates | Context: {}
+2025-10-05 10:11:07,541 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv passes initial checks | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:11:07,541 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:11:07,542 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_four-factors.csv validated successfully | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:11:07,543 - ml_framework.core.app_logging.app_logger - INFO - Checking games_misc.csv for nulls and duplicates | Context: {}
+2025-10-05 10:11:07,552 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv passes initial checks | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:11:07,552 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:11:07,553 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_misc.csv validated successfully | Context: {'rows': 48532, 'columns': 15}
+2025-10-05 10:11:07,554 - ml_framework.core.app_logging.app_logger - INFO - Checking games_scoring.csv for nulls and duplicates | Context: {}
+2025-10-05 10:11:07,567 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv passes initial checks | Context: {'rows': 48532, 'columns': 22}
+2025-10-05 10:11:07,567 - ml_framework.core.app_logging.app_logger - INFO - Checking that same games are present | Context: {}
+2025-10-05 10:11:07,568 - ml_framework.core.app_logging.app_logger - INFO - Dataframe games_scoring.csv validated successfully | Context: {'rows': 48532, 'columns': 22}
+2025-10-05 10:11:07,569 - ml_framework.core.app_logging.app_logger - INFO - All dataframes validated successfully | Context: {}
+2025-10-05 10:11:07,569 - ml_framework.core.app_logging.app_logger - INFO - Function validate_scraped_dataframes completed | Context: {'duration_seconds': 0.07194209098815918, 'status': 'success'}
+2025-10-05 10:11:07,736 - ml_framework.core.app_logging.app_logger - INFO - Starting validation of processed dataframe teams_boxscores.csv | Context: {}
+2025-10-05 10:11:07,736 - ml_framework.core.app_logging.app_logger - INFO - Checking teams_boxscores.csv for nulls and duplicates | Context: {}
+2025-10-05 10:11:07,765 - ml_framework.core.app_logging.app_logger - INFO - Dataframe teams_boxscores.csv passes initial checks | Context: {'rows': 48532, 'columns': 73}
+2025-10-05 10:11:07,765 - ml_framework.core.app_logging.app_logger - INFO - Checking teams_boxscores.csv for correct schema | Context: {}
+2025-10-05 10:11:07,765 - ml_framework.core.app_logging.app_logger - INFO - Dataframe teams_boxscores.csv passes schema checks | Context: {'columns': ['game_id', 'season', 'game_date', 'sub_season_id', 'is_playoff', 'is_overtime', 'min', 'team_id', 'is_home_team', 'team', 'match_up', 'pts', 'fgm', 'fga', 'fg_pct', '3pm', '3pa', '3p_pct', 'ftm', 'fta', 'ft_pct', 'oreb', 'dreb', 'reb', 'ast', 'tov', 'stl', 'blk', 'pf', 'plus_minus', 'off_rtg', 'def_rtg', 'net_rtg', 'ast_pct', 'ast_turnover_ratio', 'ast_ratio', 'oreb_pct', 'dreb_pct', 'reb_pct', 'tov_pct', 'efg_pct', 'ts_pct', 'pace', 'pie', 'fta_rate', 'opp_efg_pct', 'opp_fta_rate', 'opp_tov_pct', 'opp_oreb_pct', 'pts_off_to', '2nd_pts', 'fbps', 'pitp', 'opp_pts_off_to', 'opp_2nd_pts', 'opp_fbps', 'opp_pitp', 'pct_fga_2pt', 'pct_fga_3pt', 'pct_pts_2pt', 'pct_pts_2pt_mr', 'pct_pts_3pt', 'pct_pts_fbps', 'pct_pts_ft', 'pct_pts_off_to', 'pct_pts_pitp', '2fgm_pct_ast', '2fgm_pct_uast', '3fgm_pct_ast', '3fgm_pct_uast', 'fgm_pct_ast', 'fgm_pct_uast', 'is_win']}
+2025-10-05 10:11:07,765 - ml_framework.core.app_logging.app_logger - INFO - Dataframe teams_boxscores.csv validated successfully | Context: {'rows': 48532, 'columns': 73}
+2025-10-05 10:11:07,766 - ml_framework.core.app_logging.app_logger - INFO - Function validate_processed_dataframe completed | Context: {'duration_seconds': 0.029822826385498047, 'status': 'success'}
+2025-10-05 10:11:07,766 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.47955322265625e-05, 'status': 'success'}
+2025-10-05 10:11:08,445 - ml_framework.core.app_logging.app_logger - INFO - Dataframes saved successfully | Context: {}
+2025-10-05 10:11:08,445 - ml_framework.core.app_logging.app_logger - INFO - Function save_dataframes completed | Context: {'duration_seconds': 0.6796483993530273, 'status': 'success'}
+2025-10-05 10:11:08,445 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.1696090698242188e-05, 'status': 'success'}
+2025-10-05 10:11:08,445 - ml_framework.core.app_logging.app_logger - INFO - Column mapping saved successfully | Context: {'file_path': 'data/processed/column_mapping.json'}
+2025-10-05 10:11:08,445 - ml_framework.core.app_logging.app_logger - INFO - Function save_column_mapping completed | Context: {'duration_seconds': 0.0002124309539794922, 'status': 'success'}
+2025-10-05 10:11:08,557 - ml_framework.core.app_logging.app_logger - INFO - Function _get_save_directory completed | Context: {'duration_seconds': 2.8371810913085938e-05, 'status': 'success'}
+2025-10-05 10:11:09,541 - ml_framework.core.app_logging.app_logger - INFO - Dataframes saved successfully | Context: {}
+2025-10-05 10:11:09,541 - ml_framework.core.app_logging.app_logger - INFO - Function save_dataframes completed | Context: {'duration_seconds': 0.9839675426483154, 'status': 'success'}

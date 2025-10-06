@@ -1,14 +1,36 @@
 from dependency_injector import containers, providers
 
-from ml_framework.core.config_management.config_manager import ConfigManager
-from ml_framework.framework.data_access.csv_data_access import CSVDataAccess
-from ..data_validation.data_validator import DataValidator
+from ml_framework.core.common_di_container import CommonDIContainer
+from ..data_validator import DataValidator
 from .feature_engineer import FeatureEngineer
 from .feature_selector import FeatureSelector
 
-class DIContainer(containers.DeclarativeContainer):
-    config = providers.Singleton(ConfigManager)
-    data_access = providers.Factory(CSVDataAccess, config=config)
-    data_validator = providers.Factory(DataValidator, config=config)
-    feature_engineer = providers.Factory(FeatureEngineer, config=config)
-    feature_selector = providers.Factory(FeatureSelector, config=config)
+
+class DIContainer(CommonDIContainer):
+    """
+    Feature engineering-specific DI container that inherits from CommonDIContainer.
+    Adds feature engineering-specific dependencies while reusing common ones.
+    """
+
+    # Override data_validator with the specific implementation for this app
+    data_validator = providers.Factory(
+        DataValidator,
+        config=CommonDIContainer.config,
+        data_access=CommonDIContainer.data_access,
+        app_logger=CommonDIContainer.app_logger,
+        app_file_handler=CommonDIContainer.app_file_handler,
+        error_handler=CommonDIContainer.error_handler_factory
+    )
+
+    # Feature engineering-specific dependencies
+    feature_engineer = providers.Factory(
+        FeatureEngineer,
+        config=CommonDIContainer.config,
+        app_logger=CommonDIContainer.app_logger
+    )
+
+    feature_selector = providers.Factory(
+        FeatureSelector,
+        config=CommonDIContainer.config,
+        app_logger=CommonDIContainer.app_logger
+    )

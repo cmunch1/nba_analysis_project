@@ -5,7 +5,6 @@ This module provides a PageScraper class for web scraping operations using Selen
 It implements the BasePageScraper interface and includes enhanced logging and error handling.
 """
 
-import sys
 import logging
 import time
 from typing import Optional, List, Tuple
@@ -20,7 +19,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from .base_scraper_classes import BasePageScraper
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
-from ml_framework.core.app_logging import log_performance, structured_log, AppLogger
+from ml_framework.core.app_logging import log_performance, AppLogger
 
 class PageScraper(BasePageScraper):
     @log_performance
@@ -200,7 +199,11 @@ class PageScraper(BasePageScraper):
                                class_name=class_name, attempt=attempt+1,
                                error_message=str(e), error_type=type(e).__name__)
             if attempt < self.config.max_retries - 1:
-                time.sleep(self.config.retry_delay)
+                # Incremental backoff: delay increases with each retry attempt
+                delay = self.config.retry_delay * (attempt + 1)
+                self.app_logger.structured_log( logging.INFO, "Waiting before retry",
+                               class_name=class_name, attempt=attempt+1, delay_seconds=delay)
+                time.sleep(delay)
         raise self.error_handler.create_error_handler('element_not_found', f"Failed to retrieve elements with class {class_name} after {self.config.max_retries} attempts")
 
     @log_performance
@@ -336,9 +339,13 @@ class PageScraper(BasePageScraper):
                 self.app_logger.structured_log( logging.INFO, "Unexpected error occurred",
                                class_name=class_name, attempt=attempt+1,
                                error_message=str(e), error_type=type(e).__name__)
-                
+
             if attempt < self.config.max_retries - 1:
-                time.sleep(self.config.retry_delay)
+                # Incremental backoff: delay increases with each retry attempt
+                delay = self.config.retry_delay * (attempt + 1)
+                self.app_logger.structured_log( logging.INFO, "Waiting before retry",
+                               class_name=class_name, attempt=attempt+1, delay_seconds=delay)
+                time.sleep(delay)
 
         raise self.error_handler.create_error_handler('element_not_found', f"Failed to retrieve link elements with class {class_name} after {self.config.max_retries} attempts")
 
