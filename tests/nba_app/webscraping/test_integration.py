@@ -34,15 +34,15 @@ def mock_config():
     return config
 
 @pytest.fixture
-def setup_scrapers(mock_config):
+def setup_scrapers(mock_config, mock_app_logger, mock_error_handler):
     """Setup scrapers with mocked dependencies"""
     data_access = Mock()
     page_scraper = Mock()
-    
-    boxscore_scraper = BoxscoreScraper(mock_config, data_access, page_scraper)
-    schedule_scraper = ScheduleScraper(mock_config, data_access, page_scraper)
-    nba_scraper = NbaScraper(mock_config, boxscore_scraper, schedule_scraper)
-    
+
+    boxscore_scraper = BoxscoreScraper(mock_config, data_access, page_scraper, mock_app_logger, mock_error_handler)
+    schedule_scraper = ScheduleScraper(mock_config, data_access, page_scraper, mock_app_logger, mock_error_handler)
+    nba_scraper = NbaScraper(mock_config, boxscore_scraper, schedule_scraper, mock_app_logger, mock_error_handler)
+
     return {
         'nba_scraper': nba_scraper,
         'boxscore_scraper': boxscore_scraper,
@@ -89,26 +89,26 @@ def test_full_scraping_pipeline(setup_scrapers):
         assert isinstance(saved_data, dict)
         assert 'traditional' in saved_data
 
-def test_error_handling_chain(setup_scrapers):
+def test_error_handling_chain(setup_scrapers, mock_app_logger):
     """Test error handling and recovery at different stages"""
     scrapers = setup_scrapers
-    
+
     # Test page load failure
-    scrapers['page_scraper'].go_to_url.side_effect = PageLoadError("Failed to load")
+    scrapers['page_scraper'].go_to_url.side_effect = PageLoadError("Failed to load", mock_app_logger)
     with pytest.raises(ScrapingError):
         scrapers['nba_scraper'].scrape_and_save_all_boxscores(["2023"], "01/01/2023")
-    
+
     # Test element not found
     scrapers['page_scraper'].go_to_url.side_effect = None
-    scrapers['page_scraper'].get_elements_by_class.side_effect = ElementNotFoundError("Element not found")
+    scrapers['page_scraper'].get_elements_by_class.side_effect = ElementNotFoundError("Element not found", mock_app_logger)
     with pytest.raises(ScrapingError):
         scrapers['nba_scraper'].scrape_and_save_matchups_for_day("MON")
-    
+
     # Test data extraction failure - Fixed mock setup
     scrapers['page_scraper'].get_elements_by_class.side_effect = None
-    mock_scrape_stat = Mock(side_effect=DataExtractionError("Failed to extract data"))
+    mock_scrape_stat = Mock(side_effect=DataExtractionError("Failed to extract data", mock_app_logger))
     scrapers['boxscore_scraper'].scrape_stat_type = mock_scrape_stat
-    
+
     with pytest.raises(ScrapingError):
         scrapers['nba_scraper'].scrape_and_save_all_boxscores(["2023"], "01/01/2023")
 

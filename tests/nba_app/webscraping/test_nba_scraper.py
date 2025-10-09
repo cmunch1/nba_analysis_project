@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from nba_app.webscraping.nba_scraper import NbaScraper
 from nba_app.webscraping.base_scraper_classes import (
@@ -7,6 +7,8 @@ from nba_app.webscraping.base_scraper_classes import (
     BaseScheduleScraper
 )
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
+from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
+from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
 from ml_framework.core.error_handling.error_handler import (
     ConfigurationError,
     DataValidationError,
@@ -38,18 +40,45 @@ def mock_schedule_scraper():
     return Mock(spec=MockScheduleScraper)
 
 @pytest.fixture
-def scraper(mock_config, mock_boxscore_scraper, mock_schedule_scraper):
-    return NbaScraper(mock_config, mock_boxscore_scraper, mock_schedule_scraper)
+def mock_app_logger():
+    logger = Mock(spec=BaseAppLogger)
+    logger.structured_log = Mock()
+    logger.log_performance = lambda func: func
+    return logger
 
-def test_initialization(mock_config, mock_boxscore_scraper, mock_schedule_scraper):
-    scraper = NbaScraper(mock_config, mock_boxscore_scraper, mock_schedule_scraper)
+@pytest.fixture
+def mock_error_handler(mock_app_logger):
+    handler = Mock(spec=ErrorHandlerFactory)
+    def create_error(error_type, message, **kwargs):
+        error_map = {
+            'configuration': ConfigurationError,
+            'data_validation': DataValidationError,
+            'scraping': ScrapingError,
+            'data_storage': DataStorageError
+        }
+        error_class = error_map.get(error_type, Exception)
+        if error_class in [ConfigurationError, DataValidationError, ScrapingError, DataStorageError]:
+            return error_class(message, mock_app_logger)
+        return error_class(message)
+
+    handler.create_error_handler = Mock(side_effect=create_error)
+    return handler
+
+@pytest.fixture
+def scraper(mock_config, mock_boxscore_scraper, mock_schedule_scraper, mock_app_logger, mock_error_handler):
+    return NbaScraper(mock_config, mock_boxscore_scraper, mock_schedule_scraper, mock_app_logger, mock_error_handler)
+
+def test_initialization(mock_config, mock_boxscore_scraper, mock_schedule_scraper, mock_app_logger, mock_error_handler):
+    scraper = NbaScraper(mock_config, mock_boxscore_scraper, mock_schedule_scraper, mock_app_logger, mock_error_handler)
     assert scraper._config == mock_config
     assert scraper._boxscore_scraper == mock_boxscore_scraper
     assert scraper._schedule_scraper == mock_schedule_scraper
+    assert scraper.app_logger == mock_app_logger
+    assert scraper.error_handler == mock_error_handler
 
-def test_initialization_invalid_scrapers():
+def test_initialization_invalid_scrapers(mock_app_logger, mock_error_handler):
     with pytest.raises(ConfigurationError):
-        NbaScraper(Mock(), Mock(), Mock())  # Invalid scraper types
+        NbaScraper(Mock(), Mock(), Mock(), mock_app_logger, mock_error_handler)  # Invalid scraper types
 
 def test_scrape_and_save_all_boxscores_validation(scraper):
     with pytest.raises(DataValidationError):
@@ -69,8 +98,8 @@ def test_scrape_and_save_all_boxscores_success(scraper):
     )
 
 def test_scrape_and_save_all_boxscores_scraping_error(scraper):
-    scraper._boxscore_scraper.scrape_and_save_all_boxscores.side_effect = ScrapingError("Test error")
-    
+    scraper._boxscore_scraper.scrape_and_save_all_boxscores.side_effect = ScrapingError("Test error", scraper.app_logger)
+
     with pytest.raises(ScrapingError):
         scraper.scrape_and_save_all_boxscores(["2022-23"], "10/01/2022")
 
@@ -100,8 +129,8 @@ def test_scrape_and_save_matchups_for_day_no_matchups(scraper):
     scraper._schedule_scraper.scrape_and_save_matchups_for_day.assert_called_once_with(search_day)
 
 def test_scrape_and_save_matchups_for_day_scraping_error(scraper):
-    scraper._schedule_scraper.scrape_and_save_matchups_for_day.side_effect = ScrapingError("Test error")
-    
+    scraper._schedule_scraper.scrape_and_save_matchups_for_day.side_effect = ScrapingError("Test error", scraper.app_logger)
+
     with pytest.raises(ScrapingError):
         scraper.scrape_and_save_matchups_for_day("MON")
 

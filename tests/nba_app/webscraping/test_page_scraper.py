@@ -27,13 +27,15 @@ def mock_web_driver():
     return Mock()
 
 @pytest.fixture
-def scraper(mock_config, mock_web_driver):
-    return PageScraper(mock_config, mock_web_driver)
+def scraper(mock_config, mock_web_driver, mock_app_logger, mock_error_handler):
+    return PageScraper(mock_config, mock_web_driver, mock_app_logger, mock_error_handler)
 
-def test_initialization(mock_config, mock_web_driver):
-    scraper = PageScraper(mock_config, mock_web_driver)
+def test_initialization(mock_config, mock_web_driver, mock_app_logger, mock_error_handler):
+    scraper = PageScraper(mock_config, mock_web_driver, mock_app_logger, mock_error_handler)
     assert scraper.config == mock_config
     assert scraper.web_driver == mock_web_driver
+    assert scraper.app_logger == mock_app_logger
+    assert scraper.error_handler == mock_error_handler
     assert isinstance(scraper.wait, WebDriverWait)
 
 def test_go_to_url_success(scraper):
@@ -131,19 +133,19 @@ def test_scrape_page_table_no_data(scraper):
     with patch.object(scraper, 'go_to_url') as mock_go_to_url:
         with patch.object(scraper, 'get_elements_by_class') as mock_get_elements:
             mock_go_to_url.return_value = True
-            
+
             mock_get_elements.side_effect = [
-                ElementNotFoundError("Table not found"),  # table_class check
+                ElementNotFoundError("Table not found", scraper.app_logger),  # table_class check
                 [Mock()]  # no_data_class_name check
             ]
-            
+
             result = scraper.scrape_page_table(
                 "https://example.com",
                 "table-class",
                 "pagination-class",
                 "dropdown-class"
             )
-            
+
             assert result is None
             mock_get_elements.assert_any_call(scraper.config.no_data_class_name)
 

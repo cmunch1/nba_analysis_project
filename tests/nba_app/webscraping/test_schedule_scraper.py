@@ -34,14 +34,16 @@ def mock_page_scraper():
     return Mock()
 
 @pytest.fixture
-def scraper(mock_config, mock_data_access, mock_page_scraper):
-    return ScheduleScraper(mock_config, mock_data_access, mock_page_scraper)
+def scraper(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler):
+    return ScheduleScraper(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler)
 
-def test_initialization(mock_config, mock_data_access, mock_page_scraper):
-    scraper = ScheduleScraper(mock_config, mock_data_access, mock_page_scraper)
+def test_initialization(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler):
+    scraper = ScheduleScraper(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler)
     assert scraper.config == mock_config
     assert scraper.data_access == mock_data_access
     assert scraper.page_scraper == mock_page_scraper
+    assert scraper.app_logger == mock_app_logger
+    assert scraper.error_handler == mock_error_handler
 
 def test_find_games_for_day_success(scraper):
     mock_day = Mock()
@@ -139,7 +141,7 @@ def test_scrape_and_save_matchups_for_day_no_games(scraper):
         assert result is False
 
 def test_scrape_and_save_matchups_for_day_page_load_error(scraper):
-    scraper.page_scraper.go_to_url.side_effect = PageLoadError("Failed to load page")
-    
+    scraper.page_scraper.go_to_url.side_effect = PageLoadError("Failed to load page", scraper.app_logger)
+
     with pytest.raises(PageLoadError):
         scraper.scrape_and_save_matchups_for_day("MON")

@@ -37,18 +37,20 @@ def mock_page_scraper():
     return Mock()
 
 @pytest.fixture
-def scraper(mock_config, mock_data_access, mock_page_scraper):
-    return BoxscoreScraper(mock_config, mock_data_access, mock_page_scraper)
+def scraper(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler):
+    return BoxscoreScraper(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler)
 
-def test_initialization(mock_config, mock_data_access, mock_page_scraper):
-    scraper = BoxscoreScraper(mock_config, mock_data_access, mock_page_scraper)
+def test_initialization(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler):
+    scraper = BoxscoreScraper(mock_config, mock_data_access, mock_page_scraper, mock_app_logger, mock_error_handler)
     assert scraper.config == mock_config
     assert scraper.data_access == mock_data_access
     assert scraper.page_scraper == mock_page_scraper
+    assert scraper.app_logger == mock_app_logger
+    assert scraper.error_handler == mock_error_handler
 
-def test_initialization_error():
+def test_initialization_error(mock_app_logger, mock_error_handler):
     with pytest.raises(ConfigurationError):
-        BoxscoreScraper(None, None, None)
+        BoxscoreScraper(None, None, None, mock_app_logger, mock_error_handler)
 
 def test_is_valid_date():
     assert BoxscoreScraper._is_valid_date("12/25/2023") == True
@@ -142,8 +144,8 @@ def test_scrape_boxscores_table(scraper):
     scraper.page_scraper.scrape_page_table.assert_called_once()
 
 def test_scrape_boxscores_table_error(scraper):
-    scraper.page_scraper.scrape_page_table.side_effect = ScrapingError("Test error")
-    
+    scraper.page_scraper.scrape_page_table.side_effect = ScrapingError("Test error", scraper.app_logger)
+
     with pytest.raises(ScrapingError):
         scraper.scrape_boxscores_table(
             Season="2023",
