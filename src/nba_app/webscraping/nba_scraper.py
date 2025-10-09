@@ -164,15 +164,15 @@ class NbaScraper(BaseNbaScraper):
             raise self.error_handler.create_error_handler('scraping', f"Unexpected error occurred while scraping matchups: {str(e)}")
 
     @log_performance
-    def scrape_and_save_validation_data(self, game_metadata: pd.DataFrame) -> bool:
+    def scrape_and_save_validation_data(self, dates: List[str]) -> bool:
         """
-        Scrape and save validation data for specified games.
+        Scrape and save validation data for specified dates.
+
+        Uses date-based scraping approach to get all games from basketball-reference.com
+        scoreboard pages for each date.
 
         Args:
-            game_metadata (pd.DataFrame): DataFrame with columns:
-                - GAME_ID: NBA game ID
-                - GAME_DATE: Game date (MM/DD/YYYY format)
-                - HOME_TEAM_ID: Home team NBA ID
+            dates (List[str]): List of dates in MM/DD/YYYY format
 
         Returns:
             bool: True if validation data was scraped successfully, False if validator not available.
@@ -187,16 +187,16 @@ class NbaScraper(BaseNbaScraper):
                                              "Validation scraper not available - skipping validation data collection")
                 return False
 
-            if game_metadata is None or game_metadata.empty:
+            if not dates:
                 self.app_logger.structured_log(logging.WARNING,
-                                             "No game metadata provided for validation scraping")
+                                             "No dates provided for validation scraping")
                 return False
 
-            with log_context(operation="scrape_validation_data", game_count=len(game_metadata)):
+            with log_context(operation="scrape_validation_data", date_count=len(dates)):
                 self.app_logger.structured_log(logging.INFO, "Starting to scrape validation data",
-                                             game_count=len(game_metadata))
+                                             date_count=len(dates))
 
-                self._validation_scraper.scrape_and_save_validation_data(game_metadata)
+                self._validation_scraper.scrape_and_save_validation_data(dates)
 
                 self.app_logger.structured_log(logging.INFO, "Validation data scraping completed successfully")
                 return True

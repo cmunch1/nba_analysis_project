@@ -25,6 +25,7 @@ class DIContainer(CommonDIContainer):
     process_scraped_NBA_data = providers.Factory(
         ProcessScrapedNBAData,
         config=CommonDIContainer.config,
-        app_logger=CommonDIContainer.app_logger
+        app_logger=CommonDIContainer.app_logger,
+        app_file_handler=CommonDIContainer.app_file_handler
     )
     

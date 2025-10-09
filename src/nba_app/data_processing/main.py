@@ -8,10 +8,8 @@ Key features:
 - Loads and validates scraped NBA data
 - Processes and transforms the data
 - Creates both team-centric and game-centric datasets
-- Implements comprehensive logging for better debugging and monitoring
-- Utilizes structured logging and context managers for consistent log formatting
-- Implements granular error handling with custom exceptions
-- Uses dependency injection for better modularity and testability
+- Creates and saves a column mapping file
+- Saves invalid records for further review
 """
 
 import sys
@@ -63,6 +61,14 @@ def main() -> None:
             processed_dataframe, column_mapping = process_scraped_NBA_data.process_data(scraped_dataframes)
             processed_file_name = config.team_centric_data_file
 
+            # Validate home/visitor team assignments BEFORE schema validation
+            # (uses original_game_id which gets dropped after validation)
+            app_logger.structured_log(logging.INFO, "Validating home/visitor team assignments")
+            valid_dataframe, invalid_dataframe = process_scraped_NBA_data.validate_home_visitor_teams(processed_dataframe)
+
+            # Continue with only valid records (original_game_id already dropped by validate_home_visitor_teams)
+            processed_dataframe = valid_dataframe
+
             app_logger.structured_log(logging.INFO, "Validating processed dataframe")
             if not data_validator.validate_processed_dataframe(processed_dataframe, processed_file_name):
                 raise error_handler.create_error_handler('data_validation', "Data validation of processed data failed")
@@ -78,6 +84,12 @@ def main() -> None:
 
             app_logger.structured_log(logging.INFO, "Saving game-centric data", file_name=processed_file_name)
             data_access.save_dataframes([processed_dataframe], [processed_file_name], cumulative=True) # expects a list of dataframes and a list of file names
+
+            # Save invalid records if any exist (team-centric only for manual fixing)
+            if len(invalid_dataframe) > 0:
+                app_logger.structured_log(logging.WARNING, "Saving invalid home/visitor records for manual review",
+                                       invalid_count=len(invalid_dataframe))
+                process_scraped_NBA_data.save_invalid_records(invalid_dataframe)
 
         app_logger.structured_log(logging.INFO, "Data processing completed successfully")
 

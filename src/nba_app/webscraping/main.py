@@ -131,6 +131,17 @@ def scrape_validation_data(nba_scraper, newly_scraped, config, app_logger):
     """
     Scrape validation data from basketball-reference.com for all games in newly scraped data.
 
+    Uses date-based scraping approach:
+    - Extracts unique dates from newly scraped data
+    - For each date, scrapes basketball-reference scoreboard page
+    - Gets ALL games on that date with authoritative home/visitor designation
+    - No reliance on potentially mislabeled MATCH UP data from NBA.com
+
+    Benefits:
+    - One page load per date instead of per game (99% fewer requests)
+    - Catches all mislabeled games without filtering
+    - Basketball-reference is authoritative source
+
     Args:
         nba_scraper: NbaScraper instance
         newly_scraped: List of newly scraped dataframes
@@ -140,55 +151,44 @@ def scrape_validation_data(nba_scraper, newly_scraped, config, app_logger):
     try:
         app_logger.structured_log(logging.INFO, "Initiating validation data scraping")
 
-        # Build game metadata from scraped data
-        # We need: GAME_ID, GAME_DATE, HOME_TEAM_ID (team with "vs." in matchup)
-        game_metadata_list = []
+        # Extract unique dates from scraped data
+        unique_dates = set()
 
         for df in newly_scraped:
             if df.empty:
                 continue
 
-            # Verify required columns exist
-            required_cols = [config.game_id_column, 'GAME DATE', 'MATCH UP', 'TEAM_ID']
-            if not all(col in df.columns for col in required_cols):
+            # Verify GAME DATE column exists
+            if 'GAME DATE' not in df.columns:
                 app_logger.structured_log(
                     logging.WARNING,
-                    "Missing required columns for validation scraping",
+                    "Missing GAME DATE column for validation scraping",
                     available_columns=list(df.columns)
                 )
                 continue
 
-            # Filter to only home teams (those with "vs." in matchup)
-            home_games = df[df['MATCH UP'].str.contains('vs.', case=False, na=False)].copy()
+            # Extract unique dates from this dataframe
+            dates_in_df = df['GAME DATE'].dropna().unique()
+            unique_dates.update(dates_in_df)
 
-            if not home_games.empty:
-                game_metadata_list.append(home_games[[config.game_id_column, 'GAME DATE', 'TEAM_ID']])
-
-        if not game_metadata_list:
+        if not unique_dates:
             app_logger.structured_log(
                 logging.WARNING,
-                "No game metadata extracted from scraped data - skipping validation scraping"
+                "No dates extracted from scraped data - skipping validation scraping"
             )
             return
 
-        # Combine and deduplicate game metadata
-        game_metadata = pd.concat(game_metadata_list, ignore_index=True)
-        game_metadata = game_metadata.drop_duplicates(subset=[config.game_id_column])
-
-        # Rename columns to match ValidationScraper expectations
-        game_metadata = game_metadata.rename(columns={
-            config.game_id_column: 'GAME_ID',
-            'GAME DATE': 'GAME_DATE',
-            'TEAM_ID': 'HOME_TEAM_ID'
-        })
+        # Convert to sorted list
+        dates_list = sorted(list(unique_dates))
 
         app_logger.structured_log(
             logging.INFO,
-            "Scraping validation data for games",
-            game_count=len(game_metadata)
+            "Scraping validation data for dates",
+            date_count=len(dates_list),
+            date_range=f"{dates_list[0]} to {dates_list[-1]}" if dates_list else "none"
         )
 
-        if nba_scraper.scrape_and_save_validation_data(game_metadata):
+        if nba_scraper.scrape_and_save_validation_data(dates_list):
             app_logger.structured_log(logging.INFO, "Validation data scraping completed successfully")
         else:
             app_logger.structured_log(logging.WARNING, "Validation data scraping skipped or failed")

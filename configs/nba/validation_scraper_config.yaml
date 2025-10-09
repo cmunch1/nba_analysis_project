@@ -1,0 +1,91 @@
+# Basketball-Reference Validation Scraper Configuration
+# CSS selectors and settings for scraping validation data from basketball-reference.com
+
+# Date-based scoreboard URL pattern
+# Format: https://www.basketball-reference.com/boxscores/?month={MM}&day={DD}&year={YYYY}
+scoreboard_base_url: "https://www.basketball-reference.com/boxscores/"
+
+# CSS Selectors for date scoreboard page
+selectors:
+  # Main container that holds all games for a date
+  games_container: "#content"
+
+  # Each game is in a div - we'll need to parse them in groups
+  # Structure: First team link (visitor), score, "Final", second team link (home), score, box score link
+
+  # Team links pattern - these appear in pairs (visitor, home)
+  team_links: 'a[href^="/teams/"]'
+
+  # Box score link - contains the game ID and home team abbreviation
+  # Format: /boxscores/200610310LAL.html where LAL is home team
+  box_score_link: 'a[href^="/boxscores/"][href$=".html"]:not([href*="pbp"]):not([href*="shot-chart"])'
+
+  # Score spans - appear after team links
+  score_spans: "span"
+
+  # "Final" indicator - helps us identify score spans vs other spans
+  final_text: "Final"
+
+# Parsing strategy
+parsing:
+  # How to identify games on the page
+  game_identification: "box_score_links"  # Each box score link represents one game
+
+  # How to extract visitor vs home team
+  # Options: "ordinal" (first=visitor, second=home), "url_comparison" (compare team in box score link)
+  team_identification_method: "ordinal_and_url_verification"
+
+  # Verify home team by checking box score URL contains the team abbreviation
+  verify_home_team_from_url: True
+
+# Team abbreviation extraction
+team_abbrev:
+  # Extract from team link href: /teams/LAL/2007.html → LAL
+  extraction_pattern: "/teams/{ABBREV}/"
+
+  # Position in URL path (split by '/')
+  # /teams/LAL/2007.html → split('/') → ['', 'teams', 'LAL', '2007.html']
+  url_path_index: 2
+
+# Score extraction
+scores:
+  # Scores appear as text in <span> elements
+  # Located after team links and before "Final" text
+  # Pattern: <span>106</span> <span>Final</span> <span>114</span>
+  # First score = visitor, third score = home (second is "Final")
+  visitor_score_position: "first_span_before_final"
+  home_score_position: "first_span_after_final"
+
+# Error handling
+error_handling:
+  # If we can't find games on a date (no NBA games that day)
+  skip_empty_dates: True
+
+  # If team abbreviation doesn't match our mapping
+  log_unknown_teams: True
+  warn_on_unknown_teams: True
+
+  # If ordinal position doesn't match URL verification
+  fail_on_verification_mismatch: True
+
+# Rate limiting (to be respectful to basketball-reference.com)
+rate_limiting:
+  # Delay between date page requests (seconds)
+  delay_between_dates: 1.0
+
+  # Max retries if page fails to load
+  max_retries: 3
+
+  # Retry delay (seconds)
+  retry_delay: 2.0
+
+# Logging
+logging:
+  # Log each game found
+  log_games_found: True
+
+  # Log verification results (ordinal vs URL check)
+  log_verification: True
+
+  # Log detailed parsing steps (for debugging)
+  debug_parsing: False
