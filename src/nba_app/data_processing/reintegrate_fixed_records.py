@@ -47,34 +47,64 @@ def update_scraped_matchup_fields(
     # Use original_game_id to match with the scraped GAME_ID
     home_team_mapping = {}
     for _, row in fixed_team_df.iterrows():
-        original_game_id = row['original_game_id']
-        team_id = row['team_id']
-        is_home = row['is_home_team']
+        original_game_id = str(int(row['original_game_id']))  # Ensure string type, no decimals
+        team_id = int(row['team_id'])  # Ensure int type
+        is_home = int(row['is_home_team'])
         home_team_mapping[(original_game_id, team_id)] = is_home
 
     app_logger.structured_log(logging.INFO, "Created home team mapping",
-                           mapping_size=len(home_team_mapping))
+                           mapping_size=len(home_team_mapping),
+                           sample_keys=list(home_team_mapping.keys())[:3])
 
     # Update each scraped dataframe
     updated_count = 0
     for i, (df, file_name) in enumerate(zip(scraped_dataframes, file_names)):
-        # Check if this file has MATCH UP field (it should be in all boxscore files)
-        matchup_col = None
-        for col in df.columns:
-            if col.upper().replace(' ', '') == 'MATCHUP':
-                matchup_col = col
-                break
+        app_logger.structured_log(logging.INFO, f"Processing file {file_name}",
+                               file_name=file_name,
+                               row_count=len(df))
 
+        # Find column names (case-insensitive)
+        matchup_col = None
+        team_col = None
+        game_id_col = None
+        team_id_col = None
+
+        for col in df.columns:
+            col_upper = col.upper().replace(' ', '').replace('_', '')
+            if col_upper == 'MATCHUP':
+                matchup_col = col
+            elif col_upper == 'TEAM':
+                team_col = col
+            elif col_upper == 'GAMEID':
+                game_id_col = col
+            elif col_upper == 'TEAMID':
+                team_id_col = col
+
+        app_logger.structured_log(logging.INFO, f"Found columns in {file_name}",
+                               matchup_col=matchup_col,
+                               team_col=team_col,
+                               game_id_col=game_id_col,
+                               team_id_col=team_id_col)
+
+        # Skip files that don't have required columns
         if matchup_col is None:
-            app_logger.structured_log(logging.WARNING, "No MATCH UP column found in file",
+            app_logger.structured_log(logging.WARNING, "No MATCH UP column found in file, skipping",
                                    file_name=file_name)
+            continue
+
+        if team_col is None or game_id_col is None or team_id_col is None:
+            app_logger.structured_log(logging.WARNING, "Missing required columns in file, skipping",
+                                   file_name=file_name,
+                                   has_team=team_col is not None,
+                                   has_game_id=game_id_col is not None,
+                                   has_team_id=team_id_col is not None)
             continue
 
         # Update MATCH UP field for records that were fixed
         for idx, row in df.iterrows():
-            game_id = str(row['GAME_ID'])
-            team_id = row['TEAM_ID']
-            team_abbrev = row['TEAM']
+            game_id = str(int(row[game_id_col]))  # Ensure string, no decimals
+            team_id = int(row[team_id_col])  # Ensure int
+            team_abbrev = row[team_col]
 
             key = (game_id, team_id)
             if key in home_team_mapping:

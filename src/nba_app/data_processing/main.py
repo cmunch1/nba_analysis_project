@@ -12,9 +12,9 @@ Key features:
 - Saves invalid records for further review
 """
 
+import logging
 import sys
 import traceback
-import logging
 
 from .di_container import DIContainer
 
