@@ -24,10 +24,11 @@ class FeatureCharts(BaseChart):
         """
         super().__init__(config, app_logger, error_handler)
         self.chart_utils = ChartUtils(app_logger, error_handler)
-        
+
         # Get chart configuration with appropriate fallbacks
-        if hasattr(config, 'chart_options') and hasattr(config.chart_options, 'feature_importance'):
-            self.chart_config = config.chart_options.feature_importance
+        viz_cfg = config.core.visualization_config
+        if hasattr(viz_cfg, 'chart_options') and hasattr(viz_cfg.chart_options, 'feature_importance'):
+            self.chart_config = viz_cfg.chart_options.feature_importance
         else:
             # Create empty config if not available
             self.chart_config = type('EmptyConfig', (), {})()

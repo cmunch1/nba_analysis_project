@@ -31,7 +31,6 @@ def main() -> None:
     try:
         config = container.config()
 
-        # Setup the app logger (will use log_path from config)
         app_logger = container.app_logger()
         app_logger.setup(LOG_FILE)
 

@@ -16,6 +16,7 @@ class LightGBMTrainer(BaseTrainer):
         self.app_logger = app_logger
         self.error_handler = error_handler
         self.utils = TrainerUtils(app_logger, error_handler)
+        self._model_cfg = config.core.model_testing_config
         
         self.app_logger.structured_log(
             logging.INFO, 
@@ -44,16 +45,16 @@ class LightGBMTrainer(BaseTrainer):
             
             # Create LightGBM datasets
             train_data = lgb.Dataset(
-                X_train, 
+                X_train,
                 label=y_train,
                 feature_name=X_train.columns.tolist(),
-                categorical_feature=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None
+                categorical_feature=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None
             )
             val_data = lgb.Dataset(
-                X_val, 
+                X_val,
                 label=y_val,
                 feature_name=X_val.columns.tolist(),
-                categorical_feature=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None,
+                categorical_feature=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None,
                 reference=train_data
             )
 
@@ -77,7 +78,7 @@ class LightGBMTrainer(BaseTrainer):
             results.predictions = model.predict(X_val)
             results.num_boost_round = self.config.LightGBM.num_boost_round if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'num_boost_round') else 100
             results.early_stopping = self.config.LightGBM.early_stopping_rounds if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'early_stopping_rounds') else 10
-            results.categorical_features = self.config.categorical_features if hasattr(self.config, 'categorical_features') else []
+            results.categorical_features = self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else []
 
             # Process learning curve data if requested
             if hasattr(self.config, 'generate_learning_curve_data') and self.config.generate_learning_curve_data:
@@ -94,7 +95,7 @@ class LightGBMTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_train, results)
 
             # Calculate SHAP values if configured
-            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+            if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
                 self._calculate_shap_values(model, X_val, y_val, results)
 
             return results
@@ -163,7 +164,7 @@ class LightGBMTrainer(BaseTrainer):
             results.shap_values = shap_values
             
             # Calculate interactions if configured
-            if hasattr(self.config, 'calculate_shap_interactions') and self.config.calculate_shap_interactions:
+            if hasattr(self._model_cfg, 'calculate_shap_interactions') and self._model_cfg.calculate_shap_interactions:
                 self._calculate_shap_interactions(model, X_val, results)
                 
         except Exception as e:
@@ -179,8 +180,8 @@ class LightGBMTrainer(BaseTrainer):
         """Calculate and store SHAP interaction values."""
         n_features = X_val.shape[1]
         estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
-        
-        if not hasattr(self.config, 'max_shap_interaction_memory_gb') or estimated_memory <= self.config.max_shap_interaction_memory_gb:
+
+        if not hasattr(self._model_cfg, 'max_shap_interaction_memory_gb') or estimated_memory <= self._model_cfg.max_shap_interaction_memory_gb:
             interaction_values = model.predict(X_val, pred_interactions=True)
             # Remove bias term from interaction values if present
             if interaction_values.shape[1] == X_val.shape[1] + 1:

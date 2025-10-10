@@ -30,10 +30,11 @@ class ChartOrchestrator(BaseChartOrchestrator):
             app_file_handler: Application file handler
         """
         self.config = config
+        self._viz_cfg = config.core.visualization_config
         self.app_logger = app_logger
         self.error_handler = error_handler
         self.app_file_handler = app_file_handler
-        
+
         # Initialize chart instances based on configuration
         self.charts: Dict[ChartType, BaseChart] = {}
         self._initialize_charts()
@@ -57,8 +58,8 @@ class ChartOrchestrator(BaseChartOrchestrator):
         """Initialize enabled chart types based on configuration."""
         try:
             # Get chart options with fallbacks
-            if hasattr(self.config, 'chart_options'):
-                chart_options = self.config.chart_options
+            if hasattr(self._viz_cfg, 'chart_options'):
+                chart_options = self._viz_cfg.chart_options
             else:
                 chart_options = type('EmptyConfig', (), {})()  # Empty object
             
@@ -117,8 +118,8 @@ class ChartOrchestrator(BaseChartOrchestrator):
             if ChartType.FEATURE in self.charts and hasattr(results, 'feature_importance_scores') and results.feature_importance_scores is not None:
                 # Get top_n from config if available
                 top_n = None
-                if hasattr(self.config, 'chart_options') and hasattr(self.config.chart_options, 'feature_importance'):
-                    top_n = getattr(self.config.chart_options.feature_importance, 'top_n', None)
+                if hasattr(self._viz_cfg, 'chart_options') and hasattr(self._viz_cfg.chart_options, 'feature_importance'):
+                    top_n = getattr(self._viz_cfg.chart_options.feature_importance, 'top_n', None)
                 
                 charts_dict['feature_importance'] = self.charts[ChartType.FEATURE].create_figure(
                     feature_importance=results.feature_importance_scores,
@@ -222,15 +223,15 @@ class ChartOrchestrator(BaseChartOrchestrator):
             )
             
             # Check for dependence plots config
-            if (hasattr(self.config, 'chart_options') and 
-                hasattr(self.config.chart_options, 'shap') and 
-                hasattr(self.config.chart_options.shap, 'dependence_plots') and
-                self.config.chart_options.shap.dependence_plots):
-                
+            if (hasattr(self._viz_cfg, 'chart_options') and
+                hasattr(self._viz_cfg.chart_options, 'shap') and
+                hasattr(self._viz_cfg.chart_options.shap, 'dependence_plots') and
+                self._viz_cfg.chart_options.shap.dependence_plots):
+
                 # Get dependence features
                 dependence_features = []
-                if hasattr(self.config.chart_options.shap, 'dependence_features'):
-                    dependence_features = self.config.chart_options.shap.dependence_features
+                if hasattr(self._viz_cfg.chart_options.shap, 'dependence_features'):
+                    dependence_features = self._viz_cfg.chart_options.shap.dependence_features
                 
                 for feature in dependence_features:
                     if feature in results.feature_names:
@@ -250,13 +251,13 @@ class ChartOrchestrator(BaseChartOrchestrator):
             interpreter = self.charts[ChartType.MODEL_INTERPRETATION]
             
             # Check if model and configuration are available
-            if (hasattr(results, 'model') and 
-                hasattr(self.config, 'chart_options') and 
-                hasattr(self.config.chart_options, 'model_interpretation') and
-                hasattr(self.config.chart_options.model_interpretation, 'force_plot_indices')):
-                
+            if (hasattr(results, 'model') and
+                hasattr(self._viz_cfg, 'chart_options') and
+                hasattr(self._viz_cfg.chart_options, 'model_interpretation') and
+                hasattr(self._viz_cfg.chart_options.model_interpretation, 'force_plot_indices')):
+
                 # Get indices for force plots
-                force_plot_indices = self.config.chart_options.model_interpretation.force_plot_indices
+                force_plot_indices = self._viz_cfg.chart_options.model_interpretation.force_plot_indices
                 
                 for idx in force_plot_indices:
                     if hasattr(results, 'feature_data') and idx < len(results.feature_data):

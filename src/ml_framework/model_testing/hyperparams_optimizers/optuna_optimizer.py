@@ -68,27 +68,31 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
                 n_splits: int = None) -> Dict[str, Any]:
         """
         Optimize hyperparameters using Optuna and model_testing_config settings.
-        
+
         Args:
             objective_func: Optional custom objective function
             X: Training data
             y: Target data
             model_type: Type of model to optimize
             n_splits: Number of cross-validation splits
-            
+
         Returns:
             Dictionary of optimized parameters
         """
         try:
+            # Local config aliases
+            model_cfg = self.config.core.model_testing_config
+            optuna_cfg = self.config.core.optuna_config
+
             # Get parameter space based on model type
             param_space = self._get_param_space(model_type)
 
             # Get optimization settings from config
-            n_trials = self.config.optuna.n_trials
-            scoring = self.config.optuna.scoring
-            direction = self.config.optuna.direction
-            n_splits = n_splits or self.config.n_splits
-            cv_type = self.config.cross_validation_type
+            n_trials = optuna_cfg.optuna.n_trials
+            scoring = optuna_cfg.optuna.scoring
+            direction = optuna_cfg.optuna.direction
+            n_splits = n_splits or model_cfg.n_splits
+            cv_type = model_cfg.cross_validation_type
 
             self.app_logger.structured_log(
                 logging.INFO,
@@ -291,10 +295,13 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
 
     def _optimize_lightgbm(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
         """Optimize LightGBM model hyperparameters."""
+        # Local config alias
+        model_cfg = self.config.core.model_testing_config
+
         def objective(trial):
             params = self._process_parameters(trial, param_space)
             scores = []
-            
+
             # Use appropriate cross-validation strategy
             if cv_type == "TimeSeriesSplit":
                 kf = TimeSeriesSplit(n_splits=n_splits)
@@ -304,20 +311,20 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
                     shuffle=True,
                     random_state=self.config.random_state
                 )
-            
+
             for train_idx, val_idx in kf.split(X, y):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
-                
+
                 train_data = lgb.Dataset(
                     X_train,
                     label=y_train,
-                    categorical_feature=self.config.categorical_features
+                    categorical_feature=model_cfg.categorical_features
                 )
                 val_data = lgb.Dataset(
                     X_val,
                     label=y_val,
-                    categorical_feature=self.config.categorical_features,
+                    categorical_feature=model_cfg.categorical_features,
                     reference=train_data
                 )
                 

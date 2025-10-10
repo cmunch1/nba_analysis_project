@@ -65,10 +65,13 @@ class HyperparamsManager(BaseHyperparamsManager):
     def _get_storage_dir(self) -> str:
         """Get hyperparameter storage directory from nested config."""
         try:
+            # Get model testing config alias
+            model_cfg = self.config.core.model_testing_config
+
             if hasattr(self.config, 'hyperparameters') and hasattr(self.config.hyperparameters, 'storage_dir'):
                 return self.config.hyperparameters.storage_dir
-            elif hasattr(self.config, 'hyperparameter_history_dir'):
-                return self.config.hyperparameter_history_dir
+            elif hasattr(model_cfg, 'hyperparameter_history_dir'):
+                return model_cfg.hyperparameter_history_dir
             else:
                 # Default fallback
                 return "hyperparameter_history"
@@ -83,17 +86,19 @@ class HyperparamsManager(BaseHyperparamsManager):
     def get_current_params(self, model_name: str) -> Dict[str, Any]:
         """
         Get the current hyperparameters for a model, handling nested configurations.
-        
+
         Args:
             model_name: Name of the model
-            
+
         Returns:
             Dict containing model parameters
         """
         self.app_logger.structured_log(logging.INFO, "Getting current parameters",
                                      model_name=model_name)
-        
+
         try:
+            # Add local alias for model testing config
+            model_cfg = self.config.core.model_testing_config
             # Get model-specific config
             model_config = self._get_model_config(model_name)
             
@@ -203,7 +208,8 @@ class HyperparamsManager(BaseHyperparamsManager):
                     else:
                         # If no "params" key, assume the entire file is parameters
                         # but exclude metadata fields
-                        metadata_fields = self.config.hyperparameter_metadata
+                        model_cfg = self.config.core.model_testing_config
+                        metadata_fields = model_cfg.hyperparameter_metadata
                         return {k: v for k, v in params_data.items() if k not in metadata_fields}
                 except Exception as e:
                     self.app_logger.structured_log(
@@ -320,8 +326,9 @@ class HyperparamsManager(BaseHyperparamsManager):
                 enable_categorical = model_config.enable_categorical
         
         # Get categorical features from main config
-        if hasattr(self.config, 'categorical_features'):
-            categorical_features = self.config.categorical_features
+        model_cfg = self.config.core.model_testing_config
+        if hasattr(model_cfg, 'categorical_features'):
+            categorical_features = model_cfg.categorical_features
         
         return HyperparameterSet(
             name=f"{model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",

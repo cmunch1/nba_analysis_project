@@ -96,10 +96,13 @@ class FeatureSelector(BaseFeatureSelector):
         self.app_logger.structured_log(logging.INFO, "Removing unnecessary features")
 
         try:
+            # Add local alias for model testing config
+            model_cfg = self.config.core.model_testing_config
+
             # Drop non_useful_columns if they exist in config
-            if hasattr(self.config, 'non_useful_columns') and self.config.non_useful_columns:
-                df = df.drop(columns=[f"{self.config.home_team_prefix}{col}" for col in self.config.non_useful_columns])
-                df = df.drop(columns=[f"{self.config.visitor_team_prefix}{col}" for col in self.config.non_useful_columns])
+            if hasattr(model_cfg, 'non_useful_columns') and model_cfg.non_useful_columns:
+                df = df.drop(columns=[f"{self.config.home_team_prefix}{col}" for col in model_cfg.non_useful_columns])
+                df = df.drop(columns=[f"{self.config.visitor_team_prefix}{col}" for col in model_cfg.non_useful_columns])
 
             # Drop game_date column
             df = df.drop(columns=[self.config.new_date_column])

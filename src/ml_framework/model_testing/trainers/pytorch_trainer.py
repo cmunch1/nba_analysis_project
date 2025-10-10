@@ -47,6 +47,7 @@ class PyTorchTrainer(BaseTrainer):
         self.app_logger = app_logger
         self.error_handler = error_handler
         self.utils = TrainerUtils(app_logger, error_handler)
+        self._model_cfg = config.core.model_testing_config
         
         # Set device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -92,7 +93,7 @@ class PyTorchTrainer(BaseTrainer):
             results.model = model
             results.feature_names = X_train.columns.tolist()
             results.model_params = model_params
-            results.categorical_features = self.config.categorical_features if hasattr(self.config, 'categorical_features') else []
+            results.categorical_features = self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else []
             
             # Training loop with learning curve tracking
             train_losses, val_losses = self._training_loop(
@@ -120,7 +121,7 @@ class PyTorchTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_val, y_val, results)
             
             # Calculate SHAP values if configured
-            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+            if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
                 self._calculate_shap_values(model, X_val, y_val, results)
             
             return results

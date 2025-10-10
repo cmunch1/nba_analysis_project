@@ -34,10 +34,11 @@ class TrainerFactory:
     def create_trainers(cls, config: BaseConfigManager, app_logger: BaseAppLogger, error_handler: BaseErrorHandler) -> Dict[str, BaseTrainer]:
         """Creates trainers based on models specified in configuration."""
         trainers = {}
-        
+        model_cfg = config.core.model_testing_config
+
         # Process each model in the config
-        for model_name in vars(config.models):
-            enabled = getattr(config.models, model_name)
+        for model_name in vars(model_cfg.models):
+            enabled = getattr(model_cfg.models, model_name)
 
             # Extract the base model name (strip '_config' suffix if present)
             base_model_name = model_name.split('_')[0].upper()

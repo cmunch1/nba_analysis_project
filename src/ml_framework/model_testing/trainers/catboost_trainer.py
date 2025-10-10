@@ -13,18 +13,20 @@ from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
 
 class CatBoostTrainer(BaseTrainer):
-    def __init__(self, 
-                 config: BaseConfigManager, 
-                 app_logger: BaseAppLogger, 
+    def __init__(self,
+                 config: BaseConfigManager,
+                 app_logger: BaseAppLogger,
                  error_handler: BaseErrorHandler):
         """Initialize CatBoost trainer with configuration and dependencies."""
         self.config = config
         self.app_logger = app_logger
         self.error_handler = error_handler
         self.utils = TrainerUtils(app_logger, error_handler)
-        
+        # Create local alias for frequently accessed configs
+        self._model_cfg = config.core.model_testing_config
+
         self.app_logger.structured_log(
-            logging.INFO, 
+            logging.INFO,
             "CatBoostTrainer initialized successfully",
             trainer_type=type(self).__name__
         )
@@ -53,13 +55,13 @@ class CatBoostTrainer(BaseTrainer):
                 data=X_train,
                 label=y_train,
                 feature_names=X_train.columns.tolist(),
-                cat_features=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None
+                cat_features=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None
             )
             val_pool = Pool(
                 data=X_val,
                 label=y_val,
                 feature_names=X_val.columns.tolist(),
-                cat_features=self.config.categorical_features if hasattr(self.config, 'categorical_features') else None
+                cat_features=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None
             )
 
             # Ensure metrics are properly set in parameters
@@ -74,7 +76,7 @@ class CatBoostTrainer(BaseTrainer):
             primary_metric = model_params['eval_metric']
             
             # Configure logging directory and verbosity
-            log_dir = Path(self.config.log_path) / f'catboost_info/fold_{fold}'
+            log_dir = Path(self.config.core.app_logging_config.log_path) / f'catboost_info/fold_{fold}'
             if log_dir.exists():
                 shutil.rmtree(log_dir)  # Clean up any existing logs
             log_dir.mkdir(parents=True, exist_ok=True)
@@ -97,7 +99,7 @@ class CatBoostTrainer(BaseTrainer):
             results.model = model
             results.num_boost_round = model.tree_count_
             results.early_stopping = self.config.CatBoost.early_stopping_rounds if hasattr(self.config, 'CatBoost') and hasattr(self.config.CatBoost, 'early_stopping_rounds') else 10
-            results.categorical_features = self.config.categorical_features if hasattr(self.config, 'categorical_features') else []
+            results.categorical_features = self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else []
             
             # Generate predictions
             loss_function = model_params.get('loss_function', '').lower()
@@ -122,7 +124,7 @@ class CatBoostTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_train, results)
 
             # Calculate SHAP values if configured
-            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+            if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
                 self._calculate_shap_values(model, val_pool, y_val, results)
 
             return results
@@ -230,7 +232,7 @@ class CatBoostTrainer(BaseTrainer):
             )
             
             # Calculate interactions if configured
-            if hasattr(self.config, 'calculate_shap_interactions') and self.config.calculate_shap_interactions:
+            if hasattr(self._model_cfg, 'calculate_shap_interactions') and self._model_cfg.calculate_shap_interactions:
                 self._calculate_shap_interactions(model, val_pool, results)
             
         except Exception as e:
@@ -247,7 +249,7 @@ class CatBoostTrainer(BaseTrainer):
             n_features = val_pool.get_features().shape[1]
             estimated_memory = (val_pool.get_features().shape[0] * n_features * n_features * 8) / (1024 ** 3)
             
-            if not hasattr(self.config, 'max_shap_interaction_memory_gb') or estimated_memory <= self.config.max_shap_interaction_memory_gb:
+            if not hasattr(self._model_cfg, 'max_shap_interaction_memory_gb') or estimated_memory <= self._model_cfg.max_shap_interaction_memory_gb:
                 interaction_values = model.get_feature_importance(
                     val_pool,
                     type='ShapInteractionValues'

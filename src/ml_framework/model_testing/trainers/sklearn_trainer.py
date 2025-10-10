@@ -32,6 +32,7 @@ class SKLearnTrainer(BaseTrainer):
         self.error_handler = error_handler
         self.utils = TrainerUtils(app_logger, error_handler)
         self.model_type = model_type
+        self._model_cfg = config.core.model_testing_config
         
         self.model_registry = {
             'randomforest': RandomForestClassifier,
@@ -113,8 +114,8 @@ class SKLearnTrainer(BaseTrainer):
             results.feature_names = self.feature_names
             
             # Handle categorical features if specified
-            if hasattr(self.config, 'categorical_features'):
-                results.categorical_features = self.config.categorical_features
+            if hasattr(self._model_cfg, 'categorical_features'):
+                results.categorical_features = self._model_cfg.categorical_features
             
             # Train model
             model.fit(X_train, y_train)
@@ -139,10 +140,10 @@ class SKLearnTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_train, results)
             
             # Calculate SHAP values if configured
-            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+            if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
                 self._calculate_shap_values(model, X_val, y_val, results)
-                
-                if hasattr(self.config, 'calculate_shap_interactions') and self.config.calculate_shap_interactions:
+
+                if hasattr(self._model_cfg, 'calculate_shap_interactions') and self._model_cfg.calculate_shap_interactions:
                     self._calculate_shap_interactions(model, X_val, results)
             
             return results
@@ -269,8 +270,8 @@ class SKLearnTrainer(BaseTrainer):
             import shap
             n_features = X_val.shape[1]
             estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
-            
-            if not hasattr(self.config, 'max_shap_interaction_memory_gb') or estimated_memory <= self.config.max_shap_interaction_memory_gb:
+
+            if not hasattr(self._model_cfg, 'max_shap_interaction_memory_gb') or estimated_memory <= self._model_cfg.max_shap_interaction_memory_gb:
                 explainer = shap.TreeExplainer(model)
                 interaction_values = explainer.shap_interaction_values(X_val)
                 

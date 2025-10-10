@@ -3,7 +3,7 @@ import traceback
 import logging
 from datetime import datetime
 import pandas as pd
-import numpy as np
+
 
 from ml_framework.framework.data_classes import (
     ClassificationMetrics,
@@ -12,6 +12,7 @@ from ml_framework.framework.data_classes import (
 )
 from .di_container import ModelTestingDIContainer
 
+
 def main() -> None:
     """Main function to perform model testing with visualization."""
     app_logger = None
@@ -19,15 +20,13 @@ def main() -> None:
     try:
         # Initialize container
         container = ModelTestingDIContainer()
-        
+
         # Get core dependencies
         config = container.config()
-        app_file_handler = container.app_file_handler()
         app_logger = container.app_logger()
 
-        # initialize the app logger
-        log_file = app_file_handler.join_paths(config.log_path, config.model_testing_log_file)
-        app_logger.setup(log_file)
+        # Initialize the app logger
+        app_logger.setup(config.core.app_logging_config.model_testing_log_file)
 
         error_handler = container.error_handler()
         data_access = container.data_access()
@@ -153,22 +152,25 @@ def process_single_model(
     chart_orchestrator
 ) -> ModelTrainingResults:
     """Process a single model with proper visualization integration."""
-    
+
+    # Create local alias for model testing config (used frequently in this function)
+    model_cfg = config.core.model_testing_config
+
     oof_preprocessing_results = PreprocessingResults()
     val_preprocessing_results = PreprocessingResults()
-    
+
     # Prepare data
     X, y, oof_preprocessing_results, primary_ids_oof = model_tester.prepare_data(
-        training_dataframe.copy(), 
-        model_name, 
-        is_training=True, 
+        training_dataframe.copy(),
+        model_name,
+        is_training=True,
         preprocessing_results=oof_preprocessing_results
     )
-    
+
     X_val, y_val, val_preprocessing_results, primary_ids_val = model_tester.prepare_data(
-        validation_dataframe.copy(), 
-        model_name, 
-        is_training=False, 
+        validation_dataframe.copy(),
+        model_name,
+        is_training=False,
         preprocessing_results=val_preprocessing_results
     )
 
@@ -180,7 +182,7 @@ def process_single_model(
             y=y
         )
     else:
-        model_params = model_tester.get_model_params(model_name)    
+        model_params = model_tester.get_model_params(model_name)
 
     app_logger.structured_log(
         logging.INFO,
@@ -194,7 +196,7 @@ def process_single_model(
     val_results = ModelTrainingResults(X_val.shape)
 
     # Perform cross-validation if configured
-    if config.perform_oof_cross_validation:
+    if model_cfg.perform_oof_cross_validation:
         oof_results = process_model_evaluation(
             model_tester=model_tester,
             data_access=data_access,
@@ -209,13 +211,13 @@ def process_single_model(
             config=config,
             preprocessing_results=oof_preprocessing_results,
             training_results=oof_results,
-            experiment_name=config.experiment_name,
-            experiment_description=config.experiment_description,
+            experiment_name=model_cfg.experiment_name,
+            experiment_description=model_cfg.experiment_description,
             is_oof=True
         )
-    
+
     # Perform validation set testing if configured
-    if config.perform_validation_set_testing:
+    if model_cfg.perform_validation_set_testing:
         val_results = process_model_evaluation(
             model_tester=model_tester,
             data_access=data_access,
@@ -232,12 +234,12 @@ def process_single_model(
             config=config,
             preprocessing_results=val_preprocessing_results,
             training_results=val_results,
-            experiment_name=config.experiment_name,
-            experiment_description=config.experiment_description,
+            experiment_name=model_cfg.experiment_name,
+            experiment_description=model_cfg.experiment_description,
             is_oof=False
         )
 
-    return val_results if config.perform_validation_set_testing else oof_results
+    return val_results if model_cfg.perform_validation_set_testing else oof_results
 
 def process_model_evaluation(
     model_tester,
@@ -260,7 +262,10 @@ def process_model_evaluation(
     y_eval=None,
 ) -> ModelTrainingResults:
     """Process model evaluation with visualization integration."""
-    
+
+    # Create local alias for model testing config
+    model_cfg = config.core.model_testing_config
+
     eval_type = "OOF" if is_oof else "validation"
     app_logger.structured_log(
         logging.INFO,
@@ -288,8 +293,8 @@ def process_model_evaluation(
 
         if is_oof:
             results.model_params.update({
-                "cross_validation_type": config.cross_validation_type,
-                "n_splits": config.n_splits
+                "cross_validation_type": model_cfg.cross_validation_type,
+                "n_splits": model_cfg.n_splits
             })
 
         # Calculate metrics
@@ -311,15 +316,15 @@ def process_model_evaluation(
             chart_orchestrator.save_charts(charts, output_dir)
 
         # Handle predictions saving
-        if ((is_oof and config.save_oof_predictions) or 
-            (not is_oof and config.save_validation_predictions)):
+        if ((is_oof and model_cfg.save_oof_predictions) or
+            (not is_oof and model_cfg.save_validation_predictions)):
             _save_predictions(
-                results, primary_ids, config, data_access, 
+                results, primary_ids, config, data_access,
                 model_name, is_oof, app_logger
             )
 
         # Log experiment
-        if config.log_experiment:
+        if model_cfg.log_experiment:
             app_logger.structured_log(
                 logging.INFO,
                 f"Logging {eval_type} results"
@@ -340,14 +345,14 @@ def process_model_evaluation(
 def _get_enabled_models(config) -> list:
     """Get list of enabled models from config."""
     enabled_models = []
-    
+
     # Process each model in the config
-    for model_name in vars(config.models):
-        enabled = getattr(config.models, model_name)
-        
+    for model_name in vars(config.core.model_testing_config.models):
+        enabled = getattr(config.core.model_testing_config.models, model_name)
+
         if isinstance(enabled, bool) and enabled:
             enabled_models.append(model_name)
-            
+
     return enabled_models
 
 def _save_predictions(
@@ -363,27 +368,27 @@ def _save_predictions(
     try:
         predictions_df = results.feature_data.copy()
         predictions_df['target'] = results.target_data
-        
+
         if primary_ids is not None:
-            predictions_df.insert(0, config.primary_id_column, primary_ids)
-        
+            predictions_df.insert(0, config.core.model_testing_config.primary_id_column, primary_ids)
+
         pred_type = "oof" if is_oof else "val"
         predictions_df[f'{pred_type}_predictions'] = results.probability_predictions
-        
+
         output_filename = f"{model_name}_{pred_type}_predictions.csv"
-        
+
         app_logger.structured_log(
             logging.INFO,
             f"Saving {pred_type} predictions",
             output_shape=predictions_df.shape,
             filename=output_filename
         )
-        
+
         data_access.save_dataframes(
             [predictions_df],
             [output_filename]
         )
-        
+
     except Exception as e:
         app_logger.structured_log(
             logging.ERROR,

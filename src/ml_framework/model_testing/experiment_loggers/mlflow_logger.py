@@ -50,8 +50,8 @@ class MLFlowLogger(BaseExperimentLogger):
 
         if hasattr(self.config, 'tracking_uri'):
             tracking_uri = self.config.tracking_uri
-        if hasattr(self.config, 'experiment_name'):
-            experiment_name = self.config.experiment_name
+        if hasattr(self.config.core.model_testing_config, 'experiment_name'):
+            experiment_name = self.config.core.model_testing_config.experiment_name
         
         # Set tracking URI if provided, otherwise use local file system
         if tracking_uri:

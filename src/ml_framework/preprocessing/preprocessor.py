@@ -228,29 +228,32 @@ class Preprocessor(BasePreprocessor):
     def _get_model_config(self, model_name: str) -> Any:
         """
         Get preprocessing config for specific model, falling back to default if not specified.
-        
+
         Args:
             model_name: Name of the model
-            
+
         Returns:
             Model-specific or default preprocessing configuration
         """
         try:
-            if (hasattr(self.config.preprocessing, 'model_specific') and 
-                hasattr(self.config.preprocessing.model_specific, model_name)):
-                model_config = getattr(self.config.preprocessing.model_specific, model_name)
+            # Add local alias for preprocessing config
+            prep_cfg = self.config.core.preprocessing_config
+
+            if (hasattr(prep_cfg.preprocessing, 'model_specific') and
+                hasattr(prep_cfg.preprocessing.model_specific, model_name)):
+                model_config = getattr(prep_cfg.preprocessing.model_specific, model_name)
                 self.app_logger.structured_log(
-                    logging.INFO, 
+                    logging.INFO,
                     "Model-specific preprocessing config found",
                     model_name=model_name
                 )
             else:
-                model_config = self.config.preprocessing.default
+                model_config = prep_cfg.preprocessing.default
                 self.app_logger.structured_log(
-                    logging.WARNING, 
+                    logging.WARNING,
                     "No model-specific preprocessing config found, using default"
                 )
-            
+
             return model_config
         except Exception as e:
             raise self.error_handler.create_error_handler(

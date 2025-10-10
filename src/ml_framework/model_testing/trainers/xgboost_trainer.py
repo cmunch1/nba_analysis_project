@@ -17,6 +17,7 @@ class XGBoostTrainer(BaseTrainer):
         self.app_logger = app_logger
         self.error_handler = error_handler
         self.utils = TrainerUtils(app_logger, error_handler)
+        self._model_cfg = config.core.model_testing_config
 
         self.app_logger.structured_log(logging.INFO, "XGBoostTrainer initialized successfully",
                                      trainer_type=type(self).__name__)
@@ -75,7 +76,7 @@ class XGBoostTrainer(BaseTrainer):
             results.num_boost_round = self.config.XGBoost.num_boost_round if hasattr(self.config, 'XGBoost') and hasattr(self.config.XGBoost, 'num_boost_round') else 100
             results.early_stopping = self.config.XGBoost.early_stopping_rounds if hasattr(self.config, 'XGBoost') and hasattr(self.config.XGBoost, 'early_stopping_rounds') else 10
             results.enable_categorical = self.config.XGBoost.enable_categorical if hasattr(self.config, 'XGBoost') and hasattr(self.config.XGBoost, 'enable_categorical') else False
-            results.categorical_features = self.config.categorical_features if hasattr(self.config, 'categorical_features') else []
+            results.categorical_features = self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else []
 
 
             # Process learning curve data if requested
@@ -93,7 +94,7 @@ class XGBoostTrainer(BaseTrainer):
             self._calculate_feature_importance(model, X_train, results)
 
             # Calculate SHAP values if configured
-            if hasattr(self.config, 'calculate_shap_values') and self.config.calculate_shap_values:
+            if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
                 self._calculate_shap_values(model, X_val, y_val, results)
 
             return results
@@ -166,7 +167,7 @@ class XGBoostTrainer(BaseTrainer):
             results.shap_values = shap_values
             
             # Calculate interactions if configured
-            if hasattr(self.config, 'calculate_shap_interactions') and self.config.calculate_shap_interactions:
+            if hasattr(self._model_cfg, 'calculate_shap_interactions') and self._model_cfg.calculate_shap_interactions:
                 self._calculate_shap_interactions(model, X_val, results)
                 
         except Exception as e:
@@ -182,8 +183,8 @@ class XGBoostTrainer(BaseTrainer):
         """Calculate and store SHAP interaction values."""
         n_features = X_val.shape[1]
         estimated_memory = (X_val.shape[0] * n_features * n_features * 8) / (1024 ** 3)
-        
-        if not hasattr(self.config, 'max_shap_interaction_memory_gb') or estimated_memory <= self.config.max_shap_interaction_memory_gb:
+
+        if not hasattr(self._model_cfg, 'max_shap_interaction_memory_gb') or estimated_memory <= self._model_cfg.max_shap_interaction_memory_gb:
             dmatrix = xgb.DMatrix(X_val)
             interaction_values = model.predict(dmatrix, pred_interactions=True)
             # Remove bias term from interaction values if present

@@ -46,6 +46,7 @@ class ModelTester(BaseModelTester):
             error_handler: Error handling utility
         """
         self.config = config
+        self._model_cfg = config.core.model_testing_config
         self.hyperparameter_manager = hyperparameter_manager
         self.preprocessor = preprocessor
         self.trainers = trainers
@@ -105,10 +106,10 @@ class ModelTester(BaseModelTester):
 
         try:
             # Get sort configuration from model-specific config if available
-            sort_columns = self.get_model_config_value(model_name, 'sort_columns', 
-                                                      self.config.sort_columns)
+            sort_columns = self.get_model_config_value(model_name, 'sort_columns',
+                                                      self._model_cfg.sort_columns)
             sort_order = self.get_model_config_value(model_name, 'sort_order',
-                                                    self.config.sort_order)
+                                                    self._model_cfg.sort_order)
 
             # Sort chronologically for time series data
             df = df.sort_values(by=sort_columns, ascending=sort_order)
@@ -119,18 +120,18 @@ class ModelTester(BaseModelTester):
             X = df.drop(columns=[target_column])
 
             # Handle primary ID column
-            if hasattr(self.config, 'primary_id_column') and self.config.primary_id_column:
-                primary_ids = X[self.config.primary_id_column]
-                X = X.drop(columns=[self.config.primary_id_column])
+            if hasattr(self._model_cfg, 'primary_id_column') and self._model_cfg.primary_id_column:
+                primary_ids = X[self._model_cfg.primary_id_column]
+                X = X.drop(columns=[self._model_cfg.primary_id_column])
 
             # Drop non-useful columns
-            if hasattr(self.config, 'non_useful_columns') and self.config.non_useful_columns:
-                X = X.drop(columns=self.config.non_useful_columns)
+            if hasattr(self._model_cfg, 'non_useful_columns') and self._model_cfg.non_useful_columns:
+                X = X.drop(columns=self._model_cfg.non_useful_columns)
 
             # Get preprocessing configuration
             perform_preprocessing = self.get_model_config_value(
-                model_name, 'perform_preprocessing', 
-                self.config.perform_preprocessing
+                model_name, 'perform_preprocessing',
+                self._model_cfg.perform_preprocessing
             )
 
             if perform_preprocessing:
@@ -140,7 +141,7 @@ class ModelTester(BaseModelTester):
                 # Get categorical features from model config
                 categorical_features = self.get_model_config_value(
                     model_name, 'categorical_features',
-                    self.config.categorical_features
+                    self._model_cfg.categorical_features
                 )
 
                 # Convert categorical features
@@ -211,17 +212,17 @@ class ModelTester(BaseModelTester):
             model_config = self.get_model_config(model_name)
             
             # Initialize SHAP arrays if needed
-            if self.get_model_config_value(model_name, 'calculate_shap_values', 
-                                          self.config.calculate_shap_values):
+            if self.get_model_config_value(model_name, 'calculate_shap_values',
+                                          self._model_cfg.calculate_shap_values):
                 full_results.shap_values = np.full((len(y), X.shape[1]), np.nan)
                 if self.get_model_config_value(model_name, 'calculate_shap_interactions',
-                                              self.config.calculate_shap_interactions):
+                                              self._model_cfg.calculate_shap_interactions):
                     full_results.shap_interaction_values = np.full((len(y), X.shape[1], X.shape[1]), np.nan)
 
             # Setup cross-validation
-            n_splits = self.get_model_config_value(model_name, 'n_splits', self.config.n_splits)
-            cv_type = self.get_model_config_value(model_name, 'cross_validation_type', 
-                                                 self.config.cross_validation_type)
+            n_splits = self.get_model_config_value(model_name, 'n_splits', self._model_cfg.n_splits)
+            cv_type = self.get_model_config_value(model_name, 'cross_validation_type',
+                                                 self._model_cfg.cross_validation_type)
             
             if cv_type == "StratifiedKFold":
                 kf = StratifiedKFold(n_splits=n_splits, shuffle=True, 
@@ -393,7 +394,7 @@ class ModelTester(BaseModelTester):
         """Get model-specific configuration."""
         try:
             config_name = model_name.replace('_', '')  # Remove underscores for config access
-            return getattr(self.config.models, config_name, None)
+            return getattr(self._model_cfg.models, config_name, None)
         except AttributeError:
             self.app_logger.structured_log(
                 logging.WARNING,
@@ -615,7 +616,7 @@ class ModelTester(BaseModelTester):
         self.app_logger.structured_log(logging.WARNING,
                                      "Some samples were not processed in cross-validation",
                                      unprocessed_count=unprocessed_count,
-                                     cv_type=self.config.cross_validation_type)
+                                     cv_type=self._model_cfg.cross_validation_type)
         
         # Keep only processed samples in the results
         processed_mask = processed_samples
