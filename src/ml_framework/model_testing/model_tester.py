@@ -21,20 +21,22 @@ from ml_framework.framework.data_classes import (
 )
 from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 from ml_framework.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
+from ml_framework.model_registry.base_model_registry import BaseModelRegistry
 
 from .base_model_testing import BaseModelTester
 from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
 from .trainers.base_trainer import BaseTrainer
 
 class ModelTester(BaseModelTester):
-    def __init__(self, 
+    def __init__(self,
                  config: BaseConfigManager,
                  hyperparameter_manager: BaseHyperparamsManager,
                  trainers: Dict[str, BaseTrainer],
                  app_logger: BaseAppLogger,
                  error_handler: BaseErrorHandler,
                  preprocessor: BasePreprocessor,
-                 chart_orchestrator: BaseChartOrchestrator):
+                 chart_orchestrator: BaseChartOrchestrator,
+                 model_registry: Optional[BaseModelRegistry] = None):
         """
         Initialize the ModelTester with injected dependencies.
 
@@ -44,6 +46,9 @@ class ModelTester(BaseModelTester):
             trainers: Dictionary mapping model names to their trainers
             app_logger: Application logger
             error_handler: Error handling utility
+            preprocessor: Preprocessor for model-specific transforms
+            chart_orchestrator: Chart orchestrator for visualizations
+            model_registry: Optional model registry for saving trained models
         """
         self.config = config
         self._model_cfg = config.core.model_testing_config
@@ -52,10 +57,12 @@ class ModelTester(BaseModelTester):
         self.trainers = trainers
         self.app_logger = app_logger
         self.error_handler = error_handler
+        self.model_registry = model_registry
 
         self.app_logger.structured_log(logging.INFO, "ModelTester initialized",
                                      config_type=type(config).__name__,
-                                     available_trainers=list(trainers.keys()))
+                                     available_trainers=list(trainers.keys()),
+                                     has_model_registry=model_registry is not None)
 
     @staticmethod
     def log_performance(func):
@@ -502,13 +509,15 @@ class ModelTester(BaseModelTester):
 
             # Store basic information
             results.model_name = model_name
-            results.model_params = model_params           
+            results.model_params = model_params
             results.feature_names = X_train.columns.tolist()
             results.update_feature_data(X_val, y_val)
-            
+
             # Get appropriate trainer and train model
+            # Pass preprocessor to trainer for model-specific transforms
             trainer = self._get_trainer(model_name)
-            results = trainer.train(X_train, y_train, X_val, y_val, fold, model_params, results)
+            results = trainer.train(X_train, y_train, X_val, y_val, fold, model_params, results,
+                                   preprocessor=self.preprocessor)
 
             if results.predictions is None:
                 raise self.error_handler.create_error_handler(
@@ -660,5 +669,130 @@ class ModelTester(BaseModelTester):
 
         self.app_logger.structured_log(logging.INFO, "Cross-validation completed",
                                      final_feature_shape=full_results.feature_data.shape,
-                                     final_shap_shape=full_results.shap_values.shape 
+                                     final_shap_shape=full_results.shap_values.shape
                                      if full_results.shap_values is not None else None)
+
+    def save_model_to_registry(self,
+                              results: ModelTrainingResults,
+                              model_name: str,
+                              stage: Optional[str] = None,
+                              tags: Optional[Dict[str, str]] = None) -> Optional[str]:
+        """
+        Save trained model to model registry with preprocessing artifact.
+
+        Args:
+            results: ModelTrainingResults containing model and preprocessing artifact
+            model_name: Name to register the model under
+            stage: Optional stage to transition to after saving
+            tags: Optional tags for model metadata
+
+        Returns:
+            Model URI if saved successfully, None if no registry configured
+        """
+        if self.model_registry is None:
+            self.app_logger.structured_log(
+                logging.WARNING,
+                "Model registry not configured - skipping model save",
+                model_name=model_name
+            )
+            return None
+
+        try:
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Saving model to registry",
+                model_name=model_name,
+                has_preprocessor=results.preprocessing_artifact is not None
+            )
+
+            # Prepare metadata
+            metadata = {
+                'model_params': results.model_params,
+                'feature_names': results.feature_names,
+                'num_boost_round': results.num_boost_round,
+                'early_stopping': results.early_stopping,
+                'categorical_features': results.categorical_features
+            }
+
+            # Add metrics if available
+            if results.metrics:
+                metadata.update({
+                    'accuracy': float(results.metrics.accuracy) if results.metrics.accuracy else None,
+                    'precision': float(results.metrics.precision) if results.metrics.precision else None,
+                    'recall': float(results.metrics.recall) if results.metrics.recall else None,
+                    'f1': float(results.metrics.f1) if results.metrics.f1 else None,
+                    'auc': float(results.metrics.auc) if results.metrics.auc else None
+                })
+
+            # Prepare tags
+            if tags is None:
+                tags = {}
+            tags.update({
+                'model_type': results.model_name,
+                'framework': self._get_model_framework(results.model)
+            })
+
+            # Save model with preprocessor artifact
+            model_uri = self.model_registry.save_model(
+                model=results.model,
+                model_name=model_name,
+                preprocessor_artifact=results.preprocessing_artifact,
+                metadata=metadata,
+                tags=tags
+            )
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Model saved to registry",
+                model_name=model_name,
+                model_uri=model_uri
+            )
+
+            # Transition to stage if specified
+            if stage and model_uri:
+                # Extract version from URI if needed
+                try:
+                    self.model_registry.transition_model_stage(
+                        model_identifier=f"{model_name}/1",  # Assume latest version
+                        stage=stage
+                    )
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "Model transitioned to stage",
+                        model_name=model_name,
+                        stage=stage
+                    )
+                except Exception as e:
+                    self.app_logger.structured_log(
+                        logging.WARNING,
+                        "Could not transition model stage",
+                        error=str(e)
+                    )
+
+            return model_uri
+
+        except Exception as e:
+            self.app_logger.structured_log(
+                logging.ERROR,
+                "Error saving model to registry",
+                model_name=model_name,
+                error=str(e)
+            )
+            # Don't raise - model training succeeded even if save failed
+            return None
+
+    def _get_model_framework(self, model: Any) -> str:
+        """Determine the framework/library of the model."""
+        model_type = type(model).__name__
+        if 'XGBoost' in model_type or 'Booster' in model_type:
+            return 'XGBoost'
+        elif 'LightGBM' in model_type or 'LGBM' in model_type:
+            return 'LightGBM'
+        elif 'CatBoost' in model_type:
+            return 'CatBoost'
+        elif 'torch' in str(type(model).__module__):
+            return 'PyTorch'
+        elif 'sklearn' in str(type(model).__module__):
+            return 'Scikit-learn'
+        else:
+            return 'Unknown'

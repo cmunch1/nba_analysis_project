@@ -11,6 +11,7 @@ from ml_framework.framework.data_classes import ModelTrainingResults
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 
 class SKLearnTrainer(BaseTrainer):
     def __init__(self, 
@@ -86,66 +87,117 @@ class SKLearnTrainer(BaseTrainer):
             )
 
     @log_performance
-    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """Train a scikit-learn model with enhanced tracking and evaluation."""
+    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults,
+              preprocessor: Optional[BasePreprocessor] = None) -> ModelTrainingResults:
+        """
+        Train a scikit-learn model with optional preprocessing.
+
+        Args:
+            X_train: Training features
+            y_train: Training labels
+            X_val: Validation features
+            y_val: Validation labels
+            fold: Current fold number
+            model_params: Model hyperparameters
+            results: ModelTrainingResults object to store results
+            preprocessor: Optional preprocessor for model-specific transforms
+
+        Returns:
+            Updated ModelTrainingResults object with training results
+        """
         if self.model_type:
             results.model_name = self.model_type
-        
+
         self.app_logger.structured_log(
-            logging.INFO, 
-            "Starting SKLearn model training", 
+            logging.INFO,
+            "Starting SKLearn model training",
             input_shape=X_train.shape,
-            model_name=results.model_name
+            model_name=results.model_name,
+            has_preprocessor=preprocessor is not None
         )
-        
+
         try:
+            # Apply preprocessing if provided
+            if preprocessor:
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Applying preprocessing for SKLearn",
+                    fold=fold,
+                    model_name=results.model_name
+                )
+
+                # Fit preprocessor on training data and transform
+                X_train_transformed, prep_results = preprocessor.fit_transform(
+                    X_train,
+                    y_train,
+                    model_name=results.model_name
+                )
+
+                # Transform validation data (don't refit!)
+                X_val_transformed = preprocessor.transform(X_val)
+
+                # Store preprocessing artifact in results
+                results.preprocessing_artifact = preprocessor.get_preprocessor_artifact()
+
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Preprocessing completed",
+                    train_shape=X_train_transformed.shape,
+                    val_shape=X_val_transformed.shape
+                )
+            else:
+                X_train_transformed = X_train
+                X_val_transformed = X_val
+
             # Store feature names for categorical feature handling
-            self.feature_names = X_train.columns.tolist()
-            
+            self.feature_names = X_train_transformed.columns.tolist()
+
             # Extract eval_metric before initializing model
             eval_metric = model_params.pop('eval_metric', 'accuracy')
-            
+
             # Initialize the model with remaining params
             model = self._initialize_model(results.model_name, model_params)
-            
+
             # Store configuration including eval_metric
             results.model_params = model_params
             results.eval_metric = eval_metric
             results.feature_names = self.feature_names
-            
+
             # Handle categorical features if specified
             if hasattr(self._model_cfg, 'categorical_features'):
                 results.categorical_features = self._model_cfg.categorical_features
-            
-            # Train model
-            model.fit(X_train, y_train)
+
+            # Train model on transformed data
+            model.fit(X_train_transformed, y_train)
             results.model = model
-            
-            # Generate predictions
-            results.probability_predictions = self._get_probability_predictions(model, X_val)
+
+            # Generate predictions on transformed validation data
+            results.probability_predictions = self._get_probability_predictions(model, X_val_transformed)
             results.predictions = results.probability_predictions
-            
+
             self.app_logger.structured_log(
-                logging.INFO, 
-                "Generated predictions", 
+                logging.INFO,
+                "Generated predictions",
                 predictions_shape=results.predictions.shape,
                 predictions_mean=float(np.mean(results.predictions))
             )
-            
+
             # Store feature data
-            results.feature_data = X_val
+            results.feature_data = X_val_transformed
             results.target_data = y_val
-            
-            # Calculate feature importance
-            self._calculate_feature_importance(model, X_train, results)
-            
-            # Calculate SHAP values if configured
+
+            # Calculate feature importance (use transformed data if preprocessing was applied)
+            X_for_importance = X_train_transformed if preprocessor else X_train
+            self._calculate_feature_importance(model, X_for_importance, results)
+
+            # Calculate SHAP values if configured (use transformed data if preprocessing was applied)
             if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
-                self._calculate_shap_values(model, X_val, y_val, results)
+                X_for_shap = X_val_transformed if preprocessor else X_val
+                self._calculate_shap_values(model, X_for_shap, y_val, results)
 
                 if hasattr(self._model_cfg, 'calculate_shap_interactions') and self._model_cfg.calculate_shap_interactions:
-                    self._calculate_shap_interactions(model, X_val, results)
-            
+                    self._calculate_shap_interactions(model, X_for_shap, results)
+
             return results
 
         except Exception as e:

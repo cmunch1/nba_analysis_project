@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import shutil
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 from catboost import Pool, CatBoost
 from .base_trainer import BaseTrainer
 from .trainer_utils import TrainerUtils
@@ -11,6 +11,7 @@ from ml_framework.framework.data_classes import ModelTrainingResults
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 
 class CatBoostTrainer(BaseTrainer):
     def __init__(self,
@@ -41,26 +42,74 @@ class CatBoostTrainer(BaseTrainer):
         return wrapper
 
     @log_performance
-    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """Train a CatBoost model with unified log-based metric tracking."""
+    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults,
+              preprocessor: Optional[BasePreprocessor] = None) -> ModelTrainingResults:
+        """
+        Train a CatBoost model with optional preprocessing.
+
+        Args:
+            X_train: Training features
+            y_train: Training labels
+            X_val: Validation features
+            y_val: Validation labels
+            fold: Current fold number
+            model_params: Model hyperparameters
+            results: ModelTrainingResults object to store results
+            preprocessor: Optional preprocessor for model-specific transforms
+
+        Returns:
+            Updated ModelTrainingResults object with training results
+        """
         try:
             self.app_logger.structured_log(
-                logging.INFO, 
-                "Starting CatBoost training", 
-                input_shape=X_train.shape
+                logging.INFO,
+                "Starting CatBoost training",
+                input_shape=X_train.shape,
+                has_preprocessor=preprocessor is not None
             )
-            
+
+            # Apply preprocessing if provided
+            if preprocessor:
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Applying preprocessing for CatBoost",
+                    fold=fold
+                )
+
+                # Fit preprocessor on training data and transform
+                X_train_transformed, prep_results = preprocessor.fit_transform(
+                    X_train,
+                    y_train,
+                    model_name='CatBoost'
+                )
+
+                # Transform validation data (don't refit!)
+                X_val_transformed = preprocessor.transform(X_val)
+
+                # Store preprocessing artifact in results
+                results.preprocessing_artifact = preprocessor.get_preprocessor_artifact()
+
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Preprocessing completed",
+                    train_shape=X_train_transformed.shape,
+                    val_shape=X_val_transformed.shape
+                )
+            else:
+                X_train_transformed = X_train
+                X_val_transformed = X_val
+
             # Create CatBoost pools
             train_pool = Pool(
-                data=X_train,
+                data=X_train_transformed,
                 label=y_train,
-                feature_names=X_train.columns.tolist(),
+                feature_names=X_train_transformed.columns.tolist(),
                 cat_features=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None
             )
             val_pool = Pool(
-                data=X_val,
+                data=X_val_transformed,
                 label=y_val,
-                feature_names=X_val.columns.tolist(),
+                feature_names=X_val_transformed.columns.tolist(),
                 cat_features=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None
             )
 
@@ -120,10 +169,11 @@ class CatBoostTrainer(BaseTrainer):
                 loss_function=loss_function
             )
 
-            # Calculate feature importance
-            self._calculate_feature_importance(model, X_train, results)
+            # Calculate feature importance (use transformed data if preprocessing was applied)
+            X_for_importance = X_train_transformed if preprocessor else X_train
+            self._calculate_feature_importance(model, X_for_importance, results)
 
-            # Calculate SHAP values if configured
+            # Calculate SHAP values if configured (val_pool already uses transformed data)
             if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
                 self._calculate_shap_values(model, val_pool, y_val, results)
 

@@ -12,6 +12,7 @@ from ml_framework.framework.data_classes import ModelTrainingResults
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 
 class NeuralNetwork(nn.Module):
     """Simple feedforward neural network for binary classification."""
@@ -68,61 +69,111 @@ class PyTorchTrainer(BaseTrainer):
         return wrapper
 
     @log_performance
-    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """Train a PyTorch neural network with enhanced tracking."""
+    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults,
+              preprocessor: Optional[BasePreprocessor] = None) -> ModelTrainingResults:
+        """
+        Train a PyTorch neural network with optional preprocessing.
+
+        Args:
+            X_train: Training features
+            y_train: Training labels
+            X_val: Validation features
+            y_val: Validation labels
+            fold: Current fold number
+            model_params: Model hyperparameters
+            results: ModelTrainingResults object to store results
+            preprocessor: Optional preprocessor for model-specific transforms
+
+        Returns:
+            Updated ModelTrainingResults object with training results
+        """
         try:
             self.app_logger.structured_log(
-                logging.INFO, 
-                "Starting PyTorch training", 
+                logging.INFO,
+                "Starting PyTorch training",
                 input_shape=X_train.shape,
-                device=str(self.device)
+                device=str(self.device),
+                has_preprocessor=preprocessor is not None
             )
-            
+
+            # Apply preprocessing if provided
+            if preprocessor:
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Applying preprocessing for PyTorch",
+                    fold=fold
+                )
+
+                # Fit preprocessor on training data and transform
+                X_train_transformed, prep_results = preprocessor.fit_transform(
+                    X_train,
+                    y_train,
+                    model_name='PyTorch'
+                )
+
+                # Transform validation data (don't refit!)
+                X_val_transformed = preprocessor.transform(X_val)
+
+                # Store preprocessing artifact in results
+                results.preprocessing_artifact = preprocessor.get_preprocessor_artifact()
+
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Preprocessing completed",
+                    train_shape=X_train_transformed.shape,
+                    val_shape=X_val_transformed.shape
+                )
+            else:
+                X_train_transformed = X_train
+                X_val_transformed = X_val
+
             # Prepare data
-            train_loader, val_loader = self._prepare_data(X_train, y_train, X_val, y_val, model_params)
+            train_loader, val_loader = self._prepare_data(X_train_transformed, y_train, X_val_transformed, y_val, model_params)
             
-            # Initialize model
-            model = self._initialize_model(X_train.shape[1], model_params)
+            # Initialize model (use transformed data shape)
+            model = self._initialize_model(X_train_transformed.shape[1], model_params)
             model.to(self.device)
-            
+
             # Initialize optimizer and loss function
             optimizer = self._get_optimizer(model, model_params)
             criterion = nn.BCELoss()
-            
+
             # Store model configuration
             results.model = model
-            results.feature_names = X_train.columns.tolist()
+            results.feature_names = X_train_transformed.columns.tolist()
             results.model_params = model_params
             results.categorical_features = self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else []
-            
+
             # Training loop with learning curve tracking
             train_losses, val_losses = self._training_loop(
                 model, train_loader, val_loader, optimizer, criterion, model_params, results
             )
-            
-            # Generate final predictions
+
+            # Generate final predictions on transformed validation data
             model.eval()
             with torch.no_grad():
-                X_val_tensor = torch.FloatTensor(X_val.values).to(self.device)
+                X_val_tensor = torch.FloatTensor(X_val_transformed.values).to(self.device)
                 predictions = model(X_val_tensor).cpu().numpy().flatten()
-            
+
             results.predictions = predictions
-            results.feature_data = X_val
+            results.feature_data = X_val_transformed
             results.target_data = y_val
-            
+
             self.app_logger.structured_log(
-                logging.INFO, 
-                "Generated predictions", 
+                logging.INFO,
+                "Generated predictions",
                 predictions_shape=results.predictions.shape,
                 predictions_mean=float(np.mean(results.predictions))
             )
-            
-            # Calculate feature importance using permutation importance
-            self._calculate_feature_importance(model, X_val, y_val, results)
-            
-            # Calculate SHAP values if configured
+
+            # Calculate feature importance using permutation importance (use transformed data)
+            X_for_importance = X_val_transformed if preprocessor else X_val
+            self._calculate_feature_importance(model, X_for_importance, y_val, results)
+
+            # Calculate SHAP values if configured (use transformed data)
             if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
-                self._calculate_shap_values(model, X_val, y_val, results)
+                X_for_shap = X_val_transformed if preprocessor else X_val
+                self._calculate_shap_values(model, X_for_shap, y_val, results)
             
             return results
 

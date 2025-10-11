@@ -1,105 +1,208 @@
-# Default preprocessing settings
+# Preprocessing Configuration
+#
+# This configuration separates domain-specific feature engineering (nba_app) from
+# model-specific preprocessing (ml_framework). Only model-agnostic transformations
+# belong here - scaling, encoding, imputation based on algorithm requirements.
+#
+# Design Principles:
+# - Domain features (rolling averages, ELO, streaks) belong in nba_app.feature_engineering
+# - Model preprocessing (scaling, encoding) belongs in ml_framework.preprocessing
+# - Preprocessing is applied at runtime (fit on train, transform on val/test)
+# - Fitted preprocessors are persisted alongside trained models for reproducibility
+#
+# ============================================================================
 
 # Scaling Options:
-# - standard: StandardScaler
-# - minmax: MinMaxScaler
-# - maxabs: MaxAbsScaler
-# - robust: RobustScaler
+# - standard: StandardScaler (z-score normalization)
+# - minmax: MinMaxScaler (scale to [0, 1])
+# - maxabs: MaxAbsScaler (scale by max absolute value)
+# - robust: RobustScaler (use median and IQR, robust to outliers)
 # - null: No scaling
 
-# Handling Missing - numerical Values Options:
+# Imputation Options (numerical):
 # - mean: Replace missing values with the mean of the feature
 # - median: Replace missing values with the median of the feature
 # - mode: Replace missing values with the mode of the feature
+# - null: Leave missing values as they are (model must handle natively)
+
+# Imputation Options (categorical):
+# - constant: Replace missing values with a constant value ('missing')
 # - null: Leave missing values as they are
 
-# Handling Missing - categorical Values Options:
-# - constant: Replace missing values with a constant value
-# - null: Leave missing values as they are
-
-# Handling Outliers Options:
-# - winsorize: Winsorize outliers
-# - clip: Clip outliers
+# Outlier Handling Options:
+# - winsorize: Winsorize outliers to percentile thresholds
+# - clip: Clip outliers using standard deviation thresholds
 # - null: Leave outliers as they are
 
 # Categorical Encoding Options:
-# - ordinal: Ordinal encoding
-# - target: Target encoding
-# - frequency: Frequency encoding
+# - one_hot: One-hot encoding (dummy variables)
+# - ordinal: Ordinal encoding (integer mapping)
+# - catboost_native: Pass categorical indices to CatBoost natively
 # - null: Leave categorical variables as they are
+
+# Feature Selection Options:
+# - variance_threshold: Remove low-variance features
+# - mutual_info: Mutual information-based selection
+# - l1_based: L1 regularization-based selection
+# - null: No feature selection
+
+# Interaction Options:
+# - polynomial:N: Polynomial features of degree N
+# - custom: Custom interaction features
+# - null: No interaction features
+
+# Dimensionality Reduction Options:
+# - pca:K: Principal component analysis with K components
+# - null: No dimensionality reduction
 
 
 
 preprocessing:
+  # Default preprocessing (minimal transforms, suitable for tree models)
   default:
     numerical:
+      imputation: null
       scaling: null
-      handling_missing: null
       handling_outliers: null
     categorical:
       encoding: null
       handling_missing: null
+    feature_selection:
+      method: null
+      params: {}
+    interactions: null
+    dimensionality_reduction: null
 
+  # ============================================================================
+  # Model-Specific Preprocessing Profiles
+  # ============================================================================
+  # These profiles define preprocessing requirements based on algorithm needs:
+  # - Tree models: No scaling needed, handle missing natively (usually)
+  # - Linear models: Require scaling, benefit from feature selection
+  # - Neural networks: Require scaling, benefit from outlier handling
 
-
-  # Model-specific preprocessing settings
   model_specific:
+    # ------------------------------------------------------------------------
+    # LINEAR MODELS (require scaling and standardization)
+    # ------------------------------------------------------------------------
+
     LogisticRegression:
       numerical:
-        scaling: standard
-        handling_missing: mean
+        imputation: mean
+        scaling: standard  # Linear models need standardization
         handling_outliers: null
       categorical:
-        encoding: ordinal
+        encoding: one_hot  # Linear models need one-hot encoding
         handling_missing: constant
+      feature_selection:
+        method: variance_threshold  # Remove low-variance features
+        params:
+          threshold: 0.01
+      interactions: null
+      dimensionality_reduction: null
 
-
+    # ------------------------------------------------------------------------
+    # TREE-BASED MODELS (no scaling needed, some handle missing natively)
+    # ------------------------------------------------------------------------
 
     RandomForest:
       numerical:
-        scaling: null
-        handling_missing: mean
+        imputation: mean  # RF doesn't handle missing values natively
+        scaling: null  # Tree models don't need scaling
         handling_outliers: null
       categorical:
-        encoding: ordinal
+        encoding: ordinal  # Tree models work well with ordinal encoding
         handling_missing: null
-    
+      feature_selection:
+        method: null
+        params: {}
+      interactions: null
+      dimensionality_reduction: null
+
     XGBoost:
       numerical:
-        scaling: null
-        handling_missing: null
+        imputation: null  # XGBoost handles missing natively
+        scaling: null  # Tree models don't need scaling
         handling_outliers: null
       categorical:
         encoding: ordinal
-        handling_missing: null
-
+        handling_missing: null  # XGBoost handles missing natively
+      feature_selection:
+        method: null
+        params: {}
+      interactions: null
+      dimensionality_reduction: null
 
     LightGBM:
       numerical:
-        scaling: null
-        handling_missing: null
+        imputation: null  # LightGBM handles missing natively
+        scaling: null  # Tree models don't need scaling
         handling_outliers: null
       categorical:
         encoding: ordinal
-        handling_missing: null
-
+        handling_missing: null  # LightGBM handles missing natively
+      feature_selection:
+        method: null
+        params: {}
+      interactions: null
+      dimensionality_reduction: null
 
     CatBoost:
       numerical:
-        scaling: null
-        handling_missing: null
+        imputation: null  # CatBoost handles missing natively
+        scaling: null  # Tree models don't need scaling
         handling_outliers: null
       categorical:
-        encoding: null # CatBoost handles categories internally
-        handling_missing: null
+        encoding: catboost_native  # CatBoost handles categoricals internally
+        handling_missing: null  # CatBoost handles missing natively
+      feature_selection:
+        method: null
+        params: {}
+      interactions: null
+      dimensionality_reduction: null
 
-    
+    HistGradientBoosting:
+      numerical:
+        imputation: null  # HGB handles missing natively
+        scaling: null  # Tree models don't need scaling
+        handling_outliers: null
+      categorical:
+        encoding: ordinal
+        handling_missing: null  # HGB handles missing natively
+      feature_selection:
+        method: null
+        params: {}
+      interactions: null
+      dimensionality_reduction: null
+
+    # ------------------------------------------------------------------------
+    # NEURAL NETWORKS (require scaling and careful preprocessing)
+    # ------------------------------------------------------------------------
+
+    PyTorch:
+      numerical:
+        imputation: mean  # Neural networks need complete data
+        scaling: standard  # Neural networks need standardization
+        handling_outliers: clip  # Clip extreme outliers for stability
+      categorical:
+        encoding: one_hot  # One-hot encoding (or use embeddings in model)
+        handling_missing: constant
+      feature_selection:
+        method: null
+        params: {}
+      interactions: null
+      dimensionality_reduction: null
 
     NeuralNetwork:
       numerical:
+        imputation: mean
         scaling: standard
-        handling_missing: mean
         handling_outliers: clip
       categorical:
-        encoding: null
+        encoding: one_hot
         handling_missing: constant
+      feature_selection:
+        method: null
+        params: {}
+      interactions: null
+      dimensionality_reduction: null

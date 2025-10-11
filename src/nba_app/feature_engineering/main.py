@@ -64,9 +64,12 @@ def main() -> None:
             if not data_validator.validate_processed_dataframe(processed_dataframe, config.team_centric_data_file):
                 raise error_handler.create_error_handler('data_validation', "Data validation of processed data failed")
 
-            # engineer features
+            # engineer features and export schema
             app_logger.structured_log(logging.INFO, "Engineering features")
-            engineered_dataframe = feature_engineer.engineer_features(processed_dataframe)
+            engineered_dataframe = feature_engineer.engineer_features(
+                processed_dataframe,
+                export_schema=True  # Export feature schema for preprocessing
+            )
 
             # merge home and away team data for each game into a single row
             app_logger.structured_log(logging.INFO, "Merging team data into game-centric format")

@@ -65,9 +65,11 @@ class Preprocessor(BasePreprocessor):
         self.fitted_transformers = {}
         self.preprocessor = None
         self._current_results = None
-        
+        self._current_model_name = None
+        self._current_model_config = None
+
         self.app_logger.structured_log(
-            logging.INFO, 
+            logging.INFO,
             "ModularPreprocessor initialized"
         )
 
@@ -117,7 +119,11 @@ class Preprocessor(BasePreprocessor):
             transformers = []
 
             model_config = self._get_model_config(model_name)
-            
+
+            # Store model info for persistence
+            self._current_model_name = model_name
+            self._current_model_config = model_config
+
             # Add numerical pipeline if there are numerical features
             if len(numerical_features) > 0:
                 if num_pipeline := self._create_numerical_pipeline(model_config):
@@ -158,14 +164,17 @@ class Preprocessor(BasePreprocessor):
             # Update results with final feature names
             preprocessing_results.final_features = feature_names
             preprocessing_results.final_shape = transformed_df.shape
-            
+
+            # Store results for persistence
+            self._current_results = preprocessing_results
+
             self.app_logger.structured_log(
-                logging.INFO, 
+                logging.INFO,
                 "Preprocessing completed",
                 output_shape=transformed_df.shape,
                 n_features=len(feature_names)
             )
-                       
+
             return transformed_df, preprocessing_results
             
         except Exception as e:
@@ -266,31 +275,37 @@ class Preprocessor(BasePreprocessor):
     def _create_numerical_pipeline(self, model_config: Any) -> Optional[Pipeline]:
         """
         Create numerical preprocessing pipeline based on config.
-        
+
         Args:
             model_config: Model-specific configuration object
-            
+
         Returns:
             Pipeline object or None if no transformations needed
         """
         steps = []
-        
+
         try:
-            if hasattr(model_config.numerical, 'handling_missing'):
-                if model_config.numerical.handling_missing:  # Only add if not None/empty
-                    steps.append(('imputer', SimpleImputer(
-                        strategy=model_config.numerical.handling_missing
-                    )))
-                
+            # Imputation (support both 'imputation' and legacy 'handling_missing')
+            imputation_strategy = None
+            if hasattr(model_config.numerical, 'imputation'):
+                imputation_strategy = model_config.numerical.imputation
+            elif hasattr(model_config.numerical, 'handling_missing'):
+                imputation_strategy = model_config.numerical.handling_missing
+
+            if imputation_strategy:
+                steps.append(('imputer', SimpleImputer(strategy=imputation_strategy)))
+
+            # Outlier handling
             if hasattr(model_config.numerical, 'handling_outliers'):
-                if model_config.numerical.handling_outliers:  # Only add if not None/empty
+                if model_config.numerical.handling_outliers:
                     if model_config.numerical.handling_outliers == "winsorize":
                         steps.append(('outliers', WinsorizationTransformer()))
                     elif model_config.numerical.handling_outliers == "clip":
                         steps.append(('outliers', ClippingTransformer()))
-                    
+
+            # Scaling
             if hasattr(model_config.numerical, 'scaling'):
-                if model_config.numerical.scaling:  # Only add if not None/empty
+                if model_config.numerical.scaling:
                     if model_config.numerical.scaling == "standard":
                         steps.append(('scaler', StandardScaler()))
                     elif model_config.numerical.scaling == "minmax":
@@ -299,7 +314,7 @@ class Preprocessor(BasePreprocessor):
                         steps.append(('scaler', RobustScaler()))
                     elif model_config.numerical.scaling == "maxabs":
                         steps.append(('scaler', MaxAbsScaler()))
-            
+
             return Pipeline(steps) if steps else None
         except Exception as e:
             raise self.error_handler.create_error_handler(
@@ -470,6 +485,126 @@ class Preprocessor(BasePreprocessor):
                 "Error tracking categorical preprocessing",
                 error=str(e)
             )
+
+    def get_preprocessor_artifact(self) -> Dict[str, Any]:
+        """
+        Get preprocessor artifact for persistence alongside trained model.
+
+        This method packages all necessary preprocessing state for saving:
+        - The fitted sklearn ColumnTransformer
+        - Preprocessing configuration used
+        - Feature names (input and output)
+        - Preprocessing results/statistics
+
+        Returns:
+            Dictionary containing all preprocessing state for serialization
+
+        Raises:
+            Error if preprocessor hasn't been fitted yet
+        """
+        try:
+            if self.preprocessor is None:
+                raise self.error_handler.create_error_handler(
+                    'preprocessing',
+                    "Cannot create artifact: preprocessor has not been fitted. Call fit_transform first."
+                )
+
+            # Get input feature names
+            if hasattr(self.preprocessor, 'feature_names_in_'):
+                feature_names_in = self.preprocessor.feature_names_in_.tolist()
+            else:
+                feature_names_in = []
+
+            # Get output feature names
+            feature_names_out = (
+                self._current_results.final_features
+                if self._current_results
+                else []
+            )
+
+            artifact = {
+                'preprocessor': self.preprocessor,
+                'model_name': self._current_model_name,
+                'model_config': self._current_model_config,
+                'preprocessing_results': self._current_results,
+                'feature_names_in': feature_names_in,
+                'feature_names_out': feature_names_out,
+                'artifact_version': '1.0'
+            }
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Preprocessor artifact created",
+                model_name=self._current_model_name,
+                n_features_in=len(feature_names_in),
+                n_features_out=len(feature_names_out)
+            )
+
+            return artifact
+
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'preprocessing',
+                "Error creating preprocessor artifact",
+                original_error=str(e)
+            )
+
+    def load_preprocessor_artifact(self, artifact: Dict[str, Any]) -> None:
+        """
+        Load preprocessor artifact from saved state.
+
+        This method restores the preprocessor from a previously saved artifact,
+        allowing inference on new data with the exact same transformations
+        used during training.
+
+        Args:
+            artifact: Dictionary containing preprocessor state
+
+        Raises:
+            Error if artifact is invalid or incompatible
+        """
+        try:
+            # Validate artifact
+            required_keys = [
+                'preprocessor',
+                'model_name',
+                'feature_names_in',
+                'feature_names_out'
+            ]
+            missing_keys = [k for k in required_keys if k not in artifact]
+            if missing_keys:
+                raise ValueError(f"Invalid artifact: missing keys {missing_keys}")
+
+            # Restore preprocessor state
+            self.preprocessor = artifact['preprocessor']
+            self._current_model_name = artifact['model_name']
+            self._current_model_config = artifact.get('model_config')
+            self._current_results = artifact.get('preprocessing_results')
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Preprocessor artifact loaded",
+                model_name=self._current_model_name,
+                n_features_in=len(artifact['feature_names_in']),
+                n_features_out=len(artifact['feature_names_out']),
+                artifact_version=artifact.get('artifact_version', 'unknown')
+            )
+
+        except Exception as e:
+            raise self.error_handler.create_error_handler(
+                'preprocessing',
+                "Error loading preprocessor artifact",
+                original_error=str(e)
+            )
+
+    def is_fitted(self) -> bool:
+        """
+        Check if the preprocessor has been fitted.
+
+        Returns:
+            True if preprocessor is fitted and ready for transform, False otherwise
+        """
+        return self.preprocessor is not None
 
 
 # Custom transformer classes

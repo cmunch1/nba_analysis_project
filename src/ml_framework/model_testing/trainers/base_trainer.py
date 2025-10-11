@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Optional
 import pandas as pd
 from ml_framework.framework.data_classes import ModelTrainingResults
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 
 class BaseTrainer(ABC):
     """Abstract base class for model trainers."""
@@ -31,17 +32,18 @@ class BaseTrainer(ABC):
         pass
 
     @abstractmethod
-    def train(self, 
-             X_train: pd.DataFrame, 
+    def train(self,
+             X_train: pd.DataFrame,
              y_train: pd.Series,
-             X_val: pd.DataFrame, 
+             X_val: pd.DataFrame,
              y_val: pd.Series,
-             fold: int, 
+             fold: int,
              model_params: Dict[str, Any],
-             results: ModelTrainingResults) -> ModelTrainingResults:
+             results: ModelTrainingResults,
+             preprocessor: Optional[BasePreprocessor] = None) -> ModelTrainingResults:
         """
         Train a model and return results.
-        
+
         Args:
             X_train: Training features
             y_train: Training labels
@@ -50,7 +52,8 @@ class BaseTrainer(ABC):
             fold: Current fold number
             model_params: Model parameters
             results: ModelTrainingResults object to store results
-            
+            preprocessor: Optional preprocessor for model-specific transforms
+
         Returns:
             Updated ModelTrainingResults object
         """

@@ -41,7 +41,8 @@ class ModelTrainingResults:
         
         # Preprocessing results
         self.preprocessing_results: Optional[PreprocessingResults] = None
-        
+        self.preprocessing_artifact: Optional[Dict[str, Any]] = None  # Fitted preprocessor for persistence
+
         self.learning_curve_data = LearningCurveData()
         self.n_folds = 0
 

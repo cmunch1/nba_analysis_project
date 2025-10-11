@@ -13,11 +13,13 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
+from pathlib import Path
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.error_handler import FeatureEngineeringError
 from .base_feature_engineering import BaseFeatureEngineer
+from .feature_schema import FeatureSchema
 
 
 class FeatureEngineer(BaseFeatureEngineer):
@@ -48,12 +50,13 @@ class FeatureEngineer(BaseFeatureEngineer):
         return wrapper
 
     @log_performance
-    def engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
+    def engineer_features(self, df: pd.DataFrame, export_schema: bool = False) -> pd.DataFrame:
         """
         Engineer features for the input dataframe.
 
         Args:
             df (pd.DataFrame): Input dataframe.
+            export_schema (bool): Whether to export feature schema after engineering.
 
         Returns:
             pd.DataFrame: Dataframe with engineered features.
@@ -64,7 +67,8 @@ class FeatureEngineer(BaseFeatureEngineer):
         self.app_logger.structured_log(
             logging.INFO,
             "Starting feature engineering",
-            input_shape=df.shape
+            input_shape=df.shape,
+            export_schema=export_schema
         )
         try:
             if self.config.include_postseason:
@@ -79,13 +83,13 @@ class FeatureEngineer(BaseFeatureEngineer):
                     df_working = df.copy()
                 else:
                     df_working = df[df[self.config.home_team_column] == (suffix == self.config.home_game_suffix)].copy()
-                
+
                 # rolling averages from previous sets of games (e.g. last 3 games, 5 games, 10 games)
                 df_rolling_avgs = self._create_rolling_averages(df_working, suffix)
-                merge_columns = [col for col in df_rolling_avgs.columns 
+                merge_columns = [col for col in df_rolling_avgs.columns
                                  if "rolling_avg" in col]
                 df_merged = self._merge_features(df_merged, df_rolling_avgs, merge_columns, suffix)
-                
+
                 # games in a row winning or losing
                 df_streaks = self._calculate_win_lose_streaks(df_working, suffix)
                 df_merged = self._merge_features(df_merged, df_streaks, [f'win_streak_{suffix}'], suffix)
@@ -97,19 +101,23 @@ class FeatureEngineer(BaseFeatureEngineer):
             df_merged = self._update_elo_ratings(df_merged)
 
             # free up memory
-            del df_rolling_avgs 
-            del df_working 
-            del df_streaks 
-            del df 
+            del df_rolling_avgs
+            del df_working
+            del df_streaks
+            del df
+
+            # Export feature schema if requested
+            if export_schema:
+                self._export_feature_schema(df_merged)
 
             self.app_logger.structured_log(
                 logging.INFO,
                 "Feature engineering completed",
                 output_shape=df_merged.shape
             )
-            
+
             return df_merged
-        
+
         except Exception as e:
 
             raise FeatureEngineeringError("Error in feature engineering",
@@ -591,3 +599,107 @@ class FeatureEngineer(BaseFeatureEngineer):
                                             error_message=str(e),
                                             game_id=game_id,
                                             dataframe_shape=df.shape)
+
+    def _export_feature_schema(self, df: pd.DataFrame) -> None:
+        """
+        Export feature schema to JSON after feature engineering.
+
+        This schema is consumed by ml_framework.preprocessing to determine
+        which columns to scale, encode, etc.
+
+        Args:
+            df (pd.DataFrame): Dataframe with engineered features
+        """
+        try:
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Exporting feature schema",
+                dataframe_shape=df.shape
+            )
+
+            # Determine columns to exclude from features
+            exclude_columns = [
+                self.config.new_game_id_column,
+                self.config.new_team_id_column,
+                self.config.new_date_column,
+                self.config.target_column
+            ]
+
+            # Create schema from dataframe
+            schema = FeatureSchema.from_dataframe(
+                df,
+                target_column=self.config.target_column,
+                game_id_column=self.config.new_game_id_column,
+                team_id_column=self.config.new_team_id_column,
+                date_column=self.config.new_date_column,
+                categorical_threshold=10,
+                exclude_columns=exclude_columns
+            )
+
+            # Add feature groups for better organization
+            schema.feature_groups = self._create_feature_groups(df)
+
+            # Export to JSON
+            schema_path = Path(self.config.processed_data_directory) / "feature_schema.json"
+            schema.to_json(schema_path)
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Feature schema exported successfully",
+                schema_path=str(schema_path),
+                n_numeric=len(schema.numeric_features),
+                n_categorical=len(schema.categorical_features),
+                n_binary=len(schema.binary_features),
+                n_total=len(schema.get_all_features())
+            )
+
+            # Log summary for reference
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Feature schema summary",
+                summary=schema.summary()
+            )
+
+        except Exception as e:
+            self.app_logger.structured_log(
+                logging.WARNING,
+                "Failed to export feature schema",
+                error=str(e)
+            )
+            # Don't raise - schema export is helpful but not critical
+
+    def _create_feature_groups(self, df: pd.DataFrame) -> Dict[str, List[str]]:
+        """
+        Create logical groupings of features for better organization.
+
+        Args:
+            df (pd.DataFrame): Dataframe with engineered features
+
+        Returns:
+            Dictionary mapping group names to feature lists
+        """
+        feature_groups = {}
+
+        # Group rolling average features by period and type
+        for col in df.columns:
+            if 'rolling_avg' in col:
+                if 'rolling_avg_3_' in col:
+                    feature_groups.setdefault('rolling_avg_3', []).append(col)
+                elif 'rolling_avg_5_' in col:
+                    feature_groups.setdefault('rolling_avg_5', []).append(col)
+                elif 'rolling_avg_10_' in col:
+                    feature_groups.setdefault('rolling_avg_10', []).append(col)
+
+            # Group streak features
+            elif 'streak' in col:
+                feature_groups.setdefault('streaks', []).append(col)
+
+            # Group ELO features
+            elif 'elo' in col.lower() or 'win_prob' in col:
+                feature_groups.setdefault('elo_ratings', []).append(col)
+
+            # Group temporal features
+            elif any(temporal in col for temporal in ['month', 'day_of_week', 'season_progress']):
+                feature_groups.setdefault('temporal', []).append(col)
+
+        return feature_groups

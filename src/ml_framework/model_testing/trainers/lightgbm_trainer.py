@@ -1,13 +1,14 @@
 import logging
 import numpy as np
 import lightgbm as lgb
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 from .base_trainer import BaseTrainer
 from .trainer_utils import TrainerUtils
 from ml_framework.framework.data_classes import ModelTrainingResults
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
+from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 
 class LightGBMTrainer(BaseTrainer):
     def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, error_handler: BaseErrorHandler):
@@ -34,26 +35,74 @@ class LightGBMTrainer(BaseTrainer):
         return wrapper
 
     @log_performance
-    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults) -> ModelTrainingResults:
-        """Train a LightGBM model with the enhanced ModelTrainingResults."""
+    def train(self, X_train, y_train, X_val, y_val, fold: int, model_params: Dict, results: ModelTrainingResults,
+              preprocessor: Optional[BasePreprocessor] = None) -> ModelTrainingResults:
+        """
+        Train a LightGBM model with optional preprocessing.
+
+        Args:
+            X_train: Training features
+            y_train: Training labels
+            X_val: Validation features
+            y_val: Validation labels
+            fold: Current fold number
+            model_params: Model hyperparameters
+            results: ModelTrainingResults object to store results
+            preprocessor: Optional preprocessor for model-specific transforms
+
+        Returns:
+            Updated ModelTrainingResults object with training results
+        """
         try:
             self.app_logger.structured_log(
-                logging.INFO, 
-                "Starting LightGBM training", 
-                input_shape=X_train.shape
+                logging.INFO,
+                "Starting LightGBM training",
+                input_shape=X_train.shape,
+                has_preprocessor=preprocessor is not None
             )
-            
+
+            # Apply preprocessing if provided
+            if preprocessor:
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Applying preprocessing for LightGBM",
+                    fold=fold
+                )
+
+                # Fit preprocessor on training data and transform
+                X_train_transformed, prep_results = preprocessor.fit_transform(
+                    X_train,
+                    y_train,
+                    model_name='LightGBM'
+                )
+
+                # Transform validation data (don't refit!)
+                X_val_transformed = preprocessor.transform(X_val)
+
+                # Store preprocessing artifact in results
+                results.preprocessing_artifact = preprocessor.get_preprocessor_artifact()
+
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Preprocessing completed",
+                    train_shape=X_train_transformed.shape,
+                    val_shape=X_val_transformed.shape
+                )
+            else:
+                X_train_transformed = X_train
+                X_val_transformed = X_val
+
             # Create LightGBM datasets
             train_data = lgb.Dataset(
-                X_train,
+                X_train_transformed,
                 label=y_train,
-                feature_name=X_train.columns.tolist(),
+                feature_name=X_train_transformed.columns.tolist(),
                 categorical_feature=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None
             )
             val_data = lgb.Dataset(
-                X_val,
+                X_val_transformed,
                 label=y_val,
-                feature_name=X_val.columns.tolist(),
+                feature_name=X_val_transformed.columns.tolist(),
                 categorical_feature=self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else None,
                 reference=train_data
             )
@@ -75,7 +124,7 @@ class LightGBMTrainer(BaseTrainer):
 
             # Store model and generate predictions
             results.model = model
-            results.predictions = model.predict(X_val)
+            results.predictions = model.predict(X_val_transformed)
             results.num_boost_round = self.config.LightGBM.num_boost_round if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'num_boost_round') else 100
             results.early_stopping = self.config.LightGBM.early_stopping_rounds if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'early_stopping_rounds') else 10
             results.categorical_features = self._model_cfg.categorical_features if hasattr(self._model_cfg, 'categorical_features') else []
@@ -85,18 +134,20 @@ class LightGBMTrainer(BaseTrainer):
                 self._process_learning_curve_data(evals_result, results)
 
             self.app_logger.structured_log(
-                logging.INFO, 
-                "Generated predictions", 
+                logging.INFO,
+                "Generated predictions",
                 predictions_shape=results.predictions.shape,
                 predictions_mean=float(np.mean(results.predictions))
             )
 
-            # Calculate feature importance
-            self._calculate_feature_importance(model, X_train, results)
+            # Calculate feature importance (use transformed data if preprocessing was applied)
+            X_for_importance = X_train_transformed if preprocessor else X_train
+            self._calculate_feature_importance(model, X_for_importance, results)
 
-            # Calculate SHAP values if configured
+            # Calculate SHAP values if configured (use transformed data if preprocessing was applied)
             if hasattr(self._model_cfg, 'calculate_shap_values') and self._model_cfg.calculate_shap_values:
-                self._calculate_shap_values(model, X_val, y_val, results)
+                X_for_shap = X_val_transformed if preprocessor else X_val
+                self._calculate_shap_values(model, X_for_shap, y_val, results)
 
             return results
 
