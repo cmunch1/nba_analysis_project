@@ -1,0 +1,17 @@
+# LightGBM baseline hyperparameters
+device: cuda
+objective: binary
+metric: auc
+verbose: -1
+force_col_wise: true
+learning_rate: 0.05
+num_leaves: 31
+max_depth: 6
+min_data_in_leaf: 20
+feature_fraction: 0.8
+bagging_fraction: 0.8
+bagging_freq: 5
+lambda_l1: 0.1
+lambda_l2: 1.0
+min_gain_to_split: 0.1
+random_state: 42

@@ -1,5 +1,11 @@
 """
-Hyperparameter manager with support for nested configurations and proper dependency injection.
+Hyperparameter manager with proper separation of concerns.
+
+This manager:
+- Reads baseline hyperparameters from the config object (loaded by ConfigManager)
+- Manages dynamic hyperparameters in a separate storage directory
+- Tracks hyperparameter history for experiments
+- Never modifies the source-controlled config files
 """
 
 from datetime import datetime
@@ -35,13 +41,13 @@ class HyperparameterSet:
         return cls(**data)
 
 class HyperparamsManager(BaseHyperparamsManager):
-    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger, 
+    def __init__(self, config: BaseConfigManager, app_logger: BaseAppLogger,
                  app_file_handler: BaseAppFileHandler, error_handler: BaseErrorHandler):
         """
         Initialize the hyperparameter manager with injected dependencies.
-        
+
         Args:
-            config: Configuration manager
+            config: Configuration manager (contains baseline hyperparameters)
             app_logger: Application logger
             app_file_handler: File handling utility
             error_handler: Error handling utility
@@ -50,42 +56,50 @@ class HyperparamsManager(BaseHyperparamsManager):
         self.app_logger = app_logger
         self.app_file_handler = app_file_handler
         self.error_handler = error_handler
-        
-        # Initialize current_params with empty structure
-        self.current_params = {"model_hyperparameters": {}}
-        
-        # Create storage directory if needed
+
+        # Get storage directory for dynamic hyperparameters
         self.storage_dir = self._get_storage_dir()
         self.app_file_handler.ensure_directory(self.storage_dir)
-        
+
+        # Create subdirectories for organization
+        self.current_best_dir = Path(self.storage_dir) / "current_best"
+        self.history_dir = Path(self.storage_dir) / "history"
+        self.app_file_handler.ensure_directory(self.current_best_dir)
+        self.app_file_handler.ensure_directory(self.history_dir)
+
         # Log initialization
-        self.app_logger.structured_log(logging.INFO, "HyperParamsManager initialized",
-                                    storage_dir=self.storage_dir)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "HyperParamsManager initialized",
+            storage_dir=self.storage_dir,
+            current_best_dir=str(self.current_best_dir),
+            history_dir=str(self.history_dir)
+        )
 
     def _get_storage_dir(self) -> str:
-        """Get hyperparameter storage directory from nested config."""
+        """Get hyperparameter storage directory from config."""
         try:
-            # Get model testing config alias
             model_cfg = self.config.core.model_testing_config
-
-            if hasattr(self.config, 'hyperparameters') and hasattr(self.config.hyperparameters, 'storage_dir'):
-                return self.config.hyperparameters.storage_dir
-            elif hasattr(model_cfg, 'hyperparameter_history_dir'):
+            if hasattr(model_cfg, 'hyperparameter_history_dir'):
                 return model_cfg.hyperparameter_history_dir
             else:
                 # Default fallback
-                return "hyperparameter_history"
+                return "hyperparameter_storage"
         except AttributeError as e:
             self.app_logger.structured_log(
                 logging.WARNING,
                 "Could not find hyperparameter storage directory in config, using default",
                 error=str(e)
             )
-            return "hyperparameter_history"
+            return "hyperparameter_storage"
 
     def get_current_params(self, model_name: str) -> Dict[str, Any]:
         """
-        Get the current hyperparameters for a model, handling nested configurations.
+        Get the current hyperparameters for a model.
+
+        Priority:
+        1. Current best from storage directory (if exists and optimization enabled)
+        2. Baseline from config object (always available)
 
         Args:
             model_name: Name of the model
@@ -93,15 +107,16 @@ class HyperparamsManager(BaseHyperparamsManager):
         Returns:
             Dict containing model parameters
         """
-        self.app_logger.structured_log(logging.INFO, "Getting current parameters",
-                                     model_name=model_name)
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Getting current parameters",
+            model_name=model_name
+        )
 
         try:
-            # Add local alias for model testing config
-            model_cfg = self.config.core.model_testing_config
             # Get model-specific config
             model_config = self._get_model_config(model_name)
-            
+
             # Determine which parameter set to use
             use_baseline = True
             if model_config and hasattr(model_config, 'use_baseline_hyperparameters'):
@@ -109,24 +124,43 @@ class HyperparamsManager(BaseHyperparamsManager):
             if model_config and hasattr(model_config, 'perform_hyperparameter_optimization'):
                 if model_config.perform_hyperparameter_optimization:
                     use_baseline = False
-            
-            # Load parameters from model-specific JSON file
-            params = self._load_model_params(model_name, "baseline" if use_baseline else "current_best")
-            
+
+            # Try to load current best from storage if not using baseline
+            if not use_baseline:
+                current_best = self._load_current_best(model_name)
+                if current_best is not None:
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "Loaded current best parameters from storage",
+                        model_name=model_name
+                    )
+                    return current_best
+                else:
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "No current best found in storage, falling back to baseline",
+                        model_name=model_name
+                    )
+
+            # Load baseline from config object
+            params = self._get_baseline_from_config(model_name)
+
             if params is None:
                 self.app_logger.structured_log(
                     logging.WARNING,
-                    f"No parameters found for {model_name}, using default from config"
+                    f"No baseline parameters found for {model_name}, returning empty dict"
                 )
-                # Return empty default params
-                params = {}
-            else:
-                self.app_logger.structured_log(logging.INFO, "Parameters found for {model_name}",
-                                             model_name=model_name,
-                                             params=params)
-                
+                return {}
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Loaded baseline parameters from config",
+                model_name=model_name,
+                param_count=len(params)
+            )
+
             return params
-            
+
         except Exception as e:
             raise self.error_handler.create_error_handler(
                 'hyperparameter_management',
@@ -136,18 +170,28 @@ class HyperparamsManager(BaseHyperparamsManager):
 
     def _get_model_config(self, model_name: str) -> Any:
         """
-        Get model-specific configuration, handling flattened model names.
-        
+        Get model-specific configuration from config object.
+
         Args:
-            model_name: Name of the model
-            
+            model_name: Name of the model (e.g., 'xgboost', 'lightgbm')
+
         Returns:
-            Model-specific configuration object
+            Model-specific configuration object or None
         """
         try:
-            # All models are now flattened - just access directly
-            config_name = model_name.replace('_', '')  # Remove underscores for config access
-            return getattr(self.config.models, config_name, None)
+            # Remove underscores for config access (xgboost -> xgboost, sklearn_randomforest -> sklearnrandomforest)
+            config_name = model_name.replace('_', '')
+
+            # Try to access from models config
+            if hasattr(self.config, 'models'):
+                return getattr(self.config.models, config_name, None)
+
+            # Try to access from core.models config
+            if hasattr(self.config, 'core') and hasattr(self.config.core, 'models'):
+                return getattr(self.config.core.models, config_name, None)
+
+            return None
+
         except AttributeError:
             self.app_logger.structured_log(
                 logging.WARNING,
@@ -155,101 +199,101 @@ class HyperparamsManager(BaseHyperparamsManager):
             )
             return None
 
-    def _get_model_hyperparams_dir(self, model_name: str) -> Path:
+    def _get_baseline_from_config(self, model_name: str) -> Optional[Dict[str, Any]]:
         """
-        Get the directory path for a model's hyperparameters based on flattened structure.
-        
-        Args:
-            model_name: Name of the model
-            
-        Returns:
-            Path to the model's hyperparameter directory
-        """
-        # Get hyperparams base directory from config
-        if hasattr(self.config, 'hyperparameters') and hasattr(self.config.hyperparameters, 'config_dir'):
-            base_dir = self.config.hyperparameters.config_dir
-        else:
-            # Default to the configs/hyperparameters structure
-            base_dir = Path("configs") / "hyperparameters"
-            
-        # All models are now flattened - just use the model name directly
-        return base_dir / model_name.lower()
+        Get baseline hyperparameters from the config object.
 
-    def _load_model_params(self, model_name: str, param_type: str = "current_best") -> Optional[Dict[str, Any]]:
-        """
-        Load parameters from model-specific JSON files in the config structure.
-        
         Args:
             model_name: Name of the model
-            param_type: Type of parameters to load ("current_best" or "baseline")
-            
+
+        Returns:
+            Dictionary of baseline parameters or None if not found
+        """
+        try:
+            # Access config.core.hyperparameters.{model_name}.baseline
+            if not hasattr(self.config, 'core'):
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Config does not have 'core' attribute"
+                )
+                return None
+
+            if not hasattr(self.config.core, 'hyperparameters'):
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Config does not have 'core.hyperparameters' attribute"
+                )
+                return None
+
+            # Get the model's hyperparameters section
+            model_hyperparams = getattr(self.config.core.hyperparameters, model_name, None)
+
+            if model_hyperparams is None:
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    f"No hyperparameters found for model: {model_name}"
+                )
+                return None
+
+            # Get baseline config
+            baseline = getattr(model_hyperparams, 'baseline', None)
+
+            if baseline is None:
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    f"No baseline hyperparameters found for model: {model_name}"
+                )
+                return None
+
+            # Convert SimpleNamespace to dict
+            if hasattr(baseline, '__dict__'):
+                return vars(baseline)
+            else:
+                return baseline
+
+        except Exception as e:
+            self.app_logger.structured_log(
+                logging.ERROR,
+                f"Error loading baseline parameters for {model_name}",
+                error=str(e)
+            )
+            return None
+
+    def _load_current_best(self, model_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Load current best parameters from storage directory.
+
+        Args:
+            model_name: Name of the model
+
         Returns:
             Dictionary of parameters or None if not found
         """
         try:
-            # Get the model's hyperparameter directory
-            model_dir = self._get_model_hyperparams_dir(model_name)
-            
-            # First try the requested parameter type
-            param_file = model_dir / f"{param_type}.json"
-            
-            # Check if file exists and try to load it
-            if self.app_file_handler.join_paths(param_file).exists():
-                self.app_logger.structured_log(
-                    logging.INFO,
-                    f"Loading {param_type} parameters for {model_name}",
-                    file_path=str(param_file)
-                )
-                try:
-                    params_data = self.app_file_handler.read_json(param_file)
-                    # Handle both formats - with or without "params" key
-                    if "params" in params_data:
-                        return params_data["params"]
-                    else:
-                        # If no "params" key, assume the entire file is parameters
-                        # but exclude metadata fields
-                        model_cfg = self.config.core.model_testing_config
-                        metadata_fields = model_cfg.hyperparameter_metadata
-                        return {k: v for k, v in params_data.items() if k not in metadata_fields}
-                except Exception as e:
-                    self.app_logger.structured_log(
-                        logging.WARNING,
-                        f"Error reading {param_file}",
-                        error=str(e)
-                    )
-            
-            # If requested type fails or doesn't exist, try the alternate
-            alternate_type = "baseline" if param_type == "current_best" else "current_best"
-            alternate_file = model_dir / f"{alternate_type}.json"
-            
-            if self.app_file_handler.join_paths(alternate_file).exists():
-                self.app_logger.structured_log(
-                    logging.INFO,
-                    f"Loading {alternate_type} parameters for {model_name} as fallback",
-                    file_path=str(alternate_file)
-                )
-                try:
-                    params_data = self.app_file_handler.read_json(alternate_file)
-                    return params_data.get("params", {})
-                except Exception as e:
-                    self.app_logger.structured_log(
-                        logging.WARNING,
-                        f"Error reading fallback file {alternate_file}",
-                        error=str(e)
-                    )
-            
-            # If we get here, neither file was found or loadable
-            self.app_logger.structured_log(
-                logging.WARNING,
-                f"No parameter files found for {model_name}",
-                attempted_paths=[str(param_file), str(alternate_file)]
-            )
-            return None
-            
+            current_best_file = self.current_best_dir / f"{model_name}.json"
+
+            if not self.app_file_handler.join_paths(current_best_file).exists():
+                return None
+
+            data = self.app_file_handler.read_json(current_best_file)
+
+            # Extract params from the data structure
+            if "params" in data:
+                return data["params"]
+            else:
+                # If no "params" key, assume entire file is parameters
+                # but exclude metadata fields
+                model_cfg = self.config.core.model_testing_config
+                if hasattr(model_cfg, 'hyperparameter_metadata'):
+                    metadata_fields = model_cfg.hyperparameter_metadata
+                    return {k: v for k, v in data.items() if k not in metadata_fields}
+                else:
+                    return data
+
         except Exception as e:
             self.app_logger.structured_log(
-                logging.ERROR,
-                f"Error loading model parameters for {model_name}",
+                logging.WARNING,
+                f"Error loading current best parameters for {model_name}",
                 error=str(e)
             )
             return None
@@ -259,20 +303,24 @@ class HyperparamsManager(BaseHyperparamsManager):
                           run_id: Optional[str] = None, description: Optional[str] = None) -> None:
         """
         Update the best hyperparameters for a model.
-        
+        Saves to storage directory only, never modifies config files.
+
         Args:
             model_name: Name of the model
-            new_params: New hyperparameters to evaluate
+            new_params: New hyperparameters to save
             metrics: Performance metrics for the new parameters
             experiment_id: MLflow experiment ID
             run_id: Optional MLflow run ID
             description: Optional description of the parameter set
         """
-        self.app_logger.structured_log(logging.INFO, "Updating best parameters",
-                                     model_name=model_name,
-                                     metrics=metrics,
-                                     run_id=run_id)
-        
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Updating best parameters",
+            model_name=model_name,
+            metrics=metrics,
+            run_id=run_id
+        )
+
         try:
             # Generate run_id if none provided
             if run_id is None:
@@ -280,7 +328,7 @@ class HyperparamsManager(BaseHyperparamsManager):
 
             # Get model-specific config
             model_config = self._get_model_config(model_name)
-            
+
             # Create new hyperparameter set
             new_set = self._create_parameter_set(
                 model_name=model_name,
@@ -291,13 +339,13 @@ class HyperparamsManager(BaseHyperparamsManager):
                 run_id=run_id,
                 description=description
             )
-            
+
             # Save to history
             self._save_to_history(model_name, new_set)
-            
-            # Update current best
-            self._update_current_best(model_name, new_set)
-            
+
+            # Update current best in storage
+            self._update_current_best_storage(model_name, new_set)
+
         except Exception as e:
             raise self.error_handler.create_error_handler(
                 'hyperparameter_management',
@@ -345,13 +393,10 @@ class HyperparamsManager(BaseHyperparamsManager):
         )
 
     def _save_to_history(self, model_name: str, param_set: HyperparameterSet) -> None:
-        """Save hyperparameter set to history file."""
-        history_file = self.app_file_handler.join_paths(self.storage_dir, f"{model_name}_history.json")
-        
+        """Save hyperparameter set to history directory."""
+        history_file = self.history_dir / f"{model_name}_history.json"
+
         try:
-            # Ensure directory exists
-            self.app_file_handler.ensure_directory(self.storage_dir)
-            
             # Load existing history or create empty list
             try:
                 history = self.app_file_handler.read_json(history_file)
@@ -363,17 +408,18 @@ class HyperparamsManager(BaseHyperparamsManager):
                     f"Error reading history file, creating new one: {str(e)}"
                 )
                 history = []
-                
+
             # Add new parameter set and save
             history.append(asdict(param_set))
             self.app_file_handler.write_json(history, history_file)
-            
+
             self.app_logger.structured_log(
                 logging.INFO,
-                f"Saved parameter set to history file",
-                history_file=str(history_file)
+                "Saved parameter set to history",
+                history_file=str(history_file),
+                history_count=len(history)
             )
-            
+
         except Exception as e:
             self.app_logger.structured_log(
                 logging.ERROR,
@@ -382,15 +428,9 @@ class HyperparamsManager(BaseHyperparamsManager):
                 history_file=str(history_file)
             )
 
-    def _update_current_best(self, model_name: str, param_set: HyperparameterSet) -> None:
-        """Update current best parameters in the appropriate config file."""
+    def _update_current_best_storage(self, model_name: str, param_set: HyperparameterSet) -> None:
+        """Update current best parameters in storage directory (NOT in configs)."""
         try:
-            # Get the model's hyperparameter directory
-            model_dir = self._get_model_hyperparams_dir(model_name)
-            
-            # Ensure directory exists
-            self.app_file_handler.ensure_directory(model_dir)
-            
             # Create current best param data
             current_best = {
                 "name": "current_best",
@@ -404,29 +444,29 @@ class HyperparamsManager(BaseHyperparamsManager):
                 "enable_categorical": param_set.enable_categorical,
                 "categorical_features": param_set.categorical_features
             }
-            
-            # Save to current_best.json
-            current_best_path = model_dir / "current_best.json"
+
+            # Save to storage directory
+            current_best_path = self.current_best_dir / f"{model_name}.json"
             self.app_file_handler.write_json(current_best, current_best_path)
-            
+
             self.app_logger.structured_log(
                 logging.INFO,
-                f"Updated current best parameters",
+                "Updated current best parameters in storage",
                 file_path=str(current_best_path)
             )
-            
+
         except Exception as e:
             self.app_logger.structured_log(
                 logging.ERROR,
-                f"Error updating current best parameters",
+                "Error updating current best parameters in storage",
                 error=str(e),
                 model_name=model_name
             )
 
     def _load_history(self, model_name: str) -> List[HyperparameterSet]:
         """Load hyperparameter history for a model."""
-        history_file = self.app_file_handler.join_paths(self.storage_dir, f"{model_name}_history.json")
-        
+        history_file = self.history_dir / f"{model_name}_history.json"
+
         try:
             try:
                 history_data = self.app_file_handler.read_json(history_file)
@@ -434,14 +474,16 @@ class HyperparamsManager(BaseHyperparamsManager):
             except FileNotFoundError:
                 self.app_logger.structured_log(
                     logging.INFO,
-                    f"No history file found for {model_name}",
+                    "No history file found for model",
+                    model_name=model_name,
                     history_file=str(history_file)
                 )
                 return []
         except Exception as e:
             self.app_logger.structured_log(
                 logging.ERROR,
-                f"Error loading history for {model_name}",
+                "Error loading history for model",
+                model_name=model_name,
                 error=str(e),
                 history_file=str(history_file)
             )

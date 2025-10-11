@@ -19,8 +19,11 @@ primary_id_column: game_id
 
 # these columns are not useful for modeling - just informational text that is already encoded elsewhere
 # they will be dropped from the dataframe right before modeling
-non_useful_columns: 
-  #-
+non_useful_columns:
+  - h_team
+  - h_match_up
+  - v_team
+  - v_match_up
 
 # indicates which columns are categorical so they can be encoded and identified by the model
 categorical_features:

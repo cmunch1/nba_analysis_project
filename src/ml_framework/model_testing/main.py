@@ -30,7 +30,6 @@ def main() -> None:
 
         error_handler = container.error_handler()
         data_access = container.data_access()
-        data_validator = container.data_validator()
 
 
         # Get model testing dependencies
@@ -39,17 +38,12 @@ def main() -> None:
         optimizer = container.optimizer()
         experiment_logger = container.experiment_logger()
 
-
-
         preprocessor = container.preprocessor()
-
 
         # Load and validate data
         training_data = data_access.load_dataframe(config.training_data_file)
         validation_data = data_access.load_dataframe(config.validation_data_file)
         
-        #data_validator.validate_processed_dataframe(training_data, config.training_data_file)
-        #data_validator.validate_processed_dataframe(validation_data, config.validation_data_file)
 
         app_logger.structured_log(
             logging.INFO,
