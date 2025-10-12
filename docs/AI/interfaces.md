@@ -51,8 +51,33 @@ Located in `src/ml_framework/framework/` - ML framework components and base clas
 
 ### Uncertainty Quantification
 - **UncertaintyCalibrator** - `src/ml_framework/uncertainty/uncertainty_calibrator.py`
-  - Model uncertainty quantification and calibration
+  - Model uncertainty quantification and calibration (concrete implementation)
   - Supports various calibration methods for prediction confidence
+
+### Model Registry
+Located in `src/ml_framework/model_registry/` - Model persistence and versioning infrastructure.
+
+- **BaseModelRegistry** - `src/ml_framework/model_registry/base_model_registry.py`
+  - Abstract interface for model registry implementations
+  - Methods: `save_model()`, `load_model()`, `list_models()`, `delete_model()`, `get_model_metadata()`
+  - Methods: `register_model_version()`, `transition_model_stage()`, `get_model_by_stage()`
+  - Supports MLflow, custom file-based, and cloud service backends
+  - Enables model versioning and stage-based deployment (Development → Staging → Production)
+
+- **MLflowModelRegistry** - `src/ml_framework/model_registry/mlflow_model_registry.py`
+  - Concrete implementation using MLflow Model Registry
+  - Automatic model flavor detection (XGBoost, LightGBM, CatBoost, PyTorch, Sklearn)
+  - Integrated with preprocessing artifacts for complete model persistence
+
+### Inference
+Located in `src/ml_framework/inference/` - Production model serving and prediction.
+
+- **ModelPredictor** - `src/ml_framework/inference/model_predictor.py`
+  - Unified inference interface that works with any model registry
+  - Methods: `load_model()`, `predict()`, `predict_batch()`, `get_model_info()`, `validate_input()`, `is_loaded()`
+  - Automatically applies preprocessing transformations from saved artifacts
+  - Supports batch predictions for large datasets
+  - Input feature validation and error handling
 
 ### Model Testing & Training
 Located in `src/ml_framework/model_testing/` - Generic ML testing and training infrastructure.
@@ -97,7 +122,8 @@ Located in `src/ml_framework/visualization/` - Generic visualization components.
 
 #### Exploratory Analysis
 - **BaseExplorer** - `src/ml_framework/visualization/exploratory/base_explorer.py`
-  - Interface for exploratory data analysis and visualization
+  - Exploratory data analysis and visualization (concrete implementation)
+  - Provides statistical summaries and visual exploration tools
 
 ## NBA Application - Domain-Specific Implementation
 
@@ -180,6 +206,8 @@ Located in `src/ml_framework/framework/data_classes/`:
    - **Preprocessing**: Generic data preprocessing
    - **Visualization**: Generic charts and exploratory analysis
    - **Uncertainty**: Model uncertainty quantification
+   - **Model Registry**: Model persistence and versioning (MLflow, custom, cloud)
+   - **Inference**: Production model serving and prediction
 
 2. **Domain Applications** (`src/nba_app/`) - Domain-specific implementations
    - **Data Processing**: NBA-specific data transformation

@@ -831,6 +831,8 @@ src/ml_framework/
 ├── framework/               # Reusable framework components (data access, validation)
 ├── model_testing/           # Model training and evaluation
 ├── preprocessing/           # Data preprocessing and feature engineering
+├── model_registry/          # Model persistence and versioning (MLflow, custom)
+├── inference/               # Production model serving and prediction
 ├── uncertainty/             # Uncertainty quantification
 └── visualization/           # Chart generation and orchestration
 ```
@@ -1038,6 +1040,125 @@ def create_charts(self, results):
     # Save charts to directory
     output_dir = "charts/experiment_1"
     self.chart_orchestrator.save_charts(charts, output_dir)
+```
+
+#### Model Registry (`model_registry/`)
+
+**Base Class:** `BaseModelRegistry`
+
+Handles model persistence, versioning, and retrieval.
+
+```python
+from ml_framework.model_registry.mlflow_model_registry import MLflowModelRegistry
+
+class MyModuleDIContainer(containers.DeclarativeContainer):
+    common = providers.Container(CommonDIContainer)
+
+    model_registry = providers.Singleton(
+        MLflowModelRegistry,
+        config=common.config,
+        app_logger=common.app_logger,
+        error_handler=common.error_handler_factory
+    )
+```
+
+**Usage:**
+
+```python
+def save_trained_model(self, model, preprocessor_artifact, metrics):
+    """Save model with preprocessing artifacts to registry."""
+    # Save model to registry
+    model_uri = self.model_registry.save_model(
+        model=model,
+        model_name="my_model",
+        preprocessor_artifact=preprocessor_artifact,
+        metadata={'accuracy': metrics.accuracy, 'auc': metrics.auc},
+        tags={'model_type': 'XGBoost', 'version': 'v1.0'}
+    )
+
+    self.app_logger.structured_log(
+        logging.INFO,
+        "Model saved to registry",
+        model_uri=model_uri
+    )
+
+def load_production_model(self, model_name):
+    """Load model from production stage."""
+    model_data = self.model_registry.get_model_by_stage(
+        model_name=model_name,
+        stage="Production"
+    )
+    return model_data['model'], model_data['preprocessor_artifact']
+```
+
+#### Inference (`inference/`)
+
+**Concrete Class:** `ModelPredictor`
+
+Handles model loading and prediction with automatic preprocessing.
+
+```python
+from ml_framework.inference.model_predictor import ModelPredictor
+from ml_framework.model_registry.mlflow_model_registry import MLflowModelRegistry
+
+class MyModuleDIContainer(containers.DeclarativeContainer):
+    common = providers.Container(CommonDIContainer)
+
+    model_registry = providers.Singleton(
+        MLflowModelRegistry,
+        config=common.config,
+        app_logger=common.app_logger,
+        error_handler=common.error_handler_factory
+    )
+
+    model_predictor = providers.Singleton(
+        ModelPredictor,
+        config=common.config,
+        app_logger=common.app_logger,
+        error_handler=common.error_handler_factory,
+        model_registry=model_registry
+    )
+```
+
+**Usage:**
+
+```python
+def make_predictions(self, X_new):
+    """Load model and make predictions."""
+    # Load production model
+    self.model_predictor.load_model("models:/my_model/Production")
+
+    # Validate input
+    validation = self.model_predictor.validate_input(X_new)
+    if not validation['valid']:
+        raise self.error_handler.create_error_handler(
+            'data_validation',
+            f"Invalid input: {validation}",
+            missing_features=validation.get('missing_features', [])
+        )
+
+    # Make predictions (preprocessing applied automatically)
+    probabilities = self.model_predictor.predict(
+        X_new,
+        return_probabilities=True
+    )
+
+    self.app_logger.structured_log(
+        logging.INFO,
+        "Predictions generated",
+        num_predictions=len(probabilities)
+    )
+
+    return probabilities
+
+def batch_predictions(self, X_large):
+    """Process large dataset in batches."""
+    predictions = self.model_predictor.predict_batch(
+        X_large,
+        batch_size=1000,
+        return_probabilities=True
+    )
+    return predictions
 ```
 
 ---
