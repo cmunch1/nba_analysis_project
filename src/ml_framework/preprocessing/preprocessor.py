@@ -364,40 +364,38 @@ class Preprocessor(BasePreprocessor):
     def _get_feature_names(self, X: pd.DataFrame, column_transformer: ColumnTransformer) -> List[str]:
         """
         Get feature names after preprocessing transformations.
-        
+
         Args:
             X: Original input DataFrame
             column_transformer: Fitted ColumnTransformer
-            
+
         Returns:
             List of feature names after transformations
         """
         try:
-            feature_names = []
-        
-            # Process each transformer in the ColumnTransformer
-            for name, transformer, features in column_transformer.transformers_:
-                if name == 'remainder':
-                    if features == 'passthrough':
-                        # Add remaining columns (not handled by previous transformers)
-                        unused_features = [col for col in X.columns 
-                                        if col not in column_transformer._feature_names_in]
-                        feature_names.extend(unused_features)
-                    continue
-                    
-                # Get the feature names based on transformer type
-                if hasattr(transformer, 'get_feature_names_out'):
-                    # For newer scikit-learn versions
-                    trans_features = transformer.get_feature_names_out()
-                elif hasattr(transformer, 'get_feature_names'):
-                    # For older scikit-learn versions
-                    trans_features = transformer.get_feature_names()
-                else:
-                    # Fallback: use numbered features
-                    trans_features = [f"{name}{i}" for i in range(transformer.n_features_out_)]
-                
-                feature_names.extend(trans_features)
-            
+            # Check if there are any actual transformers (non-empty)
+            has_transformers = any(
+                name != 'remainder'
+                for name, _, _ in column_transformer.transformers_
+            )
+
+            # If no transformers, just return original column names
+            if not has_transformers:
+                return X.columns.tolist()
+
+            # Use the ColumnTransformer's built-in method to get feature names
+            if hasattr(column_transformer, 'get_feature_names_out'):
+                # For scikit-learn >= 1.0, get feature names
+                # Call without arguments first, let sklearn infer from fitted state
+                try:
+                    feature_names = column_transformer.get_feature_names_out().tolist()
+                except (TypeError, AttributeError):
+                    # Fallback: manually construct feature names
+                    feature_names = X.columns.tolist()
+            else:
+                # Fallback for older versions - use original column names
+                feature_names = X.columns.tolist()
+
             return feature_names
         except Exception as e:
             raise self.error_handler.create_error_handler(

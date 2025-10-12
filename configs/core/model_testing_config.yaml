@@ -24,6 +24,7 @@ non_useful_columns:
   - h_match_up
   - v_team
   - v_match_up
+  - game_date  # Date column - temporal info already captured in season/season_progress
 
 # indicates which columns are categorical so they can be encoded and identified by the model
 categorical_features:

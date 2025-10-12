@@ -13,8 +13,9 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from pathlib import Path
+from sklearn.model_selection import train_test_split
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.error_handler import FeatureEngineeringError
@@ -470,11 +471,19 @@ class FeatureEngineer(BaseFeatureEngineer):
         """
         Update ELO ratings for teams based on game outcomes.
 
+        IMPORTANT: Only pre-game ELO features are retained for modeling to prevent data leakage:
+        - elo_team_before: Team's ELO rating before the game
+        - elo_opp_before: Opponent's ELO rating before the game
+        - elo_win_prob: Predicted win probability based on pre-game ELOs
+
+        Post-game features (elo_change, elo_team_after) are calculated for ELO tracking
+        but excluded from the final dataset to avoid leakage since they use game outcomes.
+
         Args:
             df (pd.DataFrame): Input dataframe containing game data.
 
         Returns:
-            pd.DataFrame: Dataframe with updated ELO ratings and related columns.
+            pd.DataFrame: Dataframe with pre-game ELO ratings and win probability.
 
         Raises:
             FeatureEngineeringError: If there's an error during ELO rating updates.
@@ -488,17 +497,18 @@ class FeatureEngineer(BaseFeatureEngineer):
         try:
             # Ensure the DataFrame is sorted by date
             df = df.sort_values(self.config.new_date_column)
-            
+
             # Initialize team ELO ratings
             team_elos = {}
-            
+
             # Create new columns for ELO ratings and win probability
+            # Note: We calculate all columns for ELO tracking, but will drop leaky ones later
             new_columns = [
                 self.config.team_elo_before_column,
                 self.config.opp_elo_before_column,
                 self.config.win_prob_column,
                 self.config.team_elo_after_column,
-            self.config.elo_change_column
+                self.config.elo_change_column
             ]
 
             # Check if we're updating only new rows or the entire dataframe
@@ -583,14 +593,38 @@ class FeatureEngineer(BaseFeatureEngineer):
                 # Update team ELO ratings for next game
                 team_elos[home_team[self.config.new_team_id_column]] = new_home_elo
                 team_elos[away_team[self.config.new_team_id_column]] = new_away_elo
-            
+
+            # IMPORTANT: Drop post-game ELO features to prevent data leakage
+            # These features use the game outcome (target variable) in their calculation
+            leaky_columns = [
+                self.config.elo_change_column,  # Calculated from actual game result
+                self.config.team_elo_after_column  # Includes elo_change (which uses target)
+            ]
+
+            columns_to_drop = [col for col in leaky_columns if col in df.columns]
+            if columns_to_drop:
+                df = df.drop(columns=columns_to_drop)
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Dropped post-game ELO features to prevent data leakage",
+                    dropped_columns=columns_to_drop,
+                    reason="These features are calculated using game outcomes (target variable)"
+                )
+
+            # Keep only pre-game features for modeling
+            retained_elo_features = [
+                self.config.team_elo_before_column,
+                self.config.opp_elo_before_column,
+                self.config.win_prob_column
+            ]
+
             self.app_logger.structured_log(
                 logging.INFO,
                 "ELO ratings update completed",
                 output_shape=df.shape,
-                new_columns=new_columns
+                retained_elo_features=retained_elo_features
             )
-            
+
             return df
 
         except Exception as e:
@@ -694,8 +728,9 @@ class FeatureEngineer(BaseFeatureEngineer):
             elif 'streak' in col:
                 feature_groups.setdefault('streaks', []).append(col)
 
-            # Group ELO features
+            # Group ELO features (only pre-game features to prevent leakage)
             elif 'elo' in col.lower() or 'win_prob' in col:
+                # Note: elo_change and elo_team_after are excluded to prevent data leakage
                 feature_groups.setdefault('elo_ratings', []).append(col)
 
             # Group temporal features
@@ -703,3 +738,52 @@ class FeatureEngineer(BaseFeatureEngineer):
                 feature_groups.setdefault('temporal', []).append(col)
 
         return feature_groups
+
+    @log_performance
+    def split_data(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Split the dataframe into training and validation sets.
+        The validation set will be selected from the most recent n completed seasons.
+        (e.g. we will pull off the last n seasons, split off a portion for validation, then add the remainder back to the original dataframe)
+
+        Args:
+            df (pd.DataFrame): Input dataframe.
+
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: Training and validation dataframes.
+        """
+        self.app_logger.structured_log(logging.INFO, "Splitting data into training and validation sets")
+        try:
+            # Get season column from config
+            season_column = self.config.season_column
+
+            # determine the last season in the dataframe
+            last_season = df[season_column].max()
+
+            # determine the start season for the validation set
+            validation_start_season = last_season - self.config.validation_last_n_seasons
+
+            # limit the working dataframe to the last n seasons
+            working_df = df[df[season_column] >= validation_start_season]
+            df = df.drop(working_df.index)
+
+            # use a stratified split to ensure that seasonality is maintained in the validation set (e.g. same number of games from each month)
+            training_df, validation_df = train_test_split(
+                working_df,
+                test_size=self.config.validation_split,
+                stratify=working_df[self.config.stratify_column],
+                random_state=self.config.random_state
+            )
+
+            training_df = pd.concat([df, training_df])
+
+            self.app_logger.structured_log(logging.INFO, "Data split completed",
+                           training_shape=training_df.shape,
+                           validation_shape=validation_df.shape)
+
+            return training_df, validation_df
+        except Exception as e:
+            raise FeatureEngineeringError("Error in splitting data",
+                                        self.app_logger,
+                                        error_message=str(e),
+                                        dataframe_shape=df.shape)

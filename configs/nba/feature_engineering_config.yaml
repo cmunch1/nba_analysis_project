@@ -9,6 +9,9 @@ season_end: 7-1
 # this is the target column's root name. It will have a home_team_prefix added to it in the feature engineering process
 target_column: is_win
 
+# season column used for sorting and validation splitting
+season_column: season
+
 
 # prefixes added to the beginning of column names to indicate the team's status for the specific matchup
 # when all the games stats are combined on a single row for a given game

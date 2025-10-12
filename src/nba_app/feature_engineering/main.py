@@ -43,7 +43,6 @@ def main() -> None:
         data_access = container.data_access()
         data_validator = container.data_validator()
         feature_engineer = container.feature_engineer()
-        feature_selector = container.feature_selector()
         error_handler = container.error_handler_factory()
 
         app_logger.structured_log(
@@ -83,13 +82,9 @@ def main() -> None:
             app_logger.structured_log(logging.INFO, "Saving engineered features", file_name=config.engineered_data_file)
             data_access.save_dataframes([engineered_dataframe], [config.engineered_data_file])
 
-            # select features
-            app_logger.structured_log(logging.INFO, "Selecting features")
-            training_dataframe = feature_selector.select_features(engineered_dataframe)
-
             # split into training and validation sets
             app_logger.structured_log(logging.INFO, "Splitting data into training and validation sets")
-            training_dataframe, validation_dataframe = feature_selector.split_data(training_dataframe)
+            training_dataframe, validation_dataframe = feature_engineer.split_data(engineered_dataframe)
 
             # save selected features dataframes
             app_logger.structured_log(logging.INFO, "Saving training and validation datasets")
