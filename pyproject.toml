@@ -23,6 +23,7 @@ dependencies = [
     "pyyaml>=6.0.0",
     "dependency-injector>=4.41.0",
     "lxml>=6.0.2",
+    "statsmodels>=0.14.0",
 ]
 
 [build-system]

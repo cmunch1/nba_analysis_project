@@ -22,6 +22,10 @@ zzz/
 charts/
 *:Zone.Identifier
 
+# Feature audits and pruning reports - generated outputs
+feature_audits/
+pruning_reports/
+
 # Data files - large CSVs should not be in version control
 data/engineered/
 data/training/

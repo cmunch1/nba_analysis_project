@@ -11,6 +11,7 @@ from ml_framework.framework.data_classes import (
     PreprocessingResults
 )
 from .di_container import ModelTestingDIContainer
+from .pruning_workflow import run_with_pruning
 
 
 def main() -> None:
@@ -37,8 +38,9 @@ def main() -> None:
         chart_orchestrator = container.chart_orchestrator()
         optimizer = container.optimizer()
         experiment_logger = container.experiment_logger()
-
-        preprocessor = container.preprocessor()
+        feature_auditor = container.feature_auditor()
+        feature_pruner = container.feature_pruner()
+        pruning_comparison = container.pruning_comparison()
 
         # Load and validate data
         training_data = data_access.load_dataframe(config.training_data_file)
@@ -70,20 +72,41 @@ def main() -> None:
                     model_name=model_name
                 )
 
-                # Process model
-                model_results = process_single_model(
-                    model_name=model_name,
-                    training_dataframe=training_data,
-                    validation_dataframe=validation_data,
-                    config=config,
-                    model_tester=model_tester,
-                    data_access=data_access,
-                    experiment_logger=experiment_logger,
-                    optimizer=optimizer,
-                    app_logger=app_logger,
-                    chart_orchestrator=chart_orchestrator
-                )
-                
+                # Check if pruning is enabled
+                if config.core.model_testing_config.enable_feature_pruning:
+                    # Run with pruning workflow (baseline + pruned)
+                    model_results, comparison_df = run_with_pruning(
+                        model_name=model_name,
+                        training_data=training_data,
+                        validation_data=validation_data,
+                        config=config,
+                        model_tester=model_tester,
+                        data_access=data_access,
+                        experiment_logger=experiment_logger,
+                        optimizer=optimizer,
+                        app_logger=app_logger,
+                        chart_orchestrator=chart_orchestrator,
+                        feature_auditor=feature_auditor,
+                        feature_pruner=feature_pruner,
+                        pruning_comparison=pruning_comparison,
+                        process_single_model_func=process_single_model
+                    )
+                else:
+                    # Standard single-run workflow
+                    model_results = process_single_model(
+                        model_name=model_name,
+                        training_dataframe=training_data,
+                        validation_dataframe=validation_data,
+                        config=config,
+                        model_tester=model_tester,
+                        data_access=data_access,
+                        experiment_logger=experiment_logger,
+                        optimizer=optimizer,
+                        app_logger=app_logger,
+                        chart_orchestrator=chart_orchestrator,
+                        feature_auditor=feature_auditor
+                    )
+
                 results_by_model[model_name] = model_results
 
             except Exception as e:
@@ -143,7 +166,8 @@ def process_single_model(
     experiment_logger,
     optimizer,
     app_logger,
-    chart_orchestrator
+    chart_orchestrator,
+    feature_auditor
 ) -> ModelTrainingResults:
     """Process a single model with proper visualization integration."""
 
@@ -196,6 +220,7 @@ def process_single_model(
             data_access=data_access,
             experiment_logger=experiment_logger,
             chart_orchestrator=chart_orchestrator,
+            feature_auditor=feature_auditor,
             app_logger=app_logger,
             model_name=model_name,
             model_params=model_params,
@@ -217,6 +242,7 @@ def process_single_model(
             data_access=data_access,
             experiment_logger=experiment_logger,
             chart_orchestrator=chart_orchestrator,
+            feature_auditor=feature_auditor,
             app_logger=app_logger,
             model_name=model_name,
             model_params=model_params,
@@ -240,6 +266,7 @@ def process_model_evaluation(
     data_access,
     experiment_logger,
     chart_orchestrator,
+    feature_auditor,
     app_logger,
     model_name: str,
     model_params: dict,
@@ -308,6 +335,54 @@ def process_model_evaluation(
         if charts:
             output_dir = f"charts/{model_name}/{eval_type.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             chart_orchestrator.save_charts(charts, output_dir)
+
+        # Generate feature audit if configured
+        if model_cfg.generate_feature_audit:
+            try:
+                app_logger.structured_log(
+                    logging.INFO,
+                    f"Generating feature audit for {eval_type}",
+                    model_name=model_name
+                )
+
+                # Use evaluation data for permutation importance
+                audit_X = X_eval if X_eval is not None else X
+                audit_y = y_eval if y_eval is not None else y
+
+                # Create audit
+                feature_audit = feature_auditor.create_audit(
+                    results=results,
+                    X_eval=audit_X,
+                    y_eval=audit_y,
+                    run_id=None,  # Will be populated by experiment logger if available
+                    experiment_id=None
+                )
+
+                # Save audit if configured
+                if model_cfg.save_feature_audit:
+                    audit_path = feature_auditor.save_audit(
+                        audit_df=feature_audit,
+                        model_name=model_name,
+                        eval_type=eval_type.lower(),
+                        run_id=None
+                    )
+                    app_logger.structured_log(
+                        logging.INFO,
+                        f"Feature audit saved",
+                        audit_path=audit_path
+                    )
+
+                # Store audit in results for experiment logging
+                results.feature_audit = feature_audit
+
+            except Exception as e:
+                app_logger.structured_log(
+                    logging.ERROR,
+                    "Feature audit generation failed",
+                    error=str(e),
+                    model_name=model_name
+                )
+                # Don't fail the entire evaluation if audit fails
 
         # Handle predictions saving
         if ((is_oof and model_cfg.save_oof_predictions) or

@@ -274,6 +274,30 @@ class ModelTester(BaseModelTester):
                                              feature_importance_accumulator,
                                              n_folds_with_importance)
 
+                # Store per-fold importance for stability analysis
+                if oof_results.feature_importance_scores is not None:
+                    fold_importance_dict = {
+                        name: float(score)
+                        for name, score in zip(
+                            oof_results.feature_names,
+                            oof_results.feature_importance_scores
+                        )
+                    }
+                    full_results.fold_importances.append(fold_importance_dict)
+
+                # Store per-fold SHAP importance for stability analysis
+                if oof_results.shap_values is not None:
+                    # Compute mean absolute SHAP per feature for this fold
+                    fold_shap_mean_abs = np.mean(np.abs(oof_results.shap_values), axis=0)
+                    fold_shap_dict = {
+                        name: float(score)
+                        for name, score in zip(
+                            oof_results.feature_names,
+                            fold_shap_mean_abs
+                        )
+                    }
+                    full_results.fold_shap_importances.append(fold_shap_dict)
+
                 # Update learning curves
                 self._update_learning_curves(full_results, oof_results, n_folds_with_curves)
 
@@ -667,10 +691,17 @@ class ModelTester(BaseModelTester):
             ).tolist()
             full_results.n_folds = n_folds_with_curves
 
+        # Set n_folds based on fold_importances if not already set
+        if full_results.n_folds == 0 and len(full_results.fold_importances) > 0:
+            full_results.n_folds = len(full_results.fold_importances)
+            self.app_logger.structured_log(logging.INFO, "Set n_folds from fold_importances",
+                                         n_folds=full_results.n_folds)
+
         self.app_logger.structured_log(logging.INFO, "Cross-validation completed",
                                      final_feature_shape=full_results.feature_data.shape,
                                      final_shap_shape=full_results.shap_values.shape
-                                     if full_results.shap_values is not None else None)
+                                     if full_results.shap_values is not None else None,
+                                     n_folds=full_results.n_folds)
 
     def save_model_to_registry(self,
                               results: ModelTrainingResults,

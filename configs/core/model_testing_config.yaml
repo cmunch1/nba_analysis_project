@@ -86,6 +86,65 @@ calculate_shap_values: true
 max_shap_interaction_memory_gb: 256.0
 calculate_shap_interactions: false
 
+# Feature audit settings
+generate_feature_audit: true # Enable feature audit generation
+save_feature_audit: true # Save audit results to CSV/parquet
+feature_audit_format: csv # Output format: 'csv' or 'parquet' (parquet preserves precision)
+
+# Feature audit metrics configuration
+feature_audit_metrics:
+  # Statistical metrics (always computed)
+  compute_basic_stats: true # coverage, missing_rate, unique_values, variance, cardinality
+
+  # Importance metrics (reused from training results when available)
+  compute_shap_importance: true # Requires calculate_shap_values: true
+  compute_permutation_importance: true # Computed on validation set
+  permutation_n_repeats: 5 # Number of permutation repeats
+
+  # Redundancy detection
+  compute_correlation_matrix: true # Pairwise feature correlations
+  compute_vif: false # Variance Inflation Factor (expensive for high-dimensional data)
+  correlation_method: pearson # 'pearson', 'spearman', 'kendall'
+
+  # Stability scoring (across CV folds)
+  compute_stability_score: true # Requires perform_oof_cross_validation: true
+  stability_top_k: 20 # Number of top features to track for stability
+
+  # Target correlation
+  compute_target_correlation: true # Correlation between features and target
+
+# Feature audit thresholds (for drop_candidate_score)
+feature_audit_thresholds:
+  near_zero_importance_percentile: 10 # Bottom X% of features by SHAP
+  near_zero_importance_threshold: 0.0 # Absolute permutation importance threshold
+  high_missing_threshold: 0.4 # Flag features with >40% missing values
+  high_collinearity_threshold: 0.95 # Flag features with >0.95 pairwise correlation
+  low_stability_threshold: 0.2 # Flag features appearing in <20% of top-k across folds
+  drop_candidate_threshold: 2 # Minimum score to flag as drop candidate
+
+# Feature audit output
+feature_audit_output_dir: "${PROJECT_ROOT}/feature_audits" # Directory for audit files
+feature_audit_versioning: true # Include run_id and timestamp in filename
+
+# Feature pruning settings
+enable_feature_pruning: false # Master switch for automated pruning
+feature_pruning:
+  # Pruning thresholds
+  drop_candidate_threshold: 2 # Minimum drop_candidate_score to prune
+
+  # Performance constraints
+  min_acceptable_auc_delta: -0.01 # Allow up to 1% AUC drop
+  min_acceptable_accuracy_delta: -0.02 # Allow up to 2% accuracy drop
+
+  # Safety checks
+  min_features_to_keep: 10 # Never prune below this many features
+  max_features_to_drop_pct: 0.8 # Never drop more than 80% of features
+
+  # Output
+  save_pruned_datasets: false # Save pruned train/val CSV to data/pruned/
+  save_comparison_report: true # Save comparison report
+  comparison_report_dir: "${PROJECT_ROOT}/pruning_reports" # Report output directory
+
 
 
 

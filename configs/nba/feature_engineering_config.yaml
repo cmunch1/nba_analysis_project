@@ -2,6 +2,12 @@ extend_rolling_avgs: true
 extend_streaks: true
 include_postseason: true
 
+# Feature allowlist - use to filter features based on pruning analysis
+feature_allowlist:
+  enabled: true  # Set to true to enable feature filtering
+  allowlist_file: "configs/features/feature_allowlist.yaml"  # Path to allowlist YAML
+  mode: "allowlist"  # "allowlist" = only calculate features in list, "discovery" = calculate all features
+
 # used to calculate the approximate progress of the season (elapsed days over total days)
 season_start: 10-1
 season_end: 7-1

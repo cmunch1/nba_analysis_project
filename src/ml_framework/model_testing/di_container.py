@@ -13,6 +13,9 @@ from .hyperparams_managers.hyperparams_manager import HyperparamsManager
 from .experiment_loggers.experiment_logger_factory import ExperimentLoggerFactory, LoggerType
 from .hyperparams_optimizers.hyperparams_optimizer_factory import OptimizerFactory, OptimizerType
 from .trainers.trainer_factory import TrainerFactory
+from .feature_auditing.feature_auditor import FeatureAuditor
+from .feature_pruning.feature_pruner import FeaturePruner
+from .feature_pruning.pruning_comparison import PruningComparison
 
 
 
@@ -44,6 +47,30 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         app_logger=app_logger,
         error_handler=error_handler,
         app_file_handler=app_file_handler
+    )
+
+    # Feature auditor
+    feature_auditor = providers.Singleton(
+        FeatureAuditor,
+        config=config,
+        app_logger=app_logger,
+        error_handler=error_handler
+    )
+
+    # Feature pruner
+    feature_pruner = providers.Singleton(
+        FeaturePruner,
+        config=config,
+        app_logger=app_logger,
+        error_handler=error_handler
+    )
+
+    # Pruning comparison
+    pruning_comparison = providers.Singleton(
+        PruningComparison,
+        config=config,
+        app_logger=app_logger,
+        error_handler=error_handler
     )
 
     # Hyperparameter management with proper injection

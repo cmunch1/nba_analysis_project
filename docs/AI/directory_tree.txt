@@ -40,6 +40,8 @@
 │       ├── data_access_config.yaml
 │       ├── data_processing_config.yaml
 │       ├── feature_engineering_config.yaml
+│       ├── team_mapping.yaml
+│       ├── validation_scraper_config.yaml
 │       └── webscraping_config.yaml
 ├── data/
 │   ├── cumulative_scraped/
@@ -70,7 +72,9 @@
 │   │   └── xgboost_val_predictions.csv
 │   ├── processed/
 │   │   ├── column_mapping.json
+│   │   ├── games_boxscores-fixed.csv
 │   │   ├── games_boxscores.csv
+│   │   ├── teams_boxscores-fixed.csv
 │   │   └── teams_boxscores.csv
 │   ├── test_data/
 │   │   ├── games_advanced.csv
@@ -85,6 +89,7 @@
 │   ├── AI/
 │   │   ├── config_reference.txt
 │   │   ├── config_tree.txt
+│   │   ├── core_framework_usage.md
 │   │   ├── directory_tree.txt
 │   │   └── interfaces.md
 │   ├── commentary/
@@ -94,7 +99,11 @@
 │   │   └── nba-boxscore-data-dictionary.md
 │   ├── src/
 │   │   └── readme.md
-│   └── readme.md
+│   ├── future_refactors.md
+│   ├── game_id_conversion_solution.md
+│   ├── GAME_ID_CONVERSION_SUMMARY.md
+│   ├── readme.md
+│   └── validation_scraper_implementation.md
 ├── hyperparameter_history/
 │   ├── LGBM_history.json
 │   └── XGBoost_history.json
@@ -183,7 +192,8 @@
 │       │   ├── base_data_processing_classes.py
 │       │   ├── di_container.py
 │       │   ├── main.py
-│       │   └── process_scraped_NBA_data.py
+│       │   ├── process_scraped_NBA_data.py
+│       │   └── reintegrate_fixed_records.py
 │       ├── feature_engineering/
 │       │   ├── base_feature_engineering.py
 │       │   ├── di_container.py
@@ -198,26 +208,35 @@
 │       │   ├── boxscore_scraper.py
 │       │   ├── di_container.py
 │       │   ├── main.py
-│       │   ├── matchup_validator.py
 │       │   ├── nba_scraper.py
 │       │   ├── page_scraper.py
 │       │   ├── readme.md
 │       │   ├── schedule_scraper.py
 │       │   ├── test.ipynb
-│       │   ├── test_page_scraper.py
 │       │   ├── utils.py
+│       │   ├── validation_scraper.py
 │       │   └── web_driver.py
 │       └── data_validator.py
 ├── tests/
 │   ├── ml_framework/
 │   └── nba_app/
-│       └── webscraping/
-│           ├── test_boxscore_scraper.py
-│           ├── test_integration.py
-│           ├── test_nba_scraper.py
-│           ├── test_page_scraper.py
-│           └── test_schedule_scraper.py
+│       ├── data_processing/
+│       │   └── test_process_scraped_nba_data.py
+│       ├── feature_engineering/
+│       │   └── test_feature_engineer.py
+│       ├── webscraping/
+│       │   ├── test_boxscore_scraper.py
+│       │   ├── test_integration.py
+│       │   ├── test_nba_scraper.py
+│       │   ├── test_page_scraper.py
+│       │   ├── test_schedule_scraper.py
+│       │   └── test_validation_scraper.py
+│       ├── conftest.py
+│       └── test_data_validator.py
 ├── directory_tree.txt
 ├── pyproject.toml
 ├── README.md
+├── reintegrate_fixed_records.py
+├── test_validation_quick.py
+├── test_validation_scraper.py
 └── uv.lock

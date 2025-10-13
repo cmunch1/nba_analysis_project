@@ -13,7 +13,8 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import List, Dict, Optional, Tuple
+import yaml
+from typing import List, Dict, Optional, Tuple, Set
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from ml_framework.core.config_management.base_config_manager import BaseConfigManager
@@ -34,11 +35,18 @@ class FeatureEngineer(BaseFeatureEngineer):
         """
         self.config = config
         self.app_logger = app_logger
+        self.feature_allowlist = None
+
+        # Load feature allowlist if enabled
+        if hasattr(config, 'feature_allowlist') and getattr(config.feature_allowlist, 'enabled', False):
+            self._load_feature_allowlist()
 
         self.app_logger.structured_log(
             logging.INFO,
             "FeatureEngineer initialized",
-            config_type=type(config).__name__
+            config_type=type(config).__name__,
+            allowlist_enabled=self.feature_allowlist is not None,
+            allowlist_size=len(self.feature_allowlist) if self.feature_allowlist else 0
         )
 
     @staticmethod
@@ -49,6 +57,95 @@ class FeatureEngineer(BaseFeatureEngineer):
             instance = args[0]
             return instance.app_logger.log_performance(func)(*args, **kwargs)
         return wrapper
+
+    def _load_feature_allowlist(self) -> None:
+        """
+        Load feature allowlist from YAML file if enabled in config.
+        The allowlist will be used to filter which features are calculated.
+        """
+        try:
+            allowlist_file = Path(self.config.feature_allowlist.allowlist_file)
+
+            if not allowlist_file.exists():
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Feature allowlist file not found, proceeding with all features",
+                    allowlist_file=str(allowlist_file)
+                )
+                return
+
+            with open(allowlist_file, 'r') as f:
+                allowlist_data = yaml.safe_load(f)
+
+            if 'feature_allowlist' not in allowlist_data:
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Invalid allowlist file format, missing 'feature_allowlist' key",
+                    allowlist_file=str(allowlist_file)
+                )
+                return
+
+            features = allowlist_data['feature_allowlist'].get('features', [])
+
+            # Store as a set for fast lookups
+            self.feature_allowlist = set(features)
+
+            # Log metadata if available
+            metadata = allowlist_data['feature_allowlist'].get('metadata', {})
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Feature allowlist loaded successfully",
+                allowlist_file=str(allowlist_file),
+                num_features=len(self.feature_allowlist),
+                source_audit=metadata.get('source_audit'),
+                recommendation=metadata.get('recommendation')
+            )
+
+        except Exception as e:
+            self.app_logger.structured_log(
+                logging.ERROR,
+                "Failed to load feature allowlist, proceeding with all features",
+                error=str(e)
+            )
+            self.feature_allowlist = None
+
+    def _filter_stats_for_allowlist(self, stats_columns: Set[str], periods: List[int], suffix: str) -> Set[str]:
+        """
+        Filter stats columns to only include those that will produce features in the allowlist.
+
+        The allowlist contains final feature names like 'h_2nd_pts_rolling_avg_10_all'.
+        We need to work backwards to determine which base stats (like '2nd_pts') should be kept.
+
+        Args:
+            stats_columns (Set[str]): Original set of stats columns to filter
+            periods (List[int]): List of rolling average periods
+            suffix (str): Suffix for this run (all, home, visitor)
+
+        Returns:
+            Set[str]: Filtered set of stats columns
+        """
+        if self.feature_allowlist is None:
+            return stats_columns
+
+        # Build a set of base stats that are needed
+        needed_stats = set()
+
+        # For each stat column, check if any of its generated features are in the allowlist
+        for stat_col in stats_columns:
+            for period in periods:
+                # Generate what the feature name would be after processing
+                # Pattern: {stat_col}_rolling_avg_{period}_{suffix}
+                # After merge_team_data, it gets prefixed with h_ or v_
+                feature_name_base = f"{stat_col}_rolling_avg_{period}_{suffix}"
+
+                # Check if either the home or visitor version is in allowlist
+                if (f"{self.config.home_team_prefix}{feature_name_base}" in self.feature_allowlist or
+                    f"{self.config.visitor_team_prefix}{feature_name_base}" in self.feature_allowlist):
+                    needed_stats.add(stat_col)
+                    break  # No need to check other periods for this stat
+
+        return needed_stats
 
     @log_performance
     def engineer_features(self, df: pd.DataFrame, export_schema: bool = False) -> pd.DataFrame:
@@ -134,6 +231,7 @@ class FeatureEngineer(BaseFeatureEngineer):
 
         Args:
             df (pd.DataFrame): Input dataframe.
+            home_or_visitor_suffix (str): Suffix for the feature names (all, home, or visitor).
 
         Returns:
             pd.DataFrame: Dataframe with rolling averages.
@@ -142,6 +240,17 @@ class FeatureEngineer(BaseFeatureEngineer):
         all_columns = set(df.columns)
         stats_columns = all_columns.difference(self.config.game_info_columns + self.config.team_info_columns)
         periods = self.config.team_rolling_avg_periods
+
+        # Filter stats_columns based on feature allowlist if enabled
+        if self.feature_allowlist is not None:
+            stats_columns = self._filter_stats_for_allowlist(stats_columns, periods, home_or_visitor_suffix)
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Filtered stats columns based on allowlist",
+                suffix=home_or_visitor_suffix,
+                original_count=len(all_columns.difference(self.config.game_info_columns + self.config.team_info_columns)),
+                filtered_count=len(stats_columns)
+            )
         
         df = df.sort_values(by = [self.config.new_date_column, self.config.new_game_id_column], axis=0, ascending=[True, True,], ignore_index=True)
 

@@ -46,6 +46,13 @@ class ModelTrainingResults:
         self.learning_curve_data = LearningCurveData()
         self.n_folds = 0
 
+        # Feature audit results
+        self.feature_audit: Optional[pd.DataFrame] = None  # Feature audit DataFrame
+
+        # Per-fold importance tracking for stability analysis
+        self.fold_importances: List[Dict[str, float]] = []  # Model gain importance per fold
+        self.fold_shap_importances: List[Dict[str, float]] = []  # Mean absolute SHAP per fold
+
     def add_learning_curve_point(self, train_size: int, train_score: float, val_score: float, 
                                fold: int, iteration: Optional[int] = None, metric_name: Optional[str] = None):
         """Add a learning curve data point."""
