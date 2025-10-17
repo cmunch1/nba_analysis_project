@@ -43,6 +43,12 @@ class ModelTrainingResults:
         self.preprocessing_results: Optional[PreprocessingResults] = None
         self.preprocessing_artifact: Optional[Dict[str, Any]] = None  # Fitted preprocessor for persistence
 
+        # Postprocessing results
+        self.calibrated_predictions: Optional[NDArray[np.float_]] = None  # Calibrated probabilities
+        self.calibration_artifact: Optional[Any] = None  # Fitted calibrator for persistence
+        self.calibration_metrics: Optional[Dict[str, float]] = None  # Calibration quality metrics
+        self.calibration_curve_data: Optional[Dict[str, Any]] = None  # For visualization
+
         self.learning_curve_data = LearningCurveData()
         self.n_folds = 0
 

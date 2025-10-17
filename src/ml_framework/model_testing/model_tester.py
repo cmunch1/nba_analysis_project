@@ -22,6 +22,7 @@ from ml_framework.framework.data_classes import (
 from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 from ml_framework.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 from ml_framework.model_registry.base_model_registry import BaseModelRegistry
+from ml_framework.postprocessing.probability_calibrator import ProbabilityCalibrator
 
 from .base_model_testing import BaseModelTester
 from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
@@ -769,6 +770,14 @@ class ModelTester(BaseModelTester):
                     'auc': float(results.metrics.auc) if results.metrics.auc else None
                 })
 
+            # Add calibration metrics if available
+            if results.calibration_metrics:
+                metadata.update({
+                    'calibration_brier_score_improvement': results.calibration_metrics.get('brier_score_improvement'),
+                    'calibration_ece_improvement': results.calibration_metrics.get('ece_improvement'),
+                    'calibration_method': getattr(self._model_cfg.postprocessing, 'calibration_method', None) if hasattr(self._model_cfg, 'postprocessing') else None
+                })
+
             # Prepare tags
             if tags is None:
                 tags = {}
@@ -777,14 +786,51 @@ class ModelTester(BaseModelTester):
                 'framework': self._get_model_framework(results.model)
             })
 
-            # Save model with preprocessor artifact
-            model_uri = self.model_registry.save_model(
-                model=results.model,
-                model_name=model_name,
-                preprocessor_artifact=results.preprocessing_artifact,
-                metadata=metadata,
-                tags=tags
-            )
+            # Add calibration tag if calibrated
+            if results.calibration_artifact is not None:
+                tags['calibrated'] = 'true'
+
+            # Prepare additional artifacts dictionary
+            additional_artifacts = {}
+            if results.calibration_artifact is not None:
+                # Check if saving calibrator to registry is enabled
+                postprocessing_cfg = getattr(self._model_cfg, 'postprocessing', None)
+                if postprocessing_cfg and getattr(postprocessing_cfg, 'save_calibrator_to_registry', True):
+                    additional_artifacts['calibrator'] = results.calibration_artifact
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "Including calibration artifact in model save",
+                        model_name=model_name
+                    )
+
+            # Save model with preprocessor and calibration artifacts
+            # Note: Check if your model_registry.save_model() supports additional_artifacts parameter
+            # If not, this may need adjustment based on your registry implementation
+            try:
+                model_uri = self.model_registry.save_model(
+                    model=results.model,
+                    model_name=model_name,
+                    preprocessor_artifact=results.preprocessing_artifact,
+                    metadata=metadata,
+                    tags=tags,
+                    # Try to pass additional artifacts if supported
+                    **({'additional_artifacts': additional_artifacts} if additional_artifacts else {})
+                )
+            except TypeError:
+                # Fallback if registry doesn't support additional_artifacts
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Model registry doesn't support additional_artifacts parameter. "
+                    "Calibration artifact will not be saved to registry.",
+                    model_name=model_name
+                )
+                model_uri = self.model_registry.save_model(
+                    model=results.model,
+                    model_name=model_name,
+                    preprocessor_artifact=results.preprocessing_artifact,
+                    metadata=metadata,
+                    tags=tags
+                )
 
             self.app_logger.structured_log(
                 logging.INFO,
@@ -841,3 +887,94 @@ class ModelTester(BaseModelTester):
             return 'Scikit-learn'
         else:
             return 'Unknown'
+
+    @log_performance
+    def calibrate_probabilities(self,
+                               results: ModelTrainingResults,
+                               X_cal: pd.DataFrame,
+                               y_cal: pd.Series,
+                               model_name: str) -> ModelTrainingResults:
+        """
+        Calibrate probability predictions using configured method.
+
+        Args:
+            results: ModelTrainingResults containing uncalibrated predictions
+            X_cal: Calibration features (typically validation set)
+            y_cal: Calibration labels
+            model_name: Name of the model
+
+        Returns:
+            Updated results with calibrated predictions
+        """
+        # Check if calibration is enabled
+        postprocessing_cfg = getattr(self._model_cfg, 'postprocessing', None)
+        if postprocessing_cfg is None or not getattr(postprocessing_cfg, 'enable_calibration', False):
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Calibration disabled, skipping",
+                model_name=model_name
+            )
+            return results
+
+        try:
+            # Get calibration configuration
+            method = getattr(postprocessing_cfg, 'calibration_method', 'sigmoid')
+            curve_bins = getattr(postprocessing_cfg, 'calibration_curve_bins', 10)
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Starting probability calibration (direct probability method)",
+                model_name=model_name,
+                method=method,
+                n_calibration_samples=len(y_cal)
+            )
+
+            # Create calibrator instance
+            calibrator = ProbabilityCalibrator(
+                app_logger=self.app_logger,
+                error_handler=self.error_handler,
+                method=method
+            )
+
+            # Fit calibrator on calibration probabilities
+            calibrator.fit(
+                y_pred=results.predictions,
+                y_true=y_cal
+            )
+
+            # Transform predictions (pass probabilities directly)
+            calibrated_probs = calibrator.transform(y_pred=results.predictions)
+
+            # Store calibration results
+            results.calibrated_predictions = calibrated_probs
+            results.calibration_artifact = calibrator
+            results.calibration_metrics = calibrator.get_params().get('calibration_metrics', {})
+
+            # Generate calibration curve data if configured
+            if getattr(postprocessing_cfg, 'save_calibration_curves', True):
+                results.calibration_curve_data = calibrator.get_calibration_curve(
+                    y_true=y_cal,
+                    y_pred_uncalibrated=results.predictions,
+                    y_pred_calibrated=calibrated_probs,
+                    n_bins=curve_bins
+                )
+
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Probability calibration completed",
+                model_name=model_name,
+                brier_score_improvement=results.calibration_metrics.get('brier_score_improvement'),
+                ece_improvement=results.calibration_metrics.get('ece_improvement')
+            )
+
+            return results
+
+        except Exception as e:
+            self.app_logger.structured_log(
+                logging.ERROR,
+                "Error during probability calibration",
+                model_name=model_name,
+                error=str(e)
+            )
+            # Return results unchanged if calibration fails
+            return results

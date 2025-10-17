@@ -16,6 +16,7 @@ from ml_framework.core.error_handling.error_handler import (
     ModelTestingError,
     ChartCreationError,
     PreprocessingError,
+    PostprocessingError,
     OptimizationError,
     ExperimentLoggerError
 )
@@ -53,8 +54,9 @@ class ErrorHandlerFactory:
             'feature_selection': FeatureSelectionError,
             'model_testing': ModelTestingError,
             'preprocessing': PreprocessingError,
+            'postprocessing': PostprocessingError,
             'optimization': OptimizationError,
-            
+
             # Visualization errors
             'chart_creation': ChartCreationError,
             

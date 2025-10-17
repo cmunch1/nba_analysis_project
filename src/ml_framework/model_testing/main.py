@@ -336,7 +336,7 @@ def process_model_evaluation(
                 "n_splits": model_cfg.n_splits
             })
 
-        # Calculate metrics
+        # Calculate metrics on uncalibrated predictions
         metrics = ClassificationMetrics()  # Initialize metrics object
         metrics = model_tester.calculate_classification_evaluation_metrics(
             results.target_data,
@@ -348,10 +348,42 @@ def process_model_evaluation(
         # Update predictions with optimal threshold
         results.update_predictions(results.predictions, metrics.optimal_threshold)
 
+        # Apply probability calibration if enabled
+        # Use results.target_data which contains the actual targets for predictions
+        # (important for OOF where predictions may be subset of full training data)
+        results = model_tester.calibrate_probabilities(
+            results=results,
+            X_cal=None,  # Not needed for direct probability calibration
+            y_cal=results.target_data,
+            model_name=model_name
+        )
+
+        # If calibration was applied, calculate calibrated metrics
+        if results.calibrated_predictions is not None:
+            calibrated_metrics = ClassificationMetrics()
+            calibrated_metrics = model_tester.calculate_classification_evaluation_metrics(
+                results.target_data,
+                results.calibrated_predictions,
+                calibrated_metrics
+            )
+
+            # Log comparison between uncalibrated and calibrated
+            app_logger.structured_log(
+                logging.INFO,
+                "Calibration metrics comparison",
+                model_name=model_name,
+                uncalibrated_auc=float(metrics.auc),
+                calibrated_auc=float(calibrated_metrics.auc),
+                brier_improvement=results.calibration_metrics.get('brier_score_improvement') if results.calibration_metrics else None,
+                ece_improvement=results.calibration_metrics.get('ece_improvement') if results.calibration_metrics else None
+            )
+
         # Generate and save visualizations
         charts = chart_orchestrator.create_model_evaluation_charts(results)
         if charts:
-            output_dir = f"charts/{model_name}/{eval_type.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            # Use configured charts output directory
+            base_charts_dir = getattr(model_cfg, 'charts_output_dir', 'src/ml_framework/ml_artifacts/visualizations/charts')
+            output_dir = f"{base_charts_dir}/{model_name}/{eval_type.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             chart_orchestrator.save_charts(charts, output_dir)
 
         # Generate feature audit if configured
@@ -451,7 +483,7 @@ def _save_predictions(
     is_oof: bool,
     app_logger
 ) -> None:
-    """Save model predictions to file."""
+    """Save model predictions to file, including calibrated predictions if available."""
     try:
         predictions_df = results.feature_data.copy()
         predictions_df['target'] = results.target_data
@@ -460,7 +492,29 @@ def _save_predictions(
             predictions_df.insert(0, config.core.model_testing_config.primary_id_column, primary_ids)
 
         pred_type = "oof" if is_oof else "val"
-        predictions_df[f'{pred_type}_predictions'] = results.probability_predictions
+
+        # Save uncalibrated predictions
+        predictions_df[f'{pred_type}_predictions_uncalibrated'] = results.probability_predictions
+
+        # Save calibrated predictions if available
+        if results.calibrated_predictions is not None:
+            predictions_df[f'{pred_type}_predictions_calibrated'] = results.calibrated_predictions
+
+            # Add comparison columns for easy analysis
+            import numpy as np
+            predictions_df[f'{pred_type}_calibration_adjustment'] = (
+                results.calibrated_predictions - results.probability_predictions
+            )
+            predictions_df[f'{pred_type}_abs_adjustment'] = np.abs(
+                results.calibrated_predictions - results.probability_predictions
+            )
+
+            app_logger.structured_log(
+                logging.INFO,
+                f"Including calibrated predictions in save",
+                mean_adjustment=float(predictions_df[f'{pred_type}_calibration_adjustment'].mean()),
+                max_abs_adjustment=float(predictions_df[f'{pred_type}_abs_adjustment'].max())
+            )
 
         output_filename = f"{model_name}_{pred_type}_predictions.csv"
 
@@ -468,7 +522,8 @@ def _save_predictions(
             logging.INFO,
             f"Saving {pred_type} predictions",
             output_shape=predictions_df.shape,
-            filename=output_filename
+            filename=output_filename,
+            has_calibrated=results.calibrated_predictions is not None
         )
 
         data_access.save_dataframes(
@@ -496,9 +551,11 @@ def _create_model_comparison_charts(
         comparison_charts = chart_orchestrator.create_model_comparison_charts(
             list(results_by_model.values())
         )
-        
+
         if comparison_charts:
-            output_dir = f"charts/model_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            # Use configured charts output directory
+            base_charts_dir = getattr(config.core.model_testing_config, 'charts_output_dir', 'src/ml_framework/ml_artifacts/visualizations/charts')
+            output_dir = f"{base_charts_dir}/model_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             chart_orchestrator.save_charts(comparison_charts, output_dir)
             
         app_logger.structured_log(

@@ -86,6 +86,24 @@ calculate_shap_values: true
 max_shap_interaction_memory_gb: 256.0
 calculate_shap_interactions: false
 
+# Visualization output settings
+charts_output_dir: "${PROJECT_ROOT}/src/ml_framework/ml_artifacts/visualizations/charts" # Base directory for chart outputs
+
+# Postprocessing settings
+postprocessing:
+  # Probability calibration
+  enable_calibration: true # Enable probability calibration
+  calibration_method: sigmoid # 'sigmoid' (Platt scaling) or 'isotonic' (isotonic regression)
+  calibration_cv_folds: 5 # Number of CV folds (use 'prefit' for already trained models)
+
+  # Calibration evaluation
+  save_calibration_curves: true # Save calibration curve plots
+  save_calibration_metrics: true # Save calibration metrics (Brier score, ECE, log loss)
+  calibration_curve_bins: 10 # Number of bins for calibration curves
+
+  # Model registry integration
+  save_calibrator_to_registry: true # Save calibration artifact with model
+
 # Feature audit settings
 generate_feature_audit: false # Enable feature audit generation
 save_feature_audit: false # Save audit results to CSV/parquet

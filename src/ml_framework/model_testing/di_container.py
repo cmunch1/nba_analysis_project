@@ -7,6 +7,7 @@ from dependency_injector import containers, providers
 from ml_framework.core.common_di_container import CommonDIContainer
 from ml_framework.visualization.orchestration.chart_orchestrator import ChartOrchestrator
 from ml_framework.preprocessing.preprocessor import Preprocessor
+from ml_framework.postprocessing.probability_calibrator import ProbabilityCalibrator
 
 from .model_tester import ModelTester
 from .hyperparams_managers.hyperparams_manager import HyperparamsManager
@@ -37,6 +38,13 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         config=config,
         app_logger=app_logger,
         app_file_handler=app_file_handler,
+        error_handler=error_handler
+    )
+
+    # Postprocessor - Probability calibrator
+    probability_calibrator = providers.Factory(
+        ProbabilityCalibrator,
+        app_logger=app_logger,
         error_handler=error_handler
     )
 

@@ -88,7 +88,12 @@ class PreprocessingError(ErrorHandler):
     """Raised when there's an error in the preprocessing process."""
     def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
         super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
- 
+
+class PostprocessingError(ErrorHandler):
+    """Raised when there's an error in the postprocessing process."""
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
+
 class OptimizationError(ErrorHandler):
     """Raised when there's an error in the optimization process."""
     def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):

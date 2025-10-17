@@ -1,9 +1,11 @@
 import logging
 from typing import Dict, Optional
 import matplotlib.pyplot as plt
+import numpy as np
 from ..charts.chart_factory import ChartFactory
 from ..charts.chart_types import ChartType
 from ..charts.base_chart import BaseChart
+from ..charts.calibration_charts import CalibrationCharts
 from ml_framework.core.app_file_handling.base_app_file_handler import BaseAppFileHandler
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 from ml_framework.core.error_handling.base_error_handler import BaseErrorHandler
@@ -147,13 +149,18 @@ class ChartOrchestrator(BaseChartOrchestrator):
             if ChartType.MODEL_INTERPRETATION in self.charts:
                 interpretation_charts = self._create_interpretation_charts(results)
                 charts_dict.update(interpretation_charts)
-            
+
+            # Calibration charts
+            if hasattr(results, 'calibration_curve_data') and results.calibration_curve_data is not None:
+                calibration_charts = self._create_calibration_charts(results)
+                charts_dict.update(calibration_charts)
+
             self.app_logger.structured_log(
                 logging.INFO,
                 "Model evaluation charts created",
                 chart_types=list(charts_dict.keys())
             )
-            
+
             return charts_dict
             
         except Exception as e:
@@ -246,10 +253,10 @@ class ChartOrchestrator(BaseChartOrchestrator):
     def _create_interpretation_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
         """Create model interpretation charts."""
         interpretation_charts = {}
-        
+
         if ChartType.MODEL_INTERPRETATION in self.charts:
             interpreter = self.charts[ChartType.MODEL_INTERPRETATION]
-            
+
             # Check if model and configuration are available
             if (hasattr(results, 'model') and
                 hasattr(self._viz_cfg, 'chart_options') and
@@ -258,7 +265,7 @@ class ChartOrchestrator(BaseChartOrchestrator):
 
                 # Get indices for force plots
                 force_plot_indices = self._viz_cfg.chart_options.model_interpretation.force_plot_indices
-                
+
                 for idx in force_plot_indices:
                     if hasattr(results, 'feature_data') and idx < len(results.feature_data):
                         interpretation_charts[f'shap_force_plot_{idx}'] = interpreter.create_shap_force_plot(
@@ -267,8 +274,52 @@ class ChartOrchestrator(BaseChartOrchestrator):
                             index=idx,
                             shap_values=results.shap_values if hasattr(results, 'shap_values') else None
                         )
-                    
+
         return interpretation_charts
+
+    def _create_calibration_charts(self, results: ModelTrainingResults) -> Dict[str, plt.Figure]:
+        """Create calibration-related charts."""
+        calibration_charts_dict = {}
+
+        try:
+            # Create calibration chart instance
+            calibration_chart = CalibrationCharts(
+                self.config,
+                self.app_logger,
+                self.error_handler
+            )
+
+            # Create calibration curve if data available
+            if results.calibration_curve_data:
+                calibration_charts_dict['calibration_curve'] = calibration_chart.create_calibration_curve(
+                    results.calibration_curve_data
+                )
+
+            # Create calibration metrics comparison if metrics available
+            if results.calibration_metrics:
+                calibration_charts_dict['calibration_metrics'] = calibration_chart.create_calibration_comparison(
+                    results.calibration_metrics
+                )
+
+            # Create probability histogram if we have both predictions
+            if (results.calibrated_predictions is not None and
+                results.predictions is not None and
+                results.target_data is not None):
+                calibration_charts_dict['probability_histogram'] = calibration_chart.create_probability_histogram(
+                    y_pred_uncalibrated=results.predictions,
+                    y_pred_calibrated=results.calibrated_predictions,
+                    y_true=results.target_data
+                )
+
+            return calibration_charts_dict
+
+        except Exception as e:
+            self.app_logger.structured_log(
+                logging.WARNING,
+                "Failed to create calibration charts",
+                error=str(e)
+            )
+            return {}
 
     def create_model_comparison_charts(self, model_results: list) -> Dict[str, plt.Figure]:
         """
