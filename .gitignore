@@ -22,9 +22,8 @@ zzz/
 charts/
 *:Zone.Identifier
 
-# Feature audits and pruning reports - generated outputs
-feature_audits/
-pruning_reports/
+# ML artifacts - all generated outputs from training, experiments, and feature engineering
+ml_artifacts/
 
 # Data files - large CSVs should not be in version control
 data/engineered/

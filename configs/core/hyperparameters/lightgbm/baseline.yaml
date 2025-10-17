@@ -1,5 +1,5 @@
 # LightGBM baseline hyperparameters
-device: cuda
+device: cpu
 objective: binary
 metric: auc
 verbose: -1

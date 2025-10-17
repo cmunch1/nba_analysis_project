@@ -5,7 +5,7 @@ include_postseason: true
 # Feature allowlist - use to filter features based on pruning analysis
 feature_allowlist:
   enabled: true  # Set to true to enable feature filtering
-  allowlist_file: "configs/features/feature_allowlist.yaml"  # Path to allowlist YAML
+  allowlist_file: "ml_artifacts/features/allowlists/feature_allowlist_latest.yaml"  # Path to allowlist YAML
   mode: "allowlist"  # "allowlist" = only calculate features in list, "discovery" = calculate all features
 
 # used to calculate the approximate progress of the season (elapsed days over total days)

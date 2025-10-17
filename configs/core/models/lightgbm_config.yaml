@@ -11,7 +11,7 @@ use_baseline_hyperparameters: true # false = use current best hyperparameters
 optimizer: Optuna   #only Optuna is supported currently
 
 static_params:
-  device: cuda
+  device: cpu
   random_state: 42
   objective: binary
   metric: auc

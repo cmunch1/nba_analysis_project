@@ -1,0 +1,30 @@
+# Centralized artifact paths configuration
+# All ML artifacts are stored under ml_artifacts/ to reduce project root clutter
+
+# Root directory for all ML artifacts
+artifact_root: "ml_artifacts"
+
+# Model artifacts
+models:
+  root: "${artifact_root}/models"
+  checkpoints: "${artifact_root}/models/checkpoints"
+  final: "${artifact_root}/models/final"
+
+# Experiment tracking artifacts
+experiments:
+  root: "${artifact_root}/experiments"
+  hyperparameters: "${artifact_root}/experiments/hyperparameters"
+  runs: "${artifact_root}/experiments/runs"
+
+# Feature engineering artifacts
+features:
+  root: "${artifact_root}/features"
+  allowlists: "${artifact_root}/features/allowlists"
+  audits: "${artifact_root}/features/audits"
+  pruning: "${artifact_root}/features/pruning"
+  pruning_reports: "${artifact_root}/features/pruning/reports"
+  schemas: "${artifact_root}/features/schemas"
+
+# Prediction/inference outputs
+predictions:
+  root: "${artifact_root}/predictions"

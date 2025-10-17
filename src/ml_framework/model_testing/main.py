@@ -193,13 +193,31 @@ def process_single_model(
     )
 
     # Optimize hyperparameters if configured
-    if model_tester.get_model_config_value(model_name, 'perform_hyperparameter_optimization', False):
+    should_optimize = model_tester.get_model_config_value(model_name, 'perform_hyperparameter_optimization', False)
+    app_logger.structured_log(
+        logging.INFO,
+        "Checking hyperparameter optimization setting",
+        model_name=model_name,
+        should_optimize=should_optimize
+    )
+
+    if should_optimize:
+        app_logger.structured_log(
+            logging.INFO,
+            "Starting hyperparameter optimization",
+            model_name=model_name
+        )
         model_params = optimizer.optimize(
             model_type=model_name,
             X=X,
             y=y
         )
     else:
+        app_logger.structured_log(
+            logging.INFO,
+            "Skipping hyperparameter optimization, using existing params",
+            model_name=model_name
+        )
         model_params = model_tester.get_model_params(model_name)
 
     app_logger.structured_log(

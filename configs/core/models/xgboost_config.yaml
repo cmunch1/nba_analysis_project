@@ -6,8 +6,8 @@ verbose_eval: 100
 enable_categorical: false
 
 # Hyperparameter Settings
-perform_hyperparameter_optimization: false 
-use_baseline_hyperparameters: true # false = use current best hyperparameters
+perform_hyperparameter_optimization: false
+use_baseline_hyperparameters: false # false = use current best hyperparameters
 
 # Hyperparameter Optimization
 optimizer: Optuna   #only Optuna is supported currently
@@ -20,7 +20,7 @@ static_params:
   tree_method: hist
 
 optimization:
-  n_trials: 100
+  n_trials: 200
   param_space:
     learning_rate: [1.0e-3, 1.0, float, true]
     max_bin: [2, 256, int]

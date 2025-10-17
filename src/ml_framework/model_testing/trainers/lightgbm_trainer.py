@@ -110,6 +110,22 @@ class LightGBMTrainer(BaseTrainer):
             # Initialize dict to store evaluation results
             evals_result = {}
 
+            # Prepare callbacks for early stopping and verbosity
+            callbacks = []
+
+            # Add early stopping callback if configured
+            early_stopping_rounds = self.config.LightGBM.early_stopping_rounds if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'early_stopping_rounds') else 10
+            if early_stopping_rounds:
+                callbacks.append(lgb.early_stopping(stopping_rounds=early_stopping_rounds))
+
+            # Add verbose evaluation callback if configured
+            verbose_eval = self.config.LightGBM.verbose_eval if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'verbose_eval') else 100
+            if verbose_eval:
+                callbacks.append(lgb.log_evaluation(period=verbose_eval))
+
+            # Add callback to record evaluation results
+            callbacks.append(lgb.record_evaluation(evals_result))
+
             # Train model
             model = lgb.train(
                 params=model_params,
@@ -117,9 +133,7 @@ class LightGBMTrainer(BaseTrainer):
                 num_boost_round=self.config.LightGBM.num_boost_round if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'num_boost_round') else 100,
                 valid_sets=[train_data, val_data],
                 valid_names=['train', 'eval'],
-                early_stopping_rounds=self.config.LightGBM.early_stopping_rounds if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'early_stopping_rounds') else 10,
-                verbose_eval=self.config.LightGBM.verbose_eval if hasattr(self.config, 'LightGBM') and hasattr(self.config.LightGBM, 'verbose_eval') else 100,
-                evals_result=evals_result
+                callbacks=callbacks
             )
 
             # Store model and generate predictions

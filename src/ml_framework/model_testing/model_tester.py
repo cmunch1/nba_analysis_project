@@ -424,12 +424,26 @@ class ModelTester(BaseModelTester):
     def get_model_config(self, model_name: str) -> Any:
         """Get model-specific configuration."""
         try:
-            config_name = model_name.replace('_', '')  # Remove underscores for config access
-            return getattr(self._model_cfg.models, config_name, None)
-        except AttributeError:
+            # Model configurations are at config.core.models with '_config' suffix
+            # e.g., xgboost -> xgboost_config, sklearn_randomforest -> sklearnrandomforest_config
+            config_name = model_name.replace('_', '') + '_config'
+
+            if hasattr(self.config.core, 'models'):
+                model_config = getattr(self.config.core.models, config_name, None)
+                if model_config is None:
+                    self.app_logger.structured_log(
+                        logging.DEBUG,
+                        f"No configuration found for model config name: {config_name}",
+                        model_name=model_name
+                    )
+                return model_config
+            return None
+        except AttributeError as e:
             self.app_logger.structured_log(
                 logging.WARNING,
-                f"No configuration found for model: {model_name}"
+                f"Error accessing model configuration",
+                model_name=model_name,
+                error=str(e)
             )
             return None
     

@@ -54,7 +54,7 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
             )
         except Exception as e:
             raise self.error_handler.create_error_handler(
-                'hyperparameter_optimization',
+                'optimization',
                 "Failed to create Optuna study",
                 error_message=str(e)
             )
@@ -82,15 +82,14 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
         try:
             # Local config aliases
             model_cfg = self.config.core.model_testing_config
-            optuna_cfg = self.config.core.optuna_config
 
-            # Get parameter space based on model type
-            param_space = self._get_param_space(model_type)
+            # Get parameter space and optimization settings from model config
+            param_space, opt_settings = self._get_param_space(model_type)
 
-            # Get optimization settings from config
-            n_trials = optuna_cfg.optuna.n_trials
-            scoring = optuna_cfg.optuna.scoring
-            direction = optuna_cfg.optuna.direction
+            # Get optimization settings
+            n_trials = opt_settings.get('n_trials', 100)
+            scoring = 'auc'  # Default scoring
+            direction = 'maximize'  # For AUC, we want to maximize
             n_splits = n_splits or model_cfg.n_splits
             cv_type = model_cfg.cross_validation_type
 
@@ -134,25 +133,56 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
                 run_id=run_id,
                 description="Optuna optimization"
             )
-            
-            return (final_best_params if self.config.always_use_new_hyperparameters 
-                   else self.hyperparameter_manager.get_current_params(model_name=model_type))
+
+            # Return the newly optimized parameters
+            return final_best_params
         
         except Exception as e:
             raise self.error_handler.create_error_handler(
-                'hyperparameter_optimization',
+                'optimization',
                 "Error during optimization",
                 error_message=str(e)
             )
 
-    def _get_param_space(self, model_type: str) -> Dict[str, Any]:
-        """Get parameter space configuration for model type."""
-        if model_type.lower() == "xgboost":
-            return self._namespace_to_dict(self.config.xgb_param_space)
-        elif model_type.lower() == "lightgbm":
-            return self._namespace_to_dict(self.config.lgbm_param_space)
-        else:
-            raise ValueError(f"Unsupported model type: {model_type}")
+    def _get_param_space(self, model_type: str):
+        """Get parameter space and optimization settings from model-specific config.
+
+        Returns:
+            Tuple of (param_space_dict, optimization_settings_dict)
+        """
+        try:
+            # Get model config name (e.g., xgboost -> xgboost_config)
+            config_name = model_type.replace('_', '') + '_config'
+
+            # Access model config
+            if hasattr(self.config.core, 'models'):
+                model_config = getattr(self.config.core.models, config_name, None)
+                if model_config is None:
+                    raise ValueError(f"No configuration found for {config_name}")
+
+                # Extract optimization settings
+                if hasattr(model_config, 'optimization'):
+                    opt_config = model_config.optimization
+
+                    # Build parameter space
+                    param_space = {
+                        'static_params': vars(model_config.static_params) if hasattr(model_config, 'static_params') else {},
+                        'dynamic_params': vars(opt_config.param_space) if hasattr(opt_config, 'param_space') else {}
+                    }
+
+                    # Extract optimization settings
+                    opt_settings = {
+                        'n_trials': opt_config.n_trials if hasattr(opt_config, 'n_trials') else 100
+                    }
+
+                    return param_space, opt_settings
+                else:
+                    raise ValueError(f"No optimization config found in {config_name}")
+            else:
+                raise ValueError("config.core.models not found")
+
+        except Exception as e:
+            raise ValueError(f"Error loading parameter space for {model_type}: {str(e)}")
 
     def _namespace_to_dict(self, namespace: Any) -> Dict:
         """Recursively convert SimpleNamespace to dict."""
@@ -216,7 +246,7 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
                         
                 except Exception as e:
                     raise self.error_handler.create_error_handler(
-                        'hyperparameter_optimization',
+                        'optimization',
                         f"Error processing parameter {param_name}",
                         error_message=f"Config: {config}. Error: {str(e)}"
                     )
@@ -225,7 +255,7 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
             
         except Exception as e:
             raise self.error_handler.create_error_handler(
-                'hyperparameter_optimization',
+                'optimization',
                 "Error processing parameters",
                 error_message=str(e)
             )
@@ -234,17 +264,23 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
         """Return the best parameters found during optimization."""
         if self.best_params is None:
             raise self.error_handler.create_error_handler(
-                'hyperparameter_optimization',
+                'optimization',
                 "No optimization has been performed yet"
             )
         return self.best_params
 
     def _optimize_xgboost(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):
         """Optimize XGBoost model hyperparameters."""
+        # Get XGBoost-specific settings from model config
+        xgb_config = self.config.core.models.xgboost_config
+        enable_categorical = xgb_config.enable_categorical if hasattr(xgb_config, 'enable_categorical') else False
+        num_boost_round = xgb_config.num_boost_round if hasattr(xgb_config, 'num_boost_round') else 100
+        early_stopping_rounds = xgb_config.early_stopping_rounds if hasattr(xgb_config, 'early_stopping_rounds') else 10
+
         def objective(trial):
             params = self._process_parameters(trial, param_space)
             scores = []
-            
+
             # Use appropriate cross-validation strategy
             if cv_type == "TimeSeriesSplit":
                 kf = TimeSeriesSplit(n_splits=n_splits)
@@ -254,43 +290,43 @@ class OptunaOptimizer(BaseHyperparamsOptimizer):
                     shuffle=True,
                     random_state=self.config.random_state
                 )
-            
+
             for train_idx, val_idx in kf.split(X, y):
                 X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
-                
+
                 dtrain = xgb.DMatrix(
                     X_train,
                     label=y_train,
-                    enable_categorical=self.config.XGBoost.enable_categorical
+                    enable_categorical=enable_categorical
                 )
                 dval = xgb.DMatrix(
                     X_val,
                     label=y_val,
-                    enable_categorical=self.config.XGBoost.enable_categorical
+                    enable_categorical=enable_categorical
                 )
-                
+
                 model = xgb.train(
                     params,
                     dtrain,
-                    num_boost_round=self.config.XGBoost.num_boost_round,
+                    num_boost_round=num_boost_round,
                     evals=[(dval, 'val')],
-                    early_stopping_rounds=self.config.XGBoost.early_stopping_rounds,
+                    early_stopping_rounds=early_stopping_rounds,
                     verbose_eval=False
                 )
-                
+
                 y_pred = model.predict(dval)
                 scores.append(self._calculate_score(y_val, y_pred, scoring))
-            
+
             return np.mean(scores)
-        
+
         # Run optimization
         self.study.optimize(
             objective,
             n_trials=n_trials,
             callbacks=[self._optimization_callback]
         )
-        
+
         return self.study
 
     def _optimize_lightgbm(self, X, y, param_space, n_trials, n_splits, cv_type, scoring):

@@ -39,7 +39,7 @@ perform_preprocessing: false
 current_hyperparameters: "${PROJECT_ROOT}/configs/hyperparameters.json"
 
 # hyperparameters storage directory
-hyperparameter_history_dir: "${PROJECT_ROOT}/hyperparameter_history"
+hyperparameter_history_dir: "${PROJECT_ROOT}/ml_artifacts/experiments/hyperparameters"
 
 # hyperparameter metadata - fields that are not used as hyperparameters but may be included in tracking
 hyperparameter_metadata:
@@ -87,8 +87,8 @@ max_shap_interaction_memory_gb: 256.0
 calculate_shap_interactions: false
 
 # Feature audit settings
-generate_feature_audit: true # Enable feature audit generation
-save_feature_audit: true # Save audit results to CSV/parquet
+generate_feature_audit: false # Enable feature audit generation
+save_feature_audit: false # Save audit results to CSV/parquet
 feature_audit_format: csv # Output format: 'csv' or 'parquet' (parquet preserves precision)
 
 # Feature audit metrics configuration
@@ -123,7 +123,7 @@ feature_audit_thresholds:
   drop_candidate_threshold: 2 # Minimum score to flag as drop candidate
 
 # Feature audit output
-feature_audit_output_dir: "${PROJECT_ROOT}/feature_audits" # Directory for audit files
+feature_audit_output_dir: "${PROJECT_ROOT}/ml_artifacts/features/audits" # Directory for audit files
 feature_audit_versioning: true # Include run_id and timestamp in filename
 
 # Feature pruning settings
@@ -143,7 +143,7 @@ feature_pruning:
   # Output
   save_pruned_datasets: false # Save pruned train/val CSV to data/pruned/
   save_comparison_report: true # Save comparison report
-  comparison_report_dir: "${PROJECT_ROOT}/pruning_reports" # Report output directory
+  comparison_report_dir: "${PROJECT_ROOT}/ml_artifacts/features/pruning/reports" # Report output directory
 
 
 

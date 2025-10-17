@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument(
         "--output-file",
         type=str,
-        help="Path to save the feature allowlist YAML. If not provided, saves to configs/features/feature_allowlist.yaml"
+        help="Path to save the feature allowlist YAML. If not provided, saves to ml_artifacts/features/allowlists/feature_allowlist_latest.yaml"
     )
     return parser.parse_args()
 
@@ -179,8 +179,8 @@ def main():
         project_root = Path.cwd()
 
         # Use the directory names from config but with correct project root
-        reports_dir = project_root / "pruning_reports"
-        audits_dir = project_root / "feature_audits"
+        reports_dir = project_root / "ml_artifacts" / "features" / "pruning" / "reports"
+        audits_dir = project_root / "ml_artifacts" / "features" / "audits"
 
         app_logger.structured_log(
             logging.INFO,
@@ -358,8 +358,8 @@ def main():
         if args.output_file:
             output_file = Path(args.output_file)
         else:
-            # Default to configs/features/feature_allowlist.yaml
-            output_file = project_root / "configs" / "features" / "feature_allowlist.yaml"
+            # Default to ml_artifacts/features/allowlists/feature_allowlist_latest.yaml
+            output_file = project_root / "ml_artifacts" / "features" / "allowlists" / "feature_allowlist_latest.yaml"
 
         # Create output directory if needed
         app_file_handler.ensure_directory(output_file.parent)
@@ -367,7 +367,6 @@ def main():
         # Create YAML structure
         allowlist_data = {
             'feature_allowlist': {
-                'enabled': False,  # Set to false by default - user must enable manually
                 'features': sorted(kept_features),  # Sort for consistency
                 'metadata': {
                     'created_at': datetime.now().isoformat(),
@@ -396,7 +395,8 @@ def main():
         print(f"  Output file: {output_file}")
         print(f"  Features kept: {len(kept_features)}")
         print(f"  Features dropped: {len(dropped_features)}")
-        print(f"\nTo enable the allowlist, edit {output_file} and set 'enabled: true'")
+        print(f"\nTo enable the allowlist, edit configs/nba/feature_engineering_config.yaml")
+        print(f"and set feature_allowlist.enabled: true")
 
     except Exception as e:
         import traceback
