@@ -23,6 +23,7 @@ from ml_framework.preprocessing.base_preprocessor import BasePreprocessor
 from ml_framework.visualization.orchestration.base_chart_orchestrator import BaseChartOrchestrator
 from ml_framework.model_registry.base_model_registry import BaseModelRegistry
 from ml_framework.postprocessing.probability_calibrator import ProbabilityCalibrator
+from ml_framework.postprocessing.calibration_optimizer import CalibrationOptimizer
 
 from .base_model_testing import BaseModelTester
 from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
@@ -60,10 +61,14 @@ class ModelTester(BaseModelTester):
         self.error_handler = error_handler
         self.model_registry = model_registry
 
+        # Access postprocessing config from dedicated config file
+        self._postprocessing_cfg = getattr(config.core, 'postprocessing_config', None)
+
         self.app_logger.structured_log(logging.INFO, "ModelTester initialized",
                                      config_type=type(config).__name__,
                                      available_trainers=list(trainers.keys()),
-                                     has_model_registry=model_registry is not None)
+                                     has_model_registry=model_registry is not None,
+                                     has_postprocessing_config=self._postprocessing_cfg is not None)
 
     @staticmethod
     def log_performance(func):
@@ -772,10 +777,15 @@ class ModelTester(BaseModelTester):
 
             # Add calibration metrics if available
             if results.calibration_metrics:
+                # Get calibration method from postprocessing config or results
+                calibration_method = None
+                if self._postprocessing_cfg and hasattr(self._postprocessing_cfg, 'calibration'):
+                    calibration_method = getattr(self._postprocessing_cfg.calibration, 'method', None)
+
                 metadata.update({
                     'calibration_brier_score_improvement': results.calibration_metrics.get('brier_score_improvement'),
                     'calibration_ece_improvement': results.calibration_metrics.get('ece_improvement'),
-                    'calibration_method': getattr(self._model_cfg.postprocessing, 'calibration_method', None) if hasattr(self._model_cfg, 'postprocessing') else None
+                    'calibration_method': calibration_method
                 })
 
             # Prepare tags
@@ -794,8 +804,11 @@ class ModelTester(BaseModelTester):
             additional_artifacts = {}
             if results.calibration_artifact is not None:
                 # Check if saving calibrator to registry is enabled
-                postprocessing_cfg = getattr(self._model_cfg, 'postprocessing', None)
-                if postprocessing_cfg and getattr(postprocessing_cfg, 'save_calibrator_to_registry', True):
+                save_to_registry = True
+                if self._postprocessing_cfg and hasattr(self._postprocessing_cfg, 'calibration'):
+                    save_to_registry = getattr(self._postprocessing_cfg.calibration, 'save_to_registry', True)
+
+                if save_to_registry:
                     additional_artifacts['calibrator'] = results.calibration_artifact
                     self.app_logger.structured_log(
                         logging.INFO,
@@ -897,6 +910,9 @@ class ModelTester(BaseModelTester):
         """
         Calibrate probability predictions using configured method.
 
+        Supports both manual calibration (fixed method) and automatic optimization
+        (grid search over methods and parameters).
+
         Args:
             results: ModelTrainingResults containing uncalibrated predictions
             X_cal: Calibration features (typically validation set)
@@ -907,8 +923,16 @@ class ModelTester(BaseModelTester):
             Updated results with calibrated predictions
         """
         # Check if calibration is enabled
-        postprocessing_cfg = getattr(self._model_cfg, 'postprocessing', None)
-        if postprocessing_cfg is None or not getattr(postprocessing_cfg, 'enable_calibration', False):
+        if self._postprocessing_cfg is None or not hasattr(self._postprocessing_cfg, 'calibration'):
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Calibration config not found, skipping",
+                model_name=model_name
+            )
+            return results
+
+        calibration_cfg = self._postprocessing_cfg.calibration
+        if not getattr(calibration_cfg, 'enable', False):
             self.app_logger.structured_log(
                 logging.INFO,
                 "Calibration disabled, skipping",
@@ -917,30 +941,25 @@ class ModelTester(BaseModelTester):
             return results
 
         try:
-            # Get calibration configuration
-            method = getattr(postprocessing_cfg, 'calibration_method', 'sigmoid')
-            curve_bins = getattr(postprocessing_cfg, 'calibration_curve_bins', 10)
+            # Check if calibration optimization is enabled
+            optimize_calibration = getattr(calibration_cfg, 'optimize', False)
 
-            self.app_logger.structured_log(
-                logging.INFO,
-                "Starting probability calibration (direct probability method)",
-                model_name=model_name,
-                method=method,
-                n_calibration_samples=len(y_cal)
-            )
-
-            # Create calibrator instance
-            calibrator = ProbabilityCalibrator(
-                app_logger=self.app_logger,
-                error_handler=self.error_handler,
-                method=method
-            )
-
-            # Fit calibrator on calibration probabilities
-            calibrator.fit(
-                y_pred=results.predictions,
-                y_true=y_cal
-            )
+            if optimize_calibration:
+                # Use CalibrationOptimizer for automatic method selection
+                calibrator = self._optimize_calibration(
+                    results=results,
+                    y_cal=y_cal,
+                    model_name=model_name,
+                    calibration_cfg=calibration_cfg
+                )
+            else:
+                # Use manual calibration method
+                calibrator = self._manual_calibration(
+                    results=results,
+                    y_cal=y_cal,
+                    model_name=model_name,
+                    calibration_cfg=calibration_cfg
+                )
 
             # Transform predictions (pass probabilities directly)
             calibrated_probs = calibrator.transform(y_pred=results.predictions)
@@ -951,7 +970,8 @@ class ModelTester(BaseModelTester):
             results.calibration_metrics = calibrator.get_params().get('calibration_metrics', {})
 
             # Generate calibration curve data if configured
-            if getattr(postprocessing_cfg, 'save_calibration_curves', True):
+            curve_bins = getattr(calibration_cfg, 'curve_bins', 10)
+            if getattr(calibration_cfg, 'save_curves', True):
                 results.calibration_curve_data = calibrator.get_calibration_curve(
                     y_true=y_cal,
                     y_pred_uncalibrated=results.predictions,
@@ -964,7 +984,8 @@ class ModelTester(BaseModelTester):
                 "Probability calibration completed",
                 model_name=model_name,
                 brier_score_improvement=results.calibration_metrics.get('brier_score_improvement'),
-                ece_improvement=results.calibration_metrics.get('ece_improvement')
+                ece_improvement=results.calibration_metrics.get('ece_improvement'),
+                optimized=optimize_calibration
             )
 
             return results
@@ -978,3 +999,123 @@ class ModelTester(BaseModelTester):
             )
             # Return results unchanged if calibration fails
             return results
+
+    def _optimize_calibration(self,
+                             results: ModelTrainingResults,
+                             y_cal: pd.Series,
+                             model_name: str,
+                             calibration_cfg: Any) -> ProbabilityCalibrator:
+        """
+        Optimize calibration method using grid search.
+
+        Args:
+            results: ModelTrainingResults containing uncalibrated predictions
+            y_cal: Calibration labels
+            model_name: Name of the model
+            calibration_cfg: Calibration configuration
+
+        Returns:
+            Best calibrator found during optimization
+        """
+        # Get optimization configuration
+        opt_cfg = getattr(calibration_cfg, 'optimization', None)
+        if opt_cfg is None:
+            raise ValueError("optimization config not found when optimize=true")
+
+        methods = getattr(opt_cfg, 'methods', ['sigmoid', 'isotonic'])
+        evaluation_bins = getattr(opt_cfg, 'evaluation_bins', [10])
+        selection_metric = getattr(opt_cfg, 'selection_metric', 'brier_score')
+        cv_folds = getattr(opt_cfg, 'cv_folds', 3)
+        use_cv = getattr(opt_cfg, 'use_cv', True)
+
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Starting calibration optimization",
+            model_name=model_name,
+            methods=methods,
+            evaluation_bins=evaluation_bins,
+            selection_metric=selection_metric,
+            cv_folds=cv_folds,
+            n_calibration_samples=len(y_cal)
+        )
+
+        # Create optimizer
+        optimizer = CalibrationOptimizer(
+            app_logger=self.app_logger,
+            error_handler=self.error_handler,
+            methods=methods,
+            evaluation_bins=evaluation_bins,
+            selection_metric=selection_metric,
+            cv_folds=cv_folds,
+            random_state=self.config.random_state
+        )
+
+        # Run optimization
+        best_calibrator, optimization_results = optimizer.optimize(
+            y_pred=results.predictions,
+            y_true=y_cal,
+            use_cv=use_cv
+        )
+
+        # Log optimization results
+        best_config = optimizer.get_best_config()
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Calibration optimization complete",
+            model_name=model_name,
+            best_method=best_config['method'],
+            best_eval_bins=best_config['eval_bins'],
+            n_configs_evaluated=len(optimization_results)
+        )
+
+        # Log summary of all configurations
+        summary_df = optimizer.get_optimization_summary()
+        self.app_logger.structured_log(
+            logging.DEBUG,
+            "Calibration optimization summary",
+            summary=summary_df.to_dict('records')
+        )
+
+        return best_calibrator
+
+    def _manual_calibration(self,
+                           results: ModelTrainingResults,
+                           y_cal: pd.Series,
+                           model_name: str,
+                           calibration_cfg: Any) -> ProbabilityCalibrator:
+        """
+        Perform manual calibration with fixed method.
+
+        Args:
+            results: ModelTrainingResults containing uncalibrated predictions
+            y_cal: Calibration labels
+            model_name: Name of the model
+            calibration_cfg: Calibration configuration
+
+        Returns:
+            Fitted calibrator
+        """
+        method = getattr(calibration_cfg, 'method', 'sigmoid')
+
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Starting probability calibration (manual mode)",
+            model_name=model_name,
+            method=method,
+            n_calibration_samples=len(y_cal)
+        )
+
+        # Create calibrator instance
+        calibrator = ProbabilityCalibrator(
+            app_logger=self.app_logger,
+            error_handler=self.error_handler,
+            method=method
+        )
+
+        # Fit calibrator on calibration probabilities
+        calibrator.fit(
+            y_pred=results.predictions,
+            y_true=y_cal
+        )
+
+        return calibrator

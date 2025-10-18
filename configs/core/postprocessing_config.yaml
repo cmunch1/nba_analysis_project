@@ -1,0 +1,41 @@
+# Postprocessing Configuration
+# This config manages postprocessing operations applied to model outputs after training.
+# Postprocessing is a top-level module (ml_framework.postprocessing) that transforms
+# model predictions before final deployment.
+
+# Probability Calibration Settings
+# Calibration corrects model probability outputs to better reflect true likelihoods
+calibration:
+  # Master switch for probability calibration
+  enable: true
+
+  # Calibration optimization (automatic method selection)
+  optimize: true # Enable automatic calibration method selection via grid search
+  optimization:
+    methods: [sigmoid, isotonic] # Calibration methods to search over
+    evaluation_bins: [5, 7, 9, 12, 15, 20] # Bin sizes for ECE during optimization (NOT for plotting)
+    selection_metric: brier_score # Metric for selection: 'brier_score', 'ece', or 'log_loss'
+    cv_folds: 5 # Number of CV folds for robust evaluation (use 1 for simple split)
+    use_cv: true # Use cross-validation for evaluation (more robust but slower)
+
+  # Manual calibration settings (used when optimize: false)
+  method: isotonic # 'sigmoid' (Platt scaling) or 'isotonic' (isotonic regression)
+  cv_folds: 5 # Number of CV folds (use 'prefit' for already trained models)
+
+  # Calibration evaluation and output
+  save_curves: true # Save calibration curve plots
+  save_metrics: true # Save calibration metrics (Brier score, ECE, log loss)
+  curve_bins: 10 # Number of bins for plotting calibration curves (10 is industry standard)
+
+  # Chart output directory (inherited from visualization config if not specified)
+  # charts_output_dir: "${PROJECT_ROOT}/ml_artifacts/visualizations/charts"
+
+  # Model registry integration
+  save_to_registry: true # Save calibration artifact with model
+
+# Future postprocessing modules can be added here
+# Examples:
+# - Threshold optimization
+# - Prediction smoothing
+# - Ensemble aggregation
+# - Uncertainty quantification

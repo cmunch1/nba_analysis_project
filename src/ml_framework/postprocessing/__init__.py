@@ -7,19 +7,31 @@ including probability calibration, threshold optimization, and other prediction 
 Main Components:
     - BasePostprocessor: Abstract base class for all postprocessors
     - ProbabilityCalibrator: Calibrate uncalibrated probability predictions (direct probability method)
+    - CalibrationOptimizer: Automatically search for best calibration method and parameters
 
 Usage:
-    from ml_framework.postprocessing import ProbabilityCalibrator
+    from ml_framework.postprocessing import ProbabilityCalibrator, CalibrationOptimizer
 
-    # Initialize calibrator
+    # Manual calibration
     calibrator = ProbabilityCalibrator(
         app_logger=logger,
         error_handler=error_handler,
         method='sigmoid'  # or 'isotonic'
     )
-
-    # Fit and transform on probabilities directly
     calibrated_probs = calibrator.fit_transform(
+        y_pred=uncalibrated_probs,
+        y_true=y_val
+    )
+
+    # Automatic optimization
+    optimizer = CalibrationOptimizer(
+        app_logger=logger,
+        error_handler=error_handler,
+        methods=['sigmoid', 'isotonic'],
+        evaluation_bins=[5, 10, 15, 20],
+        selection_metric='brier_score'
+    )
+    best_calibrator, results = optimizer.optimize(
         y_pred=uncalibrated_probs,
         y_true=y_val
     )
@@ -27,8 +39,10 @@ Usage:
 
 from ml_framework.postprocessing.base_postprocessor import BasePostprocessor
 from ml_framework.postprocessing.probability_calibrator import ProbabilityCalibrator
+from ml_framework.postprocessing.calibration_optimizer import CalibrationOptimizer
 
 __all__ = [
     'BasePostprocessor',
-    'ProbabilityCalibrator'
+    'ProbabilityCalibrator',
+    'CalibrationOptimizer'
 ]
