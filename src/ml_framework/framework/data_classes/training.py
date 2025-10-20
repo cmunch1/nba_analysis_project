@@ -48,6 +48,11 @@ class ModelTrainingResults:
         self.calibration_artifact: Optional[Any] = None  # Fitted calibrator for persistence
         self.calibration_metrics: Optional[Dict[str, float]] = None  # Calibration quality metrics
         self.calibration_curve_data: Optional[Dict[str, Any]] = None  # For visualization
+        self.conformal_prediction_sets: Optional[List[List[str]]] = None  # Conformal prediction sets (e.g., ['home'], ['home','away'])
+        self.conformal_probability_intervals: Optional[NDArray[np.float_]] = None  # Lower/upper bounds per sample
+        self.conformal_metrics: Optional[Dict[str, Any]] = None  # Coverage diagnostics
+        self.conformal_artifact: Optional[Any] = None  # Fitted conformal predictor
+        self.conformal_metadata: Optional[Dict[str, Any]] = None  # Additional context (alphas, score function)
 
         self.learning_curve_data = LearningCurveData()
         self.n_folds = 0
@@ -103,7 +108,9 @@ class ModelTrainingResults:
             "model_name": self.model_name,
             "model": self.model,
             "model_params": self.model_params,
-            "preprocessing_results": self.preprocessing_results.to_dict() if self.preprocessing_results else None
+            "preprocessing_results": self.preprocessing_results.to_dict() if self.preprocessing_results else None,
+            "calibration_metrics": self.calibration_metrics,
+            "conformal_metrics": self.conformal_metrics
         }
 
     def prepare_for_charting(self) -> Dict[str, Any]:

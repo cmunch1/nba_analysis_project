@@ -33,6 +33,22 @@ calibration:
   # Model registry integration
   save_to_registry: true # Save calibration artifact with model
 
+# Conformal Prediction Settings
+# Adds uncertainty-aware prediction sets and probability intervals on top of calibrated probabilities
+conformal:
+  enable: true                # Master switch for conformal prediction
+  method: split                # Currently supported: 'split' (standard split conformal)
+  alphas:
+    prediction_set: 0.1        # Target miscoverage for prediction sets (e.g., 90% coverage)
+    probability_interval: 0.2  # Target miscoverage for probability intervals (e.g., 80% central interval)
+  score_function: probability_shortfall  # Options: 'probability_shortfall', 'absolute_error'
+  class_labels: [away, home]   # Optional ordered labels [negative, positive]
+  allow_empty_set: false       # If false, fallback to full set when conformal set would be empty
+  min_calibration_samples: 50  # Skip conformal fitting when calibration set is too small
+  save_metrics: true           # Persist conformal coverage metrics alongside calibration metrics
+  save_diagnostics: true       # Store per-bin empirical coverage summaries for dashboards
+  save_to_registry: true       # Persist conformal artifact with the model when saving
+
 # Future postprocessing modules can be added here
 # Examples:
 # - Threshold optimization

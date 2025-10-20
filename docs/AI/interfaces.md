@@ -49,6 +49,13 @@ Located in `src/ml_framework/framework/` - ML framework components and base clas
   - Methods: `fit_transform()`, `transform()`
   - Integrates with PreprocessingResults for tracking transformations
 
+### Postprocessing
+- **BasePostprocessor** - `src/ml_framework/postprocessing/base_postprocessor.py`
+  - Abstract base class for postprocessing model outputs
+  - Methods: `fit()`, `transform()`, `fit_transform()`
+  - Applies transformations to model outputs after training (calibration, threshold optimization)
+  - Follows scikit-learn fit/transform pattern
+
 ### Uncertainty Quantification
 - **UncertaintyCalibrator** - `src/ml_framework/uncertainty/uncertainty_calibrator.py`
   - Model uncertainty quantification and calibration (concrete implementation)
@@ -101,6 +108,19 @@ Located in `src/ml_framework/model_testing/` - Generic ML testing and training i
 
 - **BaseHyperparamsManager** - `src/ml_framework/model_testing/hyperparams_managers/base_hyperparams_manager.py`
   - Hyperparameter management and persistence interface
+
+#### Feature Analysis
+- **BaseFeatureAuditor** - `src/ml_framework/model_testing/feature_auditing/base_feature_auditor.py`
+  - Feature auditing and analysis interface
+  - Analyzes feature importance (SHAP, permutation, model-specific)
+  - Evaluates statistical properties (coverage, variance, cardinality)
+  - Identifies redundancy (correlation, VIF) and stability across CV folds
+  - Methods: `create_audit()`, property: `log_performance`
+
+- **BaseFeaturePruner** - `src/ml_framework/model_testing/feature_pruning/base_feature_pruner.py`
+  - Feature pruning and selection interface
+  - Identifies and removes low-quality features based on audit results
+  - Methods: `identify_drop_candidates()`, property: `log_performance`
 
 #### Experiment Logging
 - **BaseExperimentLogger** - `src/ml_framework/model_testing/experiment_loggers/base_experiment_logger.py`
@@ -184,28 +204,176 @@ Located in `src/nba_app/webscraping/` - NBA-specific web scraping components.
 
 Located in `src/ml_framework/framework/data_classes/`:
 
-### Metrics
-- **LearningCurvePoint** - Individual learning curve data point
-- **LearningCurveData** - Complete learning curve information
-- **ClassificationMetrics** - Model performance metrics container
+### Metrics (`src/ml_framework/framework/data_classes/metrics.py`)
 
-### Preprocessing
-- **PreprocessingStep** - Individual preprocessing operation tracking
-- **PreprocessingResults** - Complete preprocessing pipeline results
+#### LearningCurvePoint
+Data point for learning curves.
+- `train_size: int` - Training set size
+- `train_score: float` - Training score
+- `val_score: float` - Validation score
+- `fold: int` - Cross-validation fold number
+- `iteration: Optional[int]` - Iteration number (for iterative models)
+- `metric_name: Optional[str]` - Name of the metric
 
-### Training
-- **ModelTrainingResults** - Comprehensive model training results and metrics
+#### LearningCurveData
+Container for learning curve data averaged across folds.
+- `train_scores: List[float]` - Training scores per iteration
+- `val_scores: List[float]` - Validation scores per iteration
+- `iterations: List[int]` - Iteration numbers
+- `metric_name: Optional[str]` - Name of the metric
+- Methods: `add_iteration()`, `get_plot_data()`, `__bool__()`
+
+#### ClassificationMetrics
+Container for classification evaluation metrics.
+- `accuracy: float` - Accuracy score (default: 0.0)
+- `precision: float` - Precision score (default: 0.0)
+- `recall: float` - Recall score (default: 0.0)
+- `f1: float` - F1 score (default: 0.0)
+- `auc: float` - ROC AUC score (default: 0.0)
+- `optimal_threshold: float` - Optimal probability threshold (default: 0.5)
+- `valid_samples: int` - Number of valid samples (default: 0)
+- `total_samples: int` - Total number of samples (default: 0)
+- `nan_percentage: float` - Percentage of NaN values (default: 0.0)
+
+### Preprocessing (`src/ml_framework/framework/data_classes/preprocessing.py`)
+
+#### PreprocessingStep
+Records information about a single preprocessing step.
+- `name: str` - Name of the preprocessing step
+- `type: str` - Type of preprocessing operation
+- `columns: List[str]` - Columns affected by this step
+- `parameters: Dict[str, Any]` - Parameters used in this step
+- `statistics: Dict[str, Any]` - Statistics computed during preprocessing (default: {})
+- `output_features: List[str]` - Features produced by this step (default: [])
+- Methods: `to_dict()`, `_convert_to_serializable()`
+
+#### PreprocessingResults
+Tracks all preprocessing information and transformations.
+- `steps: List[PreprocessingStep]` - List of preprocessing steps (default: [])
+- `original_features: List[str]` - Original feature names (default: [])
+- `final_features: List[str]` - Final feature names after preprocessing (default: [])
+- `dropped_features: Set[str]` - Features that were dropped (default: set())
+- `engineered_features: Dict[str, List[str]]` - Engineered features by type (default: {})
+- `feature_transformations: Dict[str, List[str]]` - Transformation history per feature (default: {})
+- `final_shape: Optional[Tuple[int, int]]` - Final shape of preprocessed data
+- Methods: `add_step()`, `get_feature_lineage()`, `summarize()`, `to_dict()`, `to_json()`
+
+### Training (`src/ml_framework/framework/data_classes/training.py`)
+
+#### ModelTrainingResults
+Comprehensive container for model training results and evaluation metrics.
+
+**Model-Specific Fields:**
+- `predictions: Optional[NDArray[np.float_]]` - Model predictions
+- `shap_values: Optional[NDArray[np.float_]]` - SHAP values for feature importance
+- `shap_interaction_values: Optional[NDArray[np.float_]]` - SHAP interaction values
+- `feature_names: List[str]` - List of feature names
+- `feature_importance_scores: Optional[NDArray[np.float_]]` - Feature importance scores
+- `model: Optional[Any]` - Trained model object
+- `model_name: str` - Name of the model
+- `model_params: Dict` - Model hyperparameters
+- `num_boost_round: int` - Number of boosting rounds
+- `early_stopping: int` - Early stopping rounds
+- `enable_categorical: bool` - Whether categorical features are enabled
+- `categorical_features: List[str]` - List of categorical feature names
+- `metrics: Optional[ClassificationMetrics]` - Evaluation metrics
+- `eval_metric` - Evaluation metric function
+
+**Data Fields:**
+- `feature_data: Optional[pd.DataFrame]` - Feature data
+- `target_data: Optional[pd.Series]` - Target labels
+- `binary_predictions: Optional[NDArray[np.int_]]` - Binary predictions (0/1)
+- `probability_predictions: Optional[NDArray[np.float_]]` - Probability predictions
+
+**Evaluation Context:**
+- `is_validation: bool` - Whether this is validation data (default: False)
+- `evaluation_type: str` - Type of evaluation (e.g., "oof", "validation")
+
+**Preprocessing Results:**
+- `preprocessing_results: Optional[PreprocessingResults]` - Preprocessing metadata
+- `preprocessing_artifact: Optional[Dict[str, Any]]` - Fitted preprocessor for persistence
+
+**Postprocessing Results:**
+- `calibrated_predictions: Optional[NDArray[np.float_]]` - Calibrated probabilities
+- `calibration_artifact: Optional[Any]` - Fitted calibrator for persistence
+- `calibration_metrics: Optional[Dict[str, float]]` - Calibration quality metrics
+- `calibration_curve_data: Optional[Dict[str, Any]]` - Data for calibration visualization
+- `conformal_prediction_sets: Optional[List[List[str]]]` - Conformal prediction sets per sample
+- `conformal_probability_intervals: Optional[NDArray[np.float_]]` - Probability intervals per sample
+- `conformal_metrics: Optional[Dict[str, Any]]` - Conformal coverage diagnostics
+- `conformal_artifact: Optional[Any]` - Fitted conformal predictor for persistence
+- `conformal_metadata: Optional[Dict[str, Any]]` - Additional conformal configuration/quantiles
+
+**Learning Curves:**
+- `learning_curve_data: LearningCurveData` - Learning curve information
+- `n_folds: int` - Number of cross-validation folds
+
+**Feature Audit:**
+- `feature_audit: Optional[pd.DataFrame]` - Feature audit results
+- `fold_importances: List[Dict[str, float]]` - Model gain importance per fold
+- `fold_shap_importances: List[Dict[str, float]]` - Mean absolute SHAP per fold
+
+**Methods:**
+- `add_learning_curve_point()` - Add a learning curve data point
+- `update_feature_data()` - Update feature and target data
+- `update_predictions()` - Update probability and binary predictions
+- `prepare_for_logging()` - Prepare results for experiment logging
+- `prepare_for_charting()` - Prepare data for chart generation
+
+### Hyperparameter Management (`src/ml_framework/model_testing/hyperparams_managers/hyperparams_manager.py`)
+
+#### HyperparameterSet
+Represents a single set of hyperparameters with metadata.
+- `name: str` - Name of the hyperparameter set
+- `params: Dict[str, Any]` - Hyperparameter dictionary
+- `num_boost_round: int` - Number of boosting rounds
+- `performance_metrics: Dict[str, float]` - Performance metrics for this set
+- `creation_date: str` - ISO format creation timestamp
+- `experiment_id: str` - MLflow experiment ID
+- `run_id: str` - MLflow run ID
+- `early_stopping: int` - Early stopping rounds
+- `enable_categorical: bool` - Whether categorical features are enabled
+- `categorical_features: List[str]` - List of categorical feature names
+- `model_version: Optional[str]` - Model version (default: None)
+- `description: Optional[str]` - Description of the parameter set (default: None)
+- Class method: `from_dict()`
+
+### Feature Schema (`src/nba_app/feature_engineering/feature_schema.py`)
+
+#### FeatureSchema
+Schema describing features and their types for NBA feature engineering.
+- `numeric_features: List[str]` - Continuous numeric features
+- `categorical_features: List[str]` - Categorical features
+- `binary_features: List[str]` - Binary features (0/1)
+- `ordinal_features: List[str]` - Ordinal categorical features
+- `datetime_features: List[str]` - DateTime features
+- `target_column: str` - Name of the target/label column
+- `game_id_column: str` - Name of the game ID column
+- `team_id_column: Optional[str]` - Team ID column (default: None)
+- `date_column: Optional[str]` - Date column for temporal splits (default: None)
+- `feature_descriptions: Dict[str, str]` - Metadata describing each feature (default: {})
+- `feature_groups: Dict[str, List[str]]` - Grouping of related features (default: {})
+- Methods: `to_dict()`, `to_json()`, `from_json()`, `from_dataframe()`, `get_all_features()`, `get_modeling_features()`, `validate_dataframe()`, `summary()`
+
+### Logging (`src/ml_framework/core/app_logging/app_logger.py`)
+
+#### LogContext
+Class to store logging context data.
+- `app_version: str` - Application version
+- `environment: str` - Environment name (dev, staging, prod)
+- `additional_context: Dict[str, Any]` - Additional context key-value pairs (default: None)
 
 ## Architecture Principles
 
 ### Three-Tier Platform Architecture
 1. **Platform Core** (`src/ml_framework/`) - Reusable ML infrastructure for any domain
-   - **Core**: Application infrastructure (config, logging, error handling)
-   - **Framework**: ML framework components (data access, base classes)
-   - **Model Testing**: Generic training, optimization, and evaluation
-   - **Preprocessing**: Generic data preprocessing
+   - **Core**: Application infrastructure (config, logging, error handling, file handling)
+   - **Framework**: ML framework components (data access, data validation, data classes)
+   - **Model Testing**: Generic training, optimization, evaluation, feature auditing, and feature pruning
+   - **Preprocessing**: Generic data preprocessing transformations
+   - **Postprocessing**: Model output transformations (calibration, threshold optimization)
    - **Visualization**: Generic charts and exploratory analysis
-   - **Uncertainty**: Model uncertainty quantification
+   - **Uncertainty**: Model uncertainty quantification and calibration
    - **Model Registry**: Model persistence and versioning (MLflow, custom, cloud)
    - **Inference**: Production model serving and prediction
 

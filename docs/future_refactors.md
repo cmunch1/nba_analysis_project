@@ -164,3 +164,8 @@ Logs have changed and need to figure out why and fix this:
 2025-10-05 10:08:46,692 - ml_framework.core.app_logging.app_logger - INFO - Loading dataframes | Context: {}
 
 
+## Conformal prediction
+- add optimization for alpha and empirical coverage
+- add visualization of empirical coverage vs alpha
+- make sure stored in MLflow artifacts
+- test set to make sure conformal prediction is working as expected

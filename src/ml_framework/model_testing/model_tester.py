@@ -24,6 +24,7 @@ from ml_framework.visualization.orchestration.base_chart_orchestrator import Bas
 from ml_framework.model_registry.base_model_registry import BaseModelRegistry
 from ml_framework.postprocessing.probability_calibrator import ProbabilityCalibrator
 from ml_framework.postprocessing.calibration_optimizer import CalibrationOptimizer
+from ml_framework.postprocessing.conformal_predictor import ConformalPredictor
 
 from .base_model_testing import BaseModelTester
 from .hyperparams_managers.base_hyperparams_manager import BaseHyperparamsManager
@@ -788,6 +789,20 @@ class ModelTester(BaseModelTester):
                     'calibration_method': calibration_method
                 })
 
+            # Add conformal metrics if available
+            if results.conformal_metrics:
+                conformal_method = None
+                if self._postprocessing_cfg and hasattr(self._postprocessing_cfg, 'conformal'):
+                    conformal_method = getattr(self._postprocessing_cfg.conformal, 'method', None)
+
+                metadata.update({
+                    'conformal_method': conformal_method,
+                    'conformal_empirical_coverage': results.conformal_metrics.get('empirical_coverage_prediction_set'),
+                    'conformal_interval_width': results.conformal_metrics.get('empirical_interval_width'),
+                    'conformal_alpha_prediction_set': results.conformal_metrics.get('alpha_prediction_set'),
+                    'conformal_alpha_probability_interval': results.conformal_metrics.get('alpha_probability_interval')
+                })
+
             # Prepare tags
             if tags is None:
                 tags = {}
@@ -799,6 +814,9 @@ class ModelTester(BaseModelTester):
             # Add calibration tag if calibrated
             if results.calibration_artifact is not None:
                 tags['calibrated'] = 'true'
+
+            if results.conformal_artifact is not None:
+                tags['conformal'] = 'true'
 
             # Prepare additional artifacts dictionary
             additional_artifacts = {}
@@ -813,6 +831,19 @@ class ModelTester(BaseModelTester):
                     self.app_logger.structured_log(
                         logging.INFO,
                         "Including calibration artifact in model save",
+                        model_name=model_name
+                    )
+
+            if results.conformal_artifact is not None:
+                save_conformal = True
+                if self._postprocessing_cfg and hasattr(self._postprocessing_cfg, 'conformal'):
+                    save_conformal = getattr(self._postprocessing_cfg.conformal, 'save_to_registry', True)
+
+                if save_conformal:
+                    additional_artifacts['conformal_predictor'] = results.conformal_artifact
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "Including conformal artifact in model save",
                         model_name=model_name
                     )
 
@@ -968,6 +999,57 @@ class ModelTester(BaseModelTester):
             results.calibrated_predictions = calibrated_probs
             results.calibration_artifact = calibrator
             results.calibration_metrics = calibrator.get_params().get('calibration_metrics', {})
+
+            # Optionally apply conformal prediction layer
+            conformal_cfg = getattr(self._postprocessing_cfg, 'conformal', None)
+            if conformal_cfg and getattr(conformal_cfg, 'enable', False):
+                min_samples = getattr(conformal_cfg, 'min_calibration_samples', 50)
+                if len(y_cal) >= min_samples:
+                    alphas_cfg = getattr(conformal_cfg, 'alphas', None)
+                    alpha_prediction_set = getattr(alphas_cfg, 'prediction_set', 0.1) if alphas_cfg else 0.1
+                    alpha_probability_interval = getattr(alphas_cfg, 'probability_interval', 0.2) if alphas_cfg else 0.2
+
+                    conformal_predictor = ConformalPredictor(
+                        app_logger=self.app_logger,
+                        error_handler=self.error_handler,
+                        method=getattr(conformal_cfg, 'method', 'split'),
+                        score_function=getattr(conformal_cfg, 'score_function', 'probability_shortfall'),
+                        alpha_prediction_set=alpha_prediction_set,
+                        alpha_probability_interval=alpha_probability_interval,
+                        class_labels=list(getattr(conformal_cfg, 'class_labels', ['negative', 'positive'])),
+                        allow_empty_set=getattr(conformal_cfg, 'allow_empty_set', False)
+                    )
+
+                    conformal_predictor.fit(
+                        y_pred=calibrated_probs,
+                        y_true=np.asarray(y_cal, dtype=int)
+                    )
+                    conformal_outputs = conformal_predictor.transform(calibrated_probs)
+
+                    results.conformal_prediction_sets = conformal_outputs.get('prediction_sets')
+                    intervals = conformal_outputs.get('probability_intervals')
+                    results.conformal_probability_intervals = intervals
+                    results.conformal_metrics = conformal_predictor.metrics_
+                    results.conformal_artifact = conformal_predictor
+                    results.conformal_metadata = conformal_predictor.get_params()
+
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "Conformal prediction applied",
+                        model_name=model_name,
+                        alpha_prediction_set=alpha_prediction_set,
+                        alpha_probability_interval=alpha_probability_interval,
+                        empirical_coverage=results.conformal_metrics.get('empirical_coverage_prediction_set') if results.conformal_metrics else None,
+                        interval_width=results.conformal_metrics.get('empirical_interval_width') if results.conformal_metrics else None
+                    )
+                else:
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "Skipping conformal prediction due to insufficient calibration samples",
+                        model_name=model_name,
+                        n_calibration_samples=len(y_cal),
+                        min_required=min_samples
+                    )
 
             # Generate calibration curve data if configured
             curve_bins = getattr(calibration_cfg, 'curve_bins', 10)

@@ -8,6 +8,7 @@ Main Components:
     - BasePostprocessor: Abstract base class for all postprocessors
     - ProbabilityCalibrator: Calibrate uncalibrated probability predictions (direct probability method)
     - CalibrationOptimizer: Automatically search for best calibration method and parameters
+    - ConformalPredictor: Build conformal prediction sets and probability intervals on calibrated probabilities
 
 Usage:
     from ml_framework.postprocessing import ProbabilityCalibrator, CalibrationOptimizer
@@ -40,9 +41,11 @@ Usage:
 from ml_framework.postprocessing.base_postprocessor import BasePostprocessor
 from ml_framework.postprocessing.probability_calibrator import ProbabilityCalibrator
 from ml_framework.postprocessing.calibration_optimizer import CalibrationOptimizer
+from ml_framework.postprocessing.conformal_predictor import ConformalPredictor
 
 __all__ = [
     'BasePostprocessor',
     'ProbabilityCalibrator',
-    'CalibrationOptimizer'
+    'CalibrationOptimizer',
+    'ConformalPredictor'
 ]

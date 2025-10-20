@@ -3,25 +3,19 @@
 │   ├── core/
 │   │   ├── hyperparameters/
 │   │   │   ├── catboost/
-│   │   │   │   ├── baseline.json
-│   │   │   │   └── current_best.json
+│   │   │   │   └── baseline.yaml
 │   │   │   ├── lightgbm/
-│   │   │   │   ├── baseline.json
-│   │   │   │   └── current_best.json
+│   │   │   │   └── baseline.yaml
 │   │   │   ├── pytorch/
-│   │   │   │   └── baseline.json
+│   │   │   │   └── baseline.yaml
 │   │   │   ├── sklearn_histgradientboosting/
-│   │   │   │   ├── baseline.json
-│   │   │   │   └── current_best.json
+│   │   │   │   └── baseline.yaml
 │   │   │   ├── sklearn_logisticregression/
-│   │   │   │   ├── baseline.json
-│   │   │   │   └── current_best.json
+│   │   │   │   └── baseline.yaml
 │   │   │   ├── sklearn_randomforest/
-│   │   │   │   ├── baseline.json
-│   │   │   │   └── current_best.json
+│   │   │   │   └── baseline.yaml
 │   │   │   └── xgboost/
-│   │   │       ├── baseline.json
-│   │   │       └── current_best.json
+│   │   │       └── baseline.yaml
 │   │   ├── models/
 │   │   │   ├── catboost_config.yaml
 │   │   │   ├── lightgbm_config.yaml
@@ -31,8 +25,10 @@
 │   │   │   ├── sklearn_randomforest_config.yaml
 │   │   │   └── xgboost_config.yaml
 │   │   ├── app_logging_config.yaml
+│   │   ├── artifact_paths_config.yaml
 │   │   ├── model_testing_config.yaml
 │   │   ├── optuna_config.yaml
+│   │   ├── postprocessing_config.yaml
 │   │   ├── preprocessing_config.yaml
 │   │   └── visualization_config.yaml
 │   └── nba/
@@ -72,6 +68,7 @@
 │   │   └── xgboost_val_predictions.csv
 │   ├── processed/
 │   │   ├── column_mapping.json
+│   │   ├── feature_schema.json
 │   │   ├── games_boxscores-fixed.csv
 │   │   ├── games_boxscores.csv
 │   │   ├── teams_boxscores-fixed.csv
@@ -100,16 +97,12 @@
 │   ├── src/
 │   │   └── readme.md
 │   ├── future_refactors.md
-│   ├── game_id_conversion_solution.md
-│   ├── GAME_ID_CONVERSION_SUMMARY.md
-│   ├── readme.md
-│   └── validation_scraper_implementation.md
-├── hyperparameter_history/
-│   ├── LGBM_history.json
-│   └── XGBoost_history.json
+│   └── readme.md
 ├── noteboooks/
 │   ├── baseline.ipynb
 │   └── eda.ipynb
+├── scripts/
+│   └── analyze_calibration.py
 ├── src/
 │   ├── ml_framework/
 │   │   ├── core/
@@ -128,6 +121,9 @@
 │   │   │   │   ├── error_handler.py
 │   │   │   │   └── error_handler_factory.py
 │   │   │   └── common_di_container.py
+│   │   ├── feature_audits/
+│   │   │   ├── feature_audit_xgboost_oof_20251013_143630.csv
+│   │   │   └── feature_audit_xgboost_validation_20251013_143640.csv
 │   │   ├── framework/
 │   │   │   ├── data_access/
 │   │   │   │   ├── base_data_access.py
@@ -137,11 +133,28 @@
 │   │   │   │   ├── preprocessing.py
 │   │   │   │   └── training.py
 │   │   │   └── base_data_validator.py
+│   │   ├── hyperparameter_history/
+│   │   │   ├── current_best/
+│   │   │   └── history/
+│   │   ├── inference/
+│   │   │   └── model_predictor.py
+│   │   ├── model_registry/
+│   │   │   ├── base_model_registry.py
+│   │   │   └── mlflow_model_registry.py
 │   │   ├── model_testing/
 │   │   │   ├── experiment_loggers/
 │   │   │   │   ├── base_experiment_logger.py
 │   │   │   │   ├── experiment_logger_factory.py
 │   │   │   │   └── mlflow_logger.py
+│   │   │   ├── feature_auditing/
+│   │   │   │   ├── audit_metrics.py
+│   │   │   │   ├── base_feature_auditor.py
+│   │   │   │   └── feature_auditor.py
+│   │   │   ├── feature_pruning/
+│   │   │   │   ├── base_feature_pruner.py
+│   │   │   │   ├── feature_pruner.py
+│   │   │   │   ├── pruning_comparison.py
+│   │   │   │   └── save_pruned_features.py
 │   │   │   ├── hyperparams_managers/
 │   │   │   │   ├── base_hyperparams_manager.py
 │   │   │   │   └── hyperparams_manager.py
@@ -161,7 +174,12 @@
 │   │   │   ├── base_model_testing.py
 │   │   │   ├── di_container.py
 │   │   │   ├── main.py
-│   │   │   └── model_tester.py
+│   │   │   ├── model_tester.py
+│   │   │   └── pruning_workflow.py
+│   │   ├── postprocessing/
+│   │   │   ├── base_postprocessor.py
+│   │   │   ├── calibration_optimizer.py
+│   │   │   └── probability_calibrator.py
 │   │   ├── preprocessing/
 │   │   │   ├── base_preprocessor.py
 │   │   │   └── preprocessor.py
@@ -170,6 +188,7 @@
 │   │   └── visualization/
 │   │       ├── charts/
 │   │       │   ├── base_chart.py
+│   │       │   ├── calibration_charts.py
 │   │       │   ├── chart_factory.py
 │   │       │   ├── chart_types.py
 │   │       │   ├── chart_utils.py
@@ -198,6 +217,7 @@
 │       │   ├── base_feature_engineering.py
 │       │   ├── di_container.py
 │       │   ├── feature_engineer.py
+│       │   ├── feature_schema.py
 │       │   ├── feature_selector.py
 │       │   └── main.py
 │       ├── webscraping/
@@ -236,7 +256,4 @@
 ├── directory_tree.txt
 ├── pyproject.toml
 ├── README.md
-├── reintegrate_fixed_records.py
-├── test_validation_quick.py
-├── test_validation_scraper.py
 └── uv.lock
