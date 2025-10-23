@@ -31,6 +31,7 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
     error_handler = common.error_handler_factory
     data_access = common.data_access
     data_validator = common.data_validator
+    model_registry = common.model_registry
 
     # Preprocessor
     preprocessor = providers.Singleton(
@@ -107,7 +108,8 @@ class ModelTestingDIContainer(containers.DeclarativeContainer):
         app_logger=app_logger,
         error_handler=error_handler,
         preprocessor=preprocessor,
-        chart_orchestrator=chart_orchestrator
+        chart_orchestrator=chart_orchestrator,
+        model_registry=model_registry
     )
 
     # Experiment logger with proper injection

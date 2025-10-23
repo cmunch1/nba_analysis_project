@@ -9,6 +9,7 @@ from ml_framework.core.app_logging.app_logger import AppLogger
 from ml_framework.core.error_handling.error_handler_factory import ErrorHandlerFactory
 from ml_framework.core.app_file_handling.app_file_handler import LocalAppFileHandler
 from ml_framework.framework.base_data_validator import BaseDataValidator
+from ml_framework.model_registry.mlflow_model_registry import MLflowModelRegistry
 
 class CommonDIContainer(containers.DeclarativeContainer):
     """Container for common application dependencies."""
@@ -44,7 +45,14 @@ class CommonDIContainer(containers.DeclarativeContainer):
         error_handler=error_handler_factory
     )
 
-    
+    # Model registry (MLflow)
+    model_registry: providers.Provider[MLflowModelRegistry] = providers.Singleton(
+        MLflowModelRegistry,
+        config=config,
+        app_logger=app_logger,
+        error_handler=error_handler_factory
+    )
+
     # Data validation (use base class - concrete implementation should be provided by specific apps)
     data_validator: providers.Provider[BaseDataValidator] = providers.Factory(
         BaseDataValidator,

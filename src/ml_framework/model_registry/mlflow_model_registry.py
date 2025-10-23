@@ -67,7 +67,8 @@ class MLflowModelRegistry(BaseModelRegistry):
                    signature: Optional[Any] = None,
                    input_example: Optional[pd.DataFrame] = None,
                    metadata: Optional[Dict[str, Any]] = None,
-                   tags: Optional[Dict[str, str]] = None) -> str:
+                   tags: Optional[Dict[str, str]] = None,
+                   additional_artifacts: Optional[Dict[str, Any]] = None) -> str:
         """
         Save model to MLflow registry with artifacts.
 
@@ -79,6 +80,7 @@ class MLflowModelRegistry(BaseModelRegistry):
             input_example: Optional example input
             metadata: Optional metadata dict
             tags: Optional tags dict
+            additional_artifacts: Optional dict of additional artifacts (e.g., calibrator, conformal_predictor)
 
         Returns:
             Model URI (e.g., 'runs:/<run_id>/<artifact_path>')
@@ -128,6 +130,22 @@ class MLflowModelRegistry(BaseModelRegistry):
                         "Preprocessor artifact saved",
                         artifact_path="artifacts/preprocessor_artifact.pkl"
                     )
+
+                # Save additional artifacts if provided (e.g., calibrator, conformal_predictor)
+                if additional_artifacts:
+                    for artifact_name, artifact_data in additional_artifacts.items():
+                        artifact_path = f"{artifact_name}_artifact.pkl"
+                        with open(artifact_path, 'wb') as f:
+                            pickle.dump(artifact_data, f)
+                        mlflow.log_artifact(artifact_path, artifact_path="artifacts")
+                        os.remove(artifact_path)  # Clean up local file
+
+                        self.app_logger.structured_log(
+                            logging.INFO,
+                            "Additional artifact saved",
+                            artifact_name=artifact_name,
+                            artifact_path=f"artifacts/{artifact_name}_artifact.pkl"
+                        )
 
                 # Log the model using appropriate MLflow flavor
                 if 'XGBoost' in model_type or 'Booster' in model_type:
@@ -254,6 +272,31 @@ class MLflowModelRegistry(BaseModelRegistry):
                         error=str(e)
                     )
 
+            # Load additional artifacts (calibrator, conformal_predictor, etc.)
+            additional_artifacts = {}
+            if run_id:
+                for artifact_name in ['calibrator', 'conformal_predictor']:
+                    try:
+                        artifact_path = f"artifacts/{artifact_name}_artifact.pkl"
+                        local_path = mlflow.artifacts.download_artifacts(
+                            artifact_uri=f"runs:/{run_id}/{artifact_path}"
+                        )
+                        with open(local_path, 'rb') as f:
+                            additional_artifacts[artifact_name] = pickle.load(f)
+
+                        self.app_logger.structured_log(
+                            logging.INFO,
+                            f"{artifact_name.capitalize()} artifact loaded",
+                            run_id=run_id
+                        )
+                    except Exception as e:
+                        self.app_logger.structured_log(
+                            logging.DEBUG,
+                            f"No {artifact_name} artifact found for model",
+                            run_id=run_id,
+                            error=str(e)
+                        )
+
             # Load metadata
             metadata = {}
             if run_id:
@@ -276,14 +319,17 @@ class MLflowModelRegistry(BaseModelRegistry):
                 'model': model,
                 'preprocessor_artifact': preprocessor_artifact,
                 'metadata': metadata,
-                'run_id': run_id
+                'run_id': run_id,
+                **additional_artifacts  # Include calibrator and conformal_predictor if they exist
             }
 
             self.app_logger.structured_log(
                 logging.INFO,
                 "Model loaded successfully",
                 model_identifier=model_identifier,
-                has_preprocessor=preprocessor_artifact is not None
+                has_preprocessor=preprocessor_artifact is not None,
+                has_calibrator='calibrator' in additional_artifacts,
+                has_conformal_predictor='conformal_predictor' in additional_artifacts
             )
 
             return result

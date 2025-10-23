@@ -450,6 +450,19 @@ def process_model_evaluation(
             )
             experiment_logger.log_experiment(results)
 
+        # Save model to registry if configured (only for validation results, not OOF)
+        if (not is_oof and
+            hasattr(model_cfg, 'save_model_to_registry') and
+            model_cfg.save_model_to_registry):
+
+            _save_model_to_registry(
+                model_tester=model_tester,
+                results=results,
+                model_name=model_name,
+                config=config,
+                app_logger=app_logger
+            )
+
         return results
 
     except Exception as e:
@@ -460,6 +473,106 @@ def process_model_evaluation(
             model_name=model_name,
             input_shape=X.shape
         )
+
+def _save_model_to_registry(
+    model_tester,
+    results: 'ModelTrainingResults',
+    model_name: str,
+    config,
+    app_logger
+) -> None:
+    """
+    Save trained model with all artifacts to MLflow model registry.
+
+    Args:
+        model_tester: ModelTester instance
+        results: Training results containing model and artifacts
+        model_name: Name of the model
+        config: Configuration manager
+        app_logger: Application logger
+    """
+    try:
+        model_cfg = config.core.model_testing_config
+        registry_cfg = model_cfg.model_registry
+
+        # Get model registry name and settings
+        registry_model_name = getattr(registry_cfg, 'model_name', 'trained_model')
+        stage = getattr(registry_cfg, 'stage', None)
+        config_tags = getattr(registry_cfg, 'tags', {})
+
+        # Convert tags to dict if it's a SimpleNamespace
+        if hasattr(config_tags, '__dict__'):
+            tags = vars(config_tags)
+        elif config_tags is None:
+            tags = {}
+        else:
+            tags = dict(config_tags) if config_tags else {}
+
+        # Add dynamic tags
+        tags['model_type'] = model_name
+        tags['trained_at'] = pd.Timestamp.now().isoformat()
+
+        # Add postprocessing tags if artifacts exist
+        if results.calibration_artifact is not None:
+            tags['calibrated'] = 'true'
+            # Access method attribute from the ProbabilityCalibrator object
+            if hasattr(results.calibration_artifact, 'method'):
+                tags['calibration_method'] = results.calibration_artifact.method
+            else:
+                tags['calibration_method'] = 'unknown'
+
+        if results.conformal_artifact is not None:
+            tags['conformal'] = 'true'
+            # Access method attribute from the ConformalPredictor object
+            if hasattr(results.conformal_artifact, 'method'):
+                tags['conformal_method'] = results.conformal_artifact.method
+            else:
+                tags['conformal_method'] = 'unknown'
+
+        app_logger.structured_log(
+            logging.INFO,
+            "Saving model to registry",
+            model_name=registry_model_name,
+            model_type=model_name,
+            stage=stage,
+            has_preprocessor=results.preprocessing_artifact is not None,
+            has_calibrator=results.calibration_artifact is not None,
+            has_conformal=results.conformal_artifact is not None
+        )
+
+        # Call the model tester's save method (which now supports additional_artifacts)
+        model_uri = model_tester.save_model_to_registry(
+            results=results,
+            model_name=registry_model_name,
+            stage=stage,
+            tags=tags
+        )
+
+        if model_uri:
+            app_logger.structured_log(
+                logging.INFO,
+                "Model successfully saved to registry",
+                model_name=registry_model_name,
+                model_uri=model_uri,
+                stage=stage
+            )
+        else:
+            app_logger.structured_log(
+                logging.WARNING,
+                "Model was not saved to registry (no registry configured)",
+                model_name=registry_model_name
+            )
+
+    except Exception as e:
+        app_logger.structured_log(
+            logging.ERROR,
+            "Failed to save model to registry",
+            model_name=model_name,
+            error=str(e),
+            traceback=traceback.format_exc()
+        )
+        # Don't raise - allow the pipeline to continue even if registry save fails
+        # This makes the registry save optional/non-blocking
 
 def _get_enabled_models(config) -> list:
     """Get list of enabled models from config."""

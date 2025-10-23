@@ -61,6 +61,18 @@ save_oof_predictions: false # save the predictions for the out of fold cross val
 save_validation_predictions: true # save the predictions for the validation set to a csv file
 log_experiment: true
 
+# Model registry settings (MLflow)
+# Set save_model_to_registry: true when you have a deployment candidate
+# This will register the model with all artifacts (preprocessor, calibrator, conformal predictor)
+save_model_to_registry: true # Enable to save trained model to MLflow model registry
+model_registry:
+  model_name: "nba_win_predictor" # Name for the registered model in MLflow
+  stage: null # Optional: Transition to stage after registration ('Staging', 'Production', 'Archived', or null)
+  tags: # Optional tags for the registered model
+    project: "nba_predictor"
+    framework: "xgboost"
+    task: "binary_classification"
+
 
 # Cross validation settings (only TimeSeriesSplit or StratifiedKFold are supported currently)
 cross_validation_type: TimeSeriesSplit
