@@ -743,6 +743,84 @@ class FeatureEngineer(BaseFeatureEngineer):
                                             game_id=game_id,
                                             dataframe_shape=df.shape)
 
+    def apply_feature_allowlist(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Filter dataframe to only include allowlisted features.
+
+        This should be called after all feature engineering is complete
+        to ensure only the features from the allowlist are included in
+        the final output.
+
+        Args:
+            df (pd.DataFrame): Dataframe with all engineered features
+
+        Returns:
+            pd.DataFrame: Dataframe with only allowlisted features (plus required columns)
+        """
+        if self.feature_allowlist is None:
+            self.app_logger.structured_log(
+                logging.INFO,
+                "No feature allowlist enabled - returning all features"
+            )
+            return df
+
+        # Always keep these columns regardless of allowlist
+        # Note: After merge_team_data(), target column gets prefixed with h_
+        target_col = self.config.target_column
+        prefixed_target_col = f"{self.config.home_team_prefix}{target_col}"
+
+        # Keep metadata columns that are useful for dashboard generation and debugging
+        # These are explicitly excluded from model training via non_useful_columns config
+        metadata_columns = [
+            self.config.new_game_id_column,
+            self.config.new_date_column,
+            target_col if target_col in df.columns else prefixed_target_col,
+            'h_team', 'v_team',           # Team abbreviations (e.g., "CHA", "OKC")
+            'h_match_up', 'v_match_up'    # Match descriptions (e.g., "CHA vs. OKC")
+        ]
+
+        # Filter to only columns that actually exist in dataframe
+        required_columns = [col for col in metadata_columns if col in df.columns]
+
+        # Find columns to keep: required + allowlisted features
+        columns_to_keep = []
+
+        for col in df.columns:
+            if col in required_columns:
+                columns_to_keep.append(col)
+            elif col in self.feature_allowlist:
+                columns_to_keep.append(col)
+
+        # Log filtering results
+        metadata_kept = [c for c in columns_to_keep if c in required_columns]
+        features_kept = [c for c in columns_to_keep if c not in required_columns]
+        all_original_features = [c for c in df.columns if c not in required_columns]
+        removed_features = set(all_original_features) - set(features_kept)
+
+        self.app_logger.structured_log(
+            logging.INFO,
+            "Applied feature allowlist filter",
+            metadata_columns_kept=len(metadata_kept),
+            metadata_columns=metadata_kept,
+            original_feature_count=len(all_original_features),
+            kept_feature_count=len(features_kept),
+            removed_feature_count=len(removed_features),
+            allowlist_size=len(self.feature_allowlist),
+            total_columns=len(columns_to_keep)
+        )
+
+        # Warn about allowlist features not found in dataframe
+        missing_from_df = self.feature_allowlist - set(features_kept)
+        if missing_from_df:
+            self.app_logger.structured_log(
+                logging.WARNING,
+                "Some allowlist features not found in engineered data",
+                missing_count=len(missing_from_df),
+                sample_missing=list(missing_from_df)[:10]
+            )
+
+        return df[columns_to_keep]
+
     def _export_feature_schema(self, df: pd.DataFrame) -> None:
         """
         Export feature schema to JSON after feature engineering.
