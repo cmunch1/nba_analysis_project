@@ -1,0 +1,172 @@
+# NBA Dashboard Data Preparation Configuration
+# Aggregates predictions, results, and metrics into a single dashboard-optimized CSV
+
+dashboard_prep:
+  # Input Data Sources
+  input_paths:
+    # Predictions from inference module
+    predictions_dir: "data/predictions"
+    predictions_pattern: "predictions_{date}.csv"
+
+    # Actual game results (from cumulative scraped data)
+    actual_results: "data/cumulative_scraped/box_scores.csv"
+
+    # Model evaluation metrics (from model_testing)
+    evaluation_dir: "data/evaluation"
+
+    # MLflow experiments (for model performance tracking)
+    mlflow_tracking_uri: "${MLFLOW_TRACKING_URI}"  # From environment or default
+    mlflow_experiment_name: "nba_win_prediction"
+
+  # Output Settings
+  output:
+    # Single denormalized CSV for dashboard
+    output_dir: "data/dashboard"
+    output_filename: "dashboard_data.csv"
+
+    # Archive historical snapshots
+    archive_snapshots: true
+    snapshot_dir: "data/dashboard/archive"
+    snapshot_filename_pattern: "dashboard_data_{date}.csv"
+
+  # Tomorrow's Predictions Section
+  predictions:
+    # How many days ahead to include
+    forecast_days: 1
+
+    # Columns to include
+    include_columns:
+      - game_id
+      - game_date
+      - home_team
+      - away_team
+      - predicted_winner
+      - calibrated_home_win_prob
+      - confidence
+      - prob_lower  # Conformal interval
+      - prob_upper
+      - prediction_set  # Conformal prediction set
+
+    # Highlight high-confidence predictions
+    high_confidence_threshold: 0.75
+
+  # Yesterday's Results Section
+  results:
+    # How many days back to include
+    lookback_days: 1
+
+    # Columns to include
+    include_columns:
+      - game_id
+      - game_date
+      - home_team
+      - away_team
+      - actual_winner
+      - actual_home_score
+      - actual_away_score
+      - predicted_winner
+      - calibrated_home_win_prob
+      - prediction_correct
+      - prediction_error  # |predicted_prob - actual_outcome|
+
+  # Model Performance Metrics Section
+  performance:
+    # Time windows to calculate metrics for
+    time_windows:
+      - name: "season"
+        description: "Entire current season"
+        start_date: "2024-10-22"  # NBA season start
+
+      - name: "7day"
+        description: "Last 7 days"
+        days_back: 7
+
+      - name: "30day"
+        description: "Last 30 days"
+        days_back: 30
+
+    # Metrics to calculate
+    metrics:
+      - name: "accuracy"
+        display_name: "Prediction Accuracy"
+        format: "percentage"
+
+      - name: "brier_score"
+        display_name: "Brier Score"
+        format: "decimal"
+        decimals: 3
+
+      - name: "log_loss"
+        display_name: "Log Loss"
+        format: "decimal"
+        decimals: 3
+
+      - name: "calibration_error"
+        display_name: "Expected Calibration Error"
+        format: "decimal"
+        decimals: 3
+
+      - name: "games_predicted"
+        display_name: "Total Predictions"
+        format: "integer"
+
+      - name: "avg_confidence"
+        display_name: "Average Confidence"
+        format: "percentage"
+
+  # Team-Level Performance Section
+  team_performance:
+    # Minimum games required for team-specific stats
+    min_games: 10
+
+    # Metrics per team
+    metrics:
+      - accuracy
+      - avg_confidence
+      - total_predictions
+      - home_accuracy  # When team plays at home
+      - away_accuracy  # When team plays away
+
+    # Sort teams by accuracy for visualization
+    sort_by: "accuracy"
+    sort_order: "descending"
+
+  # Drift Monitoring Section
+  drift:
+    # Calculate daily drift metrics
+    daily_metrics:
+      - date
+      - accuracy
+      - brier_score
+      - calibration_error
+      - avg_confidence
+
+    # Lookback window for trend analysis
+    trend_window_days: 60
+
+    # Detect significant drift
+    drift_threshold:
+      accuracy_drop: 0.10  # 10% drop triggers warning
+      calibration_error_increase: 0.05
+
+  # Calibration Curve Data
+  calibration:
+    # Number of bins for calibration curve
+    num_bins: 10
+
+    # Minimum predictions per bin
+    min_bin_size: 20
+
+    # Output format: {predicted_prob_bin, actual_frequency, count}
+    include_curve_data: true
+
+  # Data Validation
+  validation:
+    # Ensure predictions exist for tomorrow
+    require_predictions: true
+
+    # Ensure results exist for yesterday
+    require_results: false  # Optional - dashboard can show without results
+
+    # Minimum data requirements
+    min_season_games: 50  # Warn if fewer games this season

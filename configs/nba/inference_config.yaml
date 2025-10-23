@@ -1,0 +1,88 @@
+# NBA Inference Configuration
+# Manages daily prediction pipeline for upcoming games
+
+inference:
+  # Model Registry Settings
+  model:
+    # MLflow model identifier for production model
+    # Options:
+    #   - "models:/model_name/Production" (aliased production model)
+    #   - "models:/model_name/1" (specific version)
+    #   - "runs:/<run_id>/model" (specific run)
+    # Using version 1 for testing (TODO: promote to Production after validation)
+    identifier: "models:/nba_win_predictor/1"
+
+    # Fallback model if production model not found
+    fallback_identifier: null
+
+  # Input Data Sources
+  data_sources:
+    # Schedule file with upcoming games (from webscraping)
+    schedule_file: "data/newly_scraped/schedule_{date}.csv"
+
+    # Historical data for feature engineering
+    historical_boxscores: "data/cumulative_scraped/box_scores.csv"
+
+    # Lookback window for rolling features (days)
+    lookback_days: 30
+
+  # Feature Engineering
+  feature_engineering:
+    # Reuse training feature engineering config
+    use_training_config: true
+
+    # Override specific settings for inference
+    # (most settings inherited from feature_engineering_config.yaml)
+
+  # Postprocessing Pipeline
+  postprocessing:
+    # Enable calibration (loads calibrator artifact from model)
+    enable_calibration: true
+
+    # Enable conformal prediction (loads conformal artifact from model)
+    enable_conformal: true
+
+    # Fallback if calibration artifact not found
+    skip_if_missing: false  # If true, use raw probabilities
+
+  # Output Settings
+  output:
+    # Predictions output directory
+    predictions_dir: "data/predictions"
+
+    # File naming pattern
+    filename_pattern: "predictions_{date}.csv"
+
+    # Include additional columns in output
+    include_raw_probabilities: true
+    include_prediction_sets: true
+    include_probability_intervals: true
+    include_model_metadata: true
+
+  # Prediction Filtering
+  filtering:
+    # Only predict games within this many days ahead
+    max_days_ahead: 2
+
+    # Skip games with incomplete historical data
+    skip_incomplete_features: true
+
+    # Minimum required historical games for team
+    min_team_games: 5
+
+  # Validation
+  validation:
+    # Validate feature schema matches training
+    validate_features: true
+
+    # Validate probability outputs
+    validate_probabilities: true
+
+    # Log warnings for out-of-distribution inputs
+    detect_distribution_shift: true
+
+# Integration with other configs
+# This config is loaded alongside:
+# - core/postprocessing_config.yaml (for calibration/conformal settings)
+# - nba_app/feature_engineering_config.yaml (for feature engineering)
+# - core/mlflow_config.yaml (for model registry connection)
