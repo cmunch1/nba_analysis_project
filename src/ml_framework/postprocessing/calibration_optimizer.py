@@ -125,6 +125,29 @@ class CalibrationOptimizer:
                     f"y_true has {len(y_true)} samples"
                 )
 
+            # Convert to numpy arrays to avoid pandas indexing issues during CV
+            # KFold.split() returns integer position indices, but pandas Series/DataFrames
+            # may have non-integer or non-sequential indices, causing indexing errors
+            if isinstance(y_pred, (pd.Series, pd.DataFrame)):
+                self.app_logger.structured_log(
+                    logging.DEBUG,
+                    "Converting y_pred from pandas to numpy for CV compatibility",
+                    original_type=type(y_pred).__name__
+                )
+                y_pred = y_pred.values if isinstance(y_pred, pd.Series) else y_pred.values.flatten()
+
+            if isinstance(y_true, (pd.Series, pd.DataFrame)):
+                self.app_logger.structured_log(
+                    logging.DEBUG,
+                    "Converting y_true from pandas to numpy for CV compatibility",
+                    original_type=type(y_true).__name__
+                )
+                y_true = y_true.values if isinstance(y_true, pd.Series) else y_true.values.flatten()
+
+            # Ensure we have numpy arrays
+            y_pred = np.asarray(y_pred)
+            y_true = np.asarray(y_true)
+
             # Ensure probabilities are in valid range
             y_pred = np.clip(y_pred, 1e-10, 1 - 1e-10)
 

@@ -159,13 +159,17 @@ class ModelPredictor:
                 return_probabilities=return_probabilities
             )
 
+            # Filter metadata columns before preprocessing/prediction
+            # These columns (primary_id, non_useful_columns) are not used for modeling
+            X_filtered = self._filter_metadata_columns(X)
+
             # Apply preprocessing if preprocessor exists
             if self.preprocessor:
                 self.app_logger.structured_log(
                     logging.INFO,
                     "Applying preprocessing to input data"
                 )
-                X_transformed = self.preprocessor.transform(X)
+                X_transformed = self.preprocessor.transform(X_filtered)
 
                 self.app_logger.structured_log(
                     logging.INFO,
@@ -173,7 +177,7 @@ class ModelPredictor:
                     transformed_shape=X_transformed.shape
                 )
             else:
-                X_transformed = X
+                X_transformed = X_filtered
 
             # Make predictions
             if return_probabilities:
@@ -359,3 +363,43 @@ class ModelPredictor:
             True if model is loaded and ready for predictions
         """
         return self.model is not None
+
+    def _filter_metadata_columns(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Filter out metadata columns that should not be used for prediction.
+
+        Removes:
+        - primary_id_column (e.g., game_id)
+        - non_useful_columns (e.g., team names, matchup strings, game_date)
+
+        Args:
+            X: Input DataFrame with all columns
+
+        Returns:
+            DataFrame with metadata columns removed
+        """
+        X_filtered = X.copy()
+        columns_to_drop = []
+
+        # Drop primary_id_column if it exists in config and data
+        if hasattr(self.config, 'primary_id_column') and self.config.primary_id_column:
+            if self.config.primary_id_column in X_filtered.columns:
+                columns_to_drop.append(self.config.primary_id_column)
+
+        # Drop non_useful_columns if they exist in config and data
+        if hasattr(self.config, 'non_useful_columns') and self.config.non_useful_columns:
+            for col in self.config.non_useful_columns:
+                if col in X_filtered.columns:
+                    columns_to_drop.append(col)
+
+        if columns_to_drop:
+            X_filtered = X_filtered.drop(columns=columns_to_drop)
+            self.app_logger.structured_log(
+                logging.DEBUG,
+                "Filtered metadata columns before prediction",
+                columns_dropped=columns_to_drop,
+                original_shape=X.shape,
+                filtered_shape=X_filtered.shape
+            )
+
+        return X_filtered

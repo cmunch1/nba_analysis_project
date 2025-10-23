@@ -18,7 +18,8 @@ from ml_framework.core.error_handling.error_handler import (
     PreprocessingError,
     PostprocessingError,
     OptimizationError,
-    ExperimentLoggerError
+    ExperimentLoggerError,
+    InferenceError
 )
 
 class ErrorHandlerFactory:
@@ -56,10 +57,11 @@ class ErrorHandlerFactory:
             'preprocessing': PreprocessingError,
             'postprocessing': PostprocessingError,
             'optimization': OptimizationError,
+            'inference': InferenceError,
 
             # Visualization errors
             'chart_creation': ChartCreationError,
-            
+
             # Logging errors
             'experiment_logger': ExperimentLoggerError,
             'experiment_logging': ExperimentLoggerError,
