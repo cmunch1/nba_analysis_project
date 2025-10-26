@@ -208,10 +208,28 @@ class FeatureEngineer(BaseFeatureEngineer):
             if export_schema:
                 self._export_feature_schema(df_merged)
 
+            # Sort columns alphabetically to ensure deterministic ordering
+            # Keep key metadata columns at the front, then sort the rest
+            metadata_cols = ['game_id', 'season', 'game_date', 'sub_season_id',
+                           'h_team', 'v_team', 'h_match_up', 'v_match_up', 'h_is_win']
+
+            # Get columns that exist in the DataFrame
+            existing_metadata = [col for col in metadata_cols if col in df_merged.columns]
+
+            # Get remaining columns and sort them
+            remaining_cols = [col for col in df_merged.columns if col not in existing_metadata]
+            sorted_remaining = sorted(remaining_cols)
+
+            # Reorder: metadata first, then sorted feature columns
+            ordered_cols = existing_metadata + sorted_remaining
+            df_merged = df_merged[ordered_cols]
+
             self.app_logger.structured_log(
                 logging.INFO,
-                "Feature engineering completed",
-                output_shape=df_merged.shape
+                "Feature engineering completed with deterministic column ordering",
+                output_shape=df_merged.shape,
+                num_metadata_cols=len(existing_metadata),
+                num_feature_cols=len(sorted_remaining)
             )
 
             return df_merged
