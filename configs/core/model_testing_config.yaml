@@ -25,6 +25,7 @@ non_useful_columns:
   - v_team
   - v_match_up
   - game_date  # Date column - temporal info already captured in season/season_progress
+  - h_is_win  # Target column - present in data but not used for inference
 
 # indicates which columns are categorical so they can be encoded and identified by the model
 categorical_features:

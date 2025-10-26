@@ -137,6 +137,9 @@ def main() -> None:
             )
             model_predictor.load_model(model_identifier)
 
+            # Load model data to access feature schema for validation
+            model_data = model_registry.load_model(model_identifier)
+
             # Step 5: Make predictions (preprocessing happens automatically)
             app_logger.structured_log(
                 logging.INFO,
@@ -144,8 +147,62 @@ def main() -> None:
                 input_shape=todays_features.shape
             )
 
+            # Drop metadata columns explicitly (workaround for config caching issue)
+            metadata_cols = ['game_id', 'game_date', 'h_team', 'v_team', 'h_match_up', 'v_match_up', 'h_is_win']
+            features_only = todays_features.drop(columns=[col for col in metadata_cols if col in todays_features.columns])
+
+            app_logger.structured_log(
+                logging.INFO,
+                "Metadata columns dropped",
+                original_shape=todays_features.shape,
+                features_shape=features_only.shape
+            )
+
+            # Reorder features to match model's expected feature schema
+            # This ensures compatibility even if feature engineering produces columns in different order
+            if 'feature_schema' in model_data and model_data['feature_schema']:
+                feature_schema = model_data['feature_schema']
+                expected_feature_order = feature_schema['feature_names']
+
+                # Verify all expected features are present
+                missing_features = set(expected_feature_order) - set(features_only.columns)
+                extra_features = set(features_only.columns) - set(expected_feature_order)
+
+                if missing_features:
+                    app_logger.structured_log(
+                        logging.ERROR,
+                        "Missing required features from model schema",
+                        missing_features=list(missing_features)[:10],
+                        num_missing=len(missing_features)
+                    )
+                    raise ValueError(f"Missing {len(missing_features)} required features")
+
+                if extra_features:
+                    app_logger.structured_log(
+                        logging.WARNING,
+                        "Extra features not in model schema (will be dropped)",
+                        extra_features=list(extra_features)[:10],
+                        num_extra=len(extra_features)
+                    )
+
+                # Reorder to match expected order (and drop any extra features)
+                features_only = features_only[expected_feature_order]
+
+                app_logger.structured_log(
+                    logging.INFO,
+                    "Features reordered to match model schema",
+                    num_features=len(expected_feature_order),
+                    schema_version=feature_schema.get('schema_version', 'unknown')
+                )
+            else:
+                app_logger.structured_log(
+                    logging.WARNING,
+                    "No feature schema found in model - skipping feature reordering",
+                    note="Model may fail if feature order doesn't match"
+                )
+
             raw_probabilities = model_predictor.predict(
-                todays_features,
+                features_only,
                 return_probabilities=True
             )
 
@@ -174,16 +231,8 @@ def main() -> None:
                         "Applying probability calibration"
                     )
 
-                    # Create calibrator and load artifact
-                    calibrator = ProbabilityCalibrator(
-                        app_logger=app_logger,
-                        error_handler=error_handler,
-                        method=calibrator_artifact.get('method', 'sigmoid')
-                    )
-
-                    # Load the fitted calibrator
-                    calibrator.calibrator_ = calibrator_artifact.get('calibrator')
-                    calibrator.calibration_metrics_ = calibrator_artifact.get('metrics', {})
+                    # calibrator_artifact is the actual fitted ProbabilityCalibrator object
+                    calibrator = calibrator_artifact
 
                     # Transform probabilities
                     calibrated_probs = calibrator.transform(raw_probabilities)
@@ -191,7 +240,7 @@ def main() -> None:
                     app_logger.structured_log(
                         logging.INFO,
                         "Calibration applied",
-                        method=calibrator_artifact.get('method'),
+                        method=getattr(calibrator, 'method', 'unknown'),
                         prob_shift=float(np.mean(calibrated_probs - raw_probabilities))
                     )
                 elif not config.inference.postprocessing.skip_if_missing:
@@ -215,38 +264,20 @@ def main() -> None:
                         "Applying conformal prediction"
                     )
 
-                    # Create conformal predictor and load artifact
-                    conformal_predictor = ConformalPredictor(
-                        app_logger=app_logger,
-                        error_handler=error_handler,
-                        method=conformal_artifact.get('method', 'split_conformal'),
-                        alpha=conformal_artifact.get('alpha', 0.1)
-                    )
+                    # conformal_artifact is the actual fitted ConformalPredictor object
+                    conformal_predictor = conformal_artifact
 
-                    # Load the fitted conformal predictor state
-                    conformal_predictor.calibration_scores_ = conformal_artifact.get('calibration_scores')
-                    conformal_predictor.alpha = conformal_artifact.get('alpha', 0.1)
-                    conformal_predictor.method = conformal_artifact.get('method', 'split_conformal')
-
-                    # Generate prediction sets and intervals
-                    conformal_results = conformal_predictor.predict(
-                        calibrated_probs,
-                        return_sets=True,
-                        return_intervals=True
-                    )
-
-                    prediction_sets = conformal_results.get('prediction_sets')
-                    prediction_intervals = conformal_results.get('intervals')
+                    # Generate prediction sets and intervals using the correct API
+                    prediction_sets = conformal_predictor.predict_set(calibrated_probs)
+                    prediction_intervals = conformal_predictor.predict_interval(calibrated_probs)
 
                     app_logger.structured_log(
                         logging.INFO,
                         "Conformal prediction applied",
-                        method=conformal_artifact.get('method'),
-                        alpha=conformal_artifact.get('alpha'),
-                        avg_interval_width=float(np.mean([
-                            interval['upper'] - interval['lower']
-                            for interval in prediction_intervals
-                        ])) if prediction_intervals else None
+                        method=getattr(conformal_predictor, 'method', 'unknown'),
+                        alpha=getattr(conformal_predictor, 'alpha', 0.1),
+                        avg_interval_width=float(np.mean(prediction_intervals[:, 1] - prediction_intervals[:, 0])) if prediction_intervals is not None else None,
+                        num_prediction_sets=len(prediction_sets) if prediction_sets else 0
                     )
                 elif not config.inference.postprocessing.skip_if_missing:
                     raise error_handler.create_error_handler(
@@ -286,7 +317,8 @@ def main() -> None:
                 num_predictions=len(predictions_df)
             )
 
-            data_access.save_dataframes([predictions_df], [str(output_path)])
+            # save_dataframes expects just the filename (it adds the directory)
+            data_access.save_dataframes([predictions_df], [output_filename])
 
             # Log summary statistics
             avg_confidence = predictions_df['confidence'].mean() if 'confidence' in predictions_df.columns else None
@@ -342,9 +374,11 @@ def _format_predictions(todays_features: pd.DataFrame,
     output_df['game_date'] = todays_features['game_date'].values
 
     # Team names (extract from engineered features)
-    # Assuming columns like 'team_id_home' and 'team_id_visitor' exist
-    # Adjust based on your actual column names after merge_team_data
-    if 'team_id_home' in todays_features.columns:
+    # The feature engineering pipeline uses h_team and v_team column names
+    if 'h_team' in todays_features.columns:
+        output_df['home_team'] = todays_features['h_team'].values
+        output_df['away_team'] = todays_features['v_team'].values
+    elif 'team_id_home' in todays_features.columns:
         output_df['home_team'] = todays_features['team_id_home'].values
         output_df['away_team'] = todays_features['team_id_visitor'].values
     elif 'team_home' in todays_features.columns:
@@ -380,8 +414,9 @@ def _format_predictions(todays_features: pd.DataFrame,
         output_df['prediction_set'] = [str(ps) for ps in prediction_sets]
 
     if prediction_intervals is not None and config.inference.output.include_probability_intervals:
-        output_df['prob_lower'] = [interval['lower'] for interval in prediction_intervals]
-        output_df['prob_upper'] = [interval['upper'] for interval in prediction_intervals]
+        # prediction_intervals is a numpy array with shape (n_samples, 2) where [:, 0] is lower and [:, 1] is upper
+        output_df['prob_lower'] = prediction_intervals[:, 0]
+        output_df['prob_upper'] = prediction_intervals[:, 1]
         output_df['interval_width'] = output_df['prob_upper'] - output_df['prob_lower']
 
     # Metadata

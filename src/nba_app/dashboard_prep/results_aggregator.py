@@ -70,9 +70,9 @@ class ResultsAggregator:
                 lookback_days=lookback_days
             )
 
-            # Load cumulative box scores
+            # Load cumulative box scores using pandas directly (data_access adds directory prefix)
             results_path = self.config.dashboard_prep.input_paths.actual_results
-            results_df = self.data_access.load_dataframe(results_path)
+            results_df = pd.read_csv(results_path)
 
             if results_df.empty:
                 self.app_logger.structured_log(

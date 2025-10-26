@@ -8,7 +8,6 @@ from .page_scraper import PageScraper
 from .boxscore_scraper import BoxscoreScraper
 from .schedule_scraper import ScheduleScraper
 from .nba_scraper import NbaScraper
-from .matchup_validator import MatchupValidator
 from .validation_scraper import ValidationScraper
 
 
@@ -54,15 +53,6 @@ class DIContainer(CommonDIContainer):
 
     schedule_scraper = providers.Factory(
         ScheduleScraper,
-        config=CommonDIContainer.config,
-        data_access=CommonDIContainer.data_access,
-        page_scraper=page_scraper,
-        app_logger=CommonDIContainer.app_logger,
-        error_handler=CommonDIContainer.error_handler_factory
-    )
-
-    matchup_validator = providers.Factory(
-        MatchupValidator,
         config=CommonDIContainer.config,
         data_access=CommonDIContainer.data_access,
         page_scraper=page_scraper,

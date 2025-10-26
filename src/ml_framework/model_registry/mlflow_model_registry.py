@@ -131,6 +131,26 @@ class MLflowModelRegistry(BaseModelRegistry):
                         artifact_path="artifacts/preprocessor_artifact.pkl"
                     )
 
+                    # Save explicit feature schema for inference-time validation and reordering
+                    if 'feature_names_in' in preprocessor_artifact:
+                        feature_schema = {
+                            'feature_names': list(preprocessor_artifact['feature_names_in']),
+                            'num_features': len(preprocessor_artifact['feature_names_in']),
+                            'schema_version': '1.0'
+                        }
+                        schema_path = "feature_schema.pkl"
+                        with open(schema_path, 'wb') as f:
+                            pickle.dump(feature_schema, f)
+                        mlflow.log_artifact(schema_path, artifact_path="artifacts")
+                        os.remove(schema_path)
+
+                        self.app_logger.structured_log(
+                            logging.INFO,
+                            "Feature schema artifact saved",
+                            num_features=feature_schema['num_features'],
+                            artifact_path="artifacts/feature_schema.pkl"
+                        )
+
                 # Save additional artifacts if provided (e.g., calibrator, conformal_predictor)
                 if additional_artifacts:
                     for artifact_name, artifact_data in additional_artifacts.items():
@@ -241,12 +261,33 @@ class MLflowModelRegistry(BaseModelRegistry):
             if model_identifier.startswith('runs:/'):
                 run_id = model_identifier.split('/')[1]
             elif model_identifier.startswith('models:/'):
-                # Get run_id from registered model version
+                # Get run_id from registered model version or stage
                 model_name = model_identifier.split('/')[1]
-                version = model_identifier.split('/')[-1]
+                version_or_stage = model_identifier.split('/')[-1]
                 client = mlflow.tracking.MlflowClient()
-                model_version = client.get_model_version(model_name, version)
-                run_id = model_version.run_id
+
+                # Check if version_or_stage is a stage name (Production, Staging, Archived) or a version number
+                if version_or_stage.isdigit():
+                    # It's a version number
+                    model_version = client.get_model_version(model_name, version_or_stage)
+                    run_id = model_version.run_id
+                else:
+                    # It's a stage name - search for models in that stage
+                    versions = client.search_model_versions(f"name='{model_name}'")
+                    stage_versions = [v for v in versions if v.current_stage == version_or_stage]
+                    if not stage_versions:
+                        raise ValueError(f"No model version found in stage '{version_or_stage}' for model '{model_name}'")
+                    # Use the first (most recent) version in this stage
+                    model_version = stage_versions[0]
+                    run_id = model_version.run_id
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        f"Using model version from stage",
+                        model_name=model_name,
+                        stage=version_or_stage,
+                        version=model_version.version,
+                        run_id=run_id
+                    )
 
             # Load preprocessor artifact if available
             preprocessor_artifact = None
@@ -268,6 +309,31 @@ class MLflowModelRegistry(BaseModelRegistry):
                     self.app_logger.structured_log(
                         logging.WARNING,
                         "No preprocessor artifact found for model",
+                        run_id=run_id,
+                        error=str(e)
+                    )
+
+            # Load feature schema artifact if available
+            feature_schema = None
+            if run_id:
+                try:
+                    artifact_path = "artifacts/feature_schema.pkl"
+                    local_path = mlflow.artifacts.download_artifacts(
+                        artifact_uri=f"runs:/{run_id}/{artifact_path}"
+                    )
+                    with open(local_path, 'rb') as f:
+                        feature_schema = pickle.load(f)
+
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        "Feature schema artifact loaded",
+                        num_features=feature_schema.get('num_features', 'unknown'),
+                        run_id=run_id
+                    )
+                except Exception as e:
+                    self.app_logger.structured_log(
+                        logging.WARNING,
+                        "No feature schema artifact found for model",
                         run_id=run_id,
                         error=str(e)
                     )
@@ -318,6 +384,7 @@ class MLflowModelRegistry(BaseModelRegistry):
             result = {
                 'model': model,
                 'preprocessor_artifact': preprocessor_artifact,
+                'feature_schema': feature_schema,
                 'metadata': metadata,
                 'run_id': run_id,
                 **additional_artifacts  # Include calibrator and conformal_predictor if they exist

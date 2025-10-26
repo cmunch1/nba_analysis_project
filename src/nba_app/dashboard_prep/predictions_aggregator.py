@@ -77,8 +77,8 @@ class PredictionsAggregator:
             filename = filename_pattern.replace('{date}', prediction_date)
             predictions_path = predictions_dir / filename
 
-            # Load predictions
-            predictions_df = self.data_access.load_dataframe(str(predictions_path))
+            # Load predictions using pandas directly (data_access adds directory prefix)
+            predictions_df = pd.read_csv(predictions_path)
 
             if predictions_df.empty:
                 self.app_logger.structured_log(

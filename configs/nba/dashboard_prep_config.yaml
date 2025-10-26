@@ -8,8 +8,8 @@ dashboard_prep:
     predictions_dir: "data/predictions"
     predictions_pattern: "predictions_{date}.csv"
 
-    # Actual game results (from cumulative scraped data)
-    actual_results: "data/cumulative_scraped/box_scores.csv"
+    # Actual game results (from processed data)
+    actual_results: "data/processed/games_boxscores.csv"
 
     # Model evaluation metrics (from model_testing)
     evaluation_dir: "data/evaluation"

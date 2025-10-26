@@ -138,9 +138,11 @@ class ModelTester(BaseModelTester):
                 primary_ids = X[self._model_cfg.primary_id_column]
                 X = X.drop(columns=[self._model_cfg.primary_id_column])
 
-            # Drop non-useful columns
+            # Drop non-useful columns (only drop columns that actually exist)
             if hasattr(self._model_cfg, 'non_useful_columns') and self._model_cfg.non_useful_columns:
-                X = X.drop(columns=self._model_cfg.non_useful_columns)
+                cols_to_drop = [col for col in self._model_cfg.non_useful_columns if col in X.columns]
+                if cols_to_drop:
+                    X = X.drop(columns=cols_to_drop)
 
             # Get preprocessing configuration
             perform_preprocessing = self.get_model_config_value(
