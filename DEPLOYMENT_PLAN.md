@@ -188,132 +188,256 @@ mlruns/models/nba_win_predictor/version-1/
 └── meta.yaml (points to run 6d263e086b924de986ab700a17e9e9a7)
 ```
 
-### Phase 1: Complete Inference Module
+### Phase 0.5: Feature Schema & Deterministic Features (COMPLETED ✅)
 
-**Priority:** HIGH
-**Status:** Ready to Start
+**Priority:** CRITICAL (Production Stability)
+**Status:** COMPLETED 2025-10-26
 
-**Tasks:**
+**Context:**
+During inference module development, discovered that feature engineering produces non-deterministic column ordering due to DataFrame merge operations. This caused 807 out of 849 features to be in wrong positions at inference time, breaking model predictions.
 
-1. **Create inference module structure:**
-   ```
-   src/nba_app/inference/
-   ├── __init__.py
-   ├── main.py              # CLI entry point
-   ├── inference_engine.py  # Core prediction logic
-   └── di_container.py      # Dependency injection
-   ```
+**Two-Layer Solution Implemented:**
 
-2. **Implement ArtifactLoader utility:**
-   ```python
-   # src/ml_framework/inference/artifact_loader.py
-   class ArtifactLoader:
-       """
-       Load artifacts from MLflow in production, local files in development.
-       Implements fallback strategy for resilience.
-       """
+#### Layer 1: Feature Schema Artifact System (Short-term Safety Net)
 
-       def load_model(self, model_uri: str) -> Any:
-           """Load model from MLflow Model Registry"""
+**Implementation** (Commit: `deadd27`):
+- Modified [src/ml_framework/model_registry/mlflow_model_registry.py](src/ml_framework/model_registry/mlflow_model_registry.py)
+  - Saves `feature_schema.pkl` during model training
+  - Schema includes: feature names (in order), feature count, schema version
+  - Loads schema during model loading
+  - Returns schema with model artifact dictionary
 
-       def load_postprocessing_artifacts(self, run_id: str) -> Dict:
-           """Load calibrator + conformal predictor from training run"""
+- Modified [src/nba_app/inference/main.py](src/nba_app/inference/main.py)
+  - Validates all expected features are present (fails fast if missing)
+  - Warns about extra features and drops them automatically
+  - **Reorders features to match model's training order**
+  - Logs validation results for debugging
 
-       def load_feature_allowlist(self, run_id: str) -> Set[str]:
-           """Load feature allowlist from training run"""
-   ```
+**Benefits:**
+- ✅ Handles non-deterministic feature engineering gracefully
+- ✅ Prevents silent model failures from feature misalignment
+- ✅ Enables safe model updates without retraining
+- ✅ Clear error messages for debugging
 
-3. **Inference workflow:**
-   ```python
-   # Simplified pipeline (200-300 lines)
-   def run_inference():
-       # 1. Load today's game IDs
-       todays_game_ids = load_game_ids("data/newly_scraped/todays_games_ids.csv")
+#### Layer 2: Deterministic Feature Engineering (Long-term Fix)
 
-       # 2. Load engineered data (already has today's games with features)
-       engineered_df = load_dataframe("data/engineered/engineered_features.csv")
+**Implementation** (Commit: `e715335`):
+- Modified [src/nba_app/feature_engineering/feature_engineer.py](src/nba_app/feature_engineering/feature_engineer.py)
+  - Preserves metadata columns at front (game_id, season, game_date, etc.)
+  - Alphabetically sorts all feature columns
+  - Reorders DataFrame before returning
+  - Added logging for metadata vs feature column counts
 
-       # 3. Filter to today's games
-       todays_features = engineered_df[engineered_df['game_id'].isin(todays_game_ids)]
-
-       # 4. Load model + artifacts from MLflow
-       model_uri = "models:/nba_win_predictor/Production"
-       model = artifact_loader.load_model(model_uri)
-       artifacts = artifact_loader.load_postprocessing_artifacts(run_id)
-
-       # 5. Predict (preprocessing automatic via ModelPredictor)
-       raw_predictions = model_predictor.predict(todays_features)
-
-       # 6. Apply postprocessing
-       calibrated_probs = calibrator.transform(raw_predictions)
-       prediction_sets = conformal_predictor.predict(calibrated_probs)
-
-       # 7. Save predictions
-       save_predictions("data/predictions/predictions_{date}.csv")
-   ```
-
-4. **Config already exists:**
-   - ✅ [configs/nba/inference_config.yaml](configs/nba/inference_config.yaml)
-   - Specifies: model identifier, input paths, postprocessing settings, output format
-
-**Files to Create:**
-- `src/nba_app/inference/main.py`
-- `src/nba_app/inference/inference_engine.py`
-- `src/nba_app/inference/di_container.py`
-- `src/ml_framework/inference/artifact_loader.py` (if not exists)
-
-**Files to Modify:**
-- None (inference is net-new)
-
-**Testing:**
+**Verification:**
 ```bash
-# Test with today's engineered data
-uv run -m src.nba_app.inference.main
+# Ran feature engineering 3 times
+Run 1: 856 columns (4 metadata + 852 features) ✅
+Run 2: 856 columns (4 metadata + 852 features) ✅
+Run 3: 856 columns (4 metadata + 852 features) ✅
 
-# Expected output: data/predictions/predictions_2025-10-23.csv
+# Column order comparison: IDENTICAL across all runs ✅
 ```
 
-### Phase 2: Test Dashboard Prep Module
+**Benefits:**
+- ✅ Eliminates root cause of feature schema mismatches
+- ✅ Makes feature engineering output 100% reproducible
+- ✅ Simplifies debugging (consistent column positions)
+- ✅ Reduces reliance on feature reordering at inference time
+
+#### Model Version History
+
+| Version | Date | Status | Key Features | Issues |
+|---------|------|--------|--------------|--------|
+| 1 | Initial | Archived | Isotonic calibration | Calibration clips to 0.0 |
+| 2 | Oct 24 | Archived | Sigmoid calibration | Fixed calibration bug |
+| 3 | Oct 25 | Archived | Transition | Testing version |
+| 4 | Oct 25 | Archived | Feature schema artifact | Pre-deterministic features |
+| **5** | **Oct 26** | **Production** | **Deterministic features + schema** | **None known** |
+
+#### Testing Results
+
+**End-to-End Integration Test:**
+```bash
+✅ Feature Engineering: Generated 856 columns in deterministic order
+✅ Model Training: Saved model v5 with feature schema artifact
+✅ Model Promotion: Version 5 promoted to Production stage
+✅ Inference:
+   - Feature schema loaded (849 features)
+   - Features validated and reordered
+   - 12 predictions generated successfully
+   - No feature mismatch errors
+```
+
+**Defense-in-Depth Validation:**
+- ✅ Layer 1 works: Feature reordering handles mismatches
+- ✅ Layer 2 works: Deterministic features prevent mismatches
+- ✅ Both layers working together provide maximum reliability
+
+**Files Modified:**
+1. [src/ml_framework/model_registry/mlflow_model_registry.py](src/ml_framework/model_registry/mlflow_model_registry.py) - Feature schema save/load
+2. [src/nba_app/inference/main.py](src/nba_app/inference/main.py) - Feature validation and reordering
+3. [src/nba_app/feature_engineering/feature_engineer.py](src/nba_app/feature_engineering/feature_engineer.py) - Deterministic column ordering
+4. [src/ml_framework/model_testing/model_tester.py](src/ml_framework/model_testing/model_tester.py) - Flexible column dropping
+5. [src/nba_app/dashboard_prep/predictions_aggregator.py](src/nba_app/dashboard_prep/predictions_aggregator.py) - Path fixes
+6. [src/nba_app/dashboard_prep/results_aggregator.py](src/nba_app/dashboard_prep/results_aggregator.py) - Path fixes
+7. [configs/core/model_testing_config.yaml](configs/core/model_testing_config.yaml) - Add h_is_win to non_useful_columns
+8. [configs/nba/inference_config.yaml](configs/nba/inference_config.yaml) - Use Production stage
+9. [configs/nba/dashboard_prep_config.yaml](configs/nba/dashboard_prep_config.yaml) - Fix paths
+
+**Impact:**
+This work was **not in the original deployment plan** but proved critical for production stability. The two-layer approach provides both immediate safety (feature reordering) and long-term reliability (deterministic features).
+
+### Phase 1: Complete Inference Module (COMPLETED ✅)
 
 **Priority:** HIGH
-**Status:** Module Created, Not Tested
+**Status:** COMPLETED 2025-10-26
 
-**Tasks:**
+**Completed Tasks:**
 
-1. **Verify module structure:**
+1. ✅ **Created inference module structure:**
+   ```
+   src/nba_app/inference/
+   ├── __init__.py              ✅ Created
+   ├── main.py                  ✅ Created (CLI entry point)
+   ├── inference_engine.py      ✅ Created (Core prediction logic)
+   └── di_container.py          ✅ Created (Dependency injection)
+   ```
+
+2. ✅ **Implemented artifact loading using existing MLflow registry:**
+   - Uses [src/ml_framework/model_registry/mlflow_model_registry.py](src/ml_framework/model_registry/mlflow_model_registry.py)
+   - Loads all artifacts: model, preprocessor, calibrator, conformal_predictor, **feature_schema**
+   - Supports stage-based loading (`models:/nba_win_predictor/Production`)
+
+3. ✅ **Inference workflow implemented:**
+   - Loads today's game IDs from webscraping output
+   - Loads engineered features (already includes today's games)
+   - Filters to today's games only
+   - **Validates features using feature_schema artifact**
+   - **Reorders features to match model's expected order**
+   - Generates raw predictions
+   - Applies calibration (sigmoid method)
+   - Applies conformal prediction (split method, alpha=0.1)
+   - Saves predictions with metadata (team names, confidence, intervals)
+
+4. ✅ **Configuration:**
+   - [configs/nba/inference_config.yaml](configs/nba/inference_config.yaml)
+   - Updated to use `models:/nba_win_predictor/Production` (stage-based loading)
+
+**Key Enhancements Beyond Original Plan:**
+
+1. **Feature Schema Validation & Reordering** (NEW)
+   - Automatically validates all required features are present
+   - Warns about extra features and drops them
+   - Reorders features to match model's training order
+   - Handles non-deterministic feature engineering gracefully
+
+2. **Team Information Preservation** (FIXED)
+   - Extracts team names from h_team/v_team columns
+   - Includes team abbreviations in prediction output
+   - No more "UNKNOWN" team names
+
+3. **Robust Error Handling**
+   - Fails fast with clear error messages on missing features
+   - Logs feature validation results
+   - Handles missing artifacts gracefully
+
+**Testing Results:**
+```bash
+✅ uv run -m src.nba_app.inference.main
+
+# Output:
+✅ Feature schema artifact loaded (849 features)
+✅ Features reordered to match model schema
+✅ Raw predictions generated (12 predictions)
+✅ Calibrated probabilities applied (sigmoid method)
+✅ Conformal prediction sets generated (alpha=0.1)
+✅ Predictions saved: data/predictions/predictions_2025-10-26.csv
+
+# Sample output columns:
+game_id, game_date, home_team, away_team, raw_home_win_prob,
+calibrated_home_win_prob, predicted_winner, confidence,
+prediction_set, prob_lower, prob_upper, interval_width,
+prediction_timestamp, model_identifier
+```
+
+**Model Version in Production:**
+- Version 5 (with deterministic features + feature schema artifact)
+- Trained 2025-10-26
+- Cross-validation AUC: ~0.70
+- Calibration method: Sigmoid (Platt scaling)
+- Conformal method: Split (alpha=0.1)
+
+### Phase 2: Test Dashboard Prep Module (PARTIALLY COMPLETED ⚠️)
+
+**Priority:** HIGH
+**Status:** Module Created, Testing Blocked by Data Schema Issue
+
+**Completed Tasks:**
+
+1. ✅ **Module structure verified:**
    ```
    src/nba_app/dashboard_prep/
    ├── __init__.py                  ✅ Created
    ├── main.py                      ✅ Created
    ├── dashboard_data_generator.py  ✅ Created
-   ├── predictions_aggregator.py    ✅ Created
-   ├── results_aggregator.py        ✅ Created
+   ├── predictions_aggregator.py    ✅ Created (path fixes applied)
+   ├── results_aggregator.py        ✅ Created (path fixes applied)
    ├── performance_calculator.py    ✅ Created
    ├── team_performance_analyzer.py ✅ Created
    └── di_container.py              ✅ Created
    ```
 
-2. **Test complete pipeline:**
-   ```bash
-   # Run dashboard prep (requires predictions + actual results)
-   uv run -m src.nba_app.dashboard_prep.main
+2. ✅ **Configuration updated:**
+   - [configs/nba/dashboard_prep_config.yaml](configs/nba/dashboard_prep_config.yaml)
+   - Fixed data source paths (cumulative → processed)
+   - Updated predictions directory path
 
-   # Expected output: data/dashboard/dashboard_data.csv
+3. ⚠️ **Testing blocked by data schema issue:**
+   ```bash
+   # Attempted: uv run -m src.nba_app.dashboard_prep.main
+
+   ❌ ERROR: Error creating game results from team-centric data
+      Original error: 'is_home_team'
+
+   Root Cause: Data schema mismatch
+   - Expected: is_home_team column in actual results data
+   - Actual: Column not present in data/processed/games_boxscores.csv
    ```
 
-3. **Validate dashboard output sections:**
-   - **predictions**: Tomorrow's games with uncertainty
-   - **results**: Yesterday's games with validation
-   - **metrics**: Season/7day/30day performance
-   - **team_performance**: Per-team accuracy
-   - **drift**: Daily metrics for monitoring
+**Known Issues:**
 
-**Config:**
-- ✅ [configs/nba/dashboard_prep_config.yaml](configs/nba/dashboard_prep_config.yaml)
+1. **Data Schema Mismatch (BLOCKER)**
+   - Dashboard prep expects `is_home_team` column in actual results
+   - Current processed data has different schema
+   - **This is separate from feature schema work** - not a regression
+   - Requires investigation of data processing pipeline output
+
+2. **Partial Validation Sections:**
+   - ❌ **predictions**: Cannot test (blocked by results error)
+   - ❌ **results**: Schema mismatch prevents loading
+   - ❌ **metrics**: Blocked by results dependency
+   - ❌ **team_performance**: Blocked by results dependency
+   - ❌ **drift**: Blocked by results dependency
+
+**Fixes Applied:**
+
+1. ✅ Fixed path doubling issue in predictions_aggregator.py
+   - Changed from `data_access.load_dataframe()` to `pd.read_csv()`
+   - Prevents doubled paths like `data/cumulative_scraped/data/cumulative_scraped/...`
+
+2. ✅ Fixed path doubling issue in results_aggregator.py
+   - Same fix as predictions_aggregator
+
+**Next Steps for Phase 2:**
+
+1. Investigate data processing pipeline output schema
+2. Determine if `is_home_team` should be added to processed data
+3. Or update dashboard prep to work with current schema
+4. Complete end-to-end testing once blocker resolved
 
 **Dependencies:**
-- Requires: predictions from inference module
-- Requires: actual results from webscraping (yesterday's box scores)
+- ✅ Predictions from inference module (working)
+- ⚠️ Actual results data (schema mismatch)
 
 ### Phase 3: End-to-End Pipeline Testing
 
@@ -567,31 +691,35 @@ data/
 
 ### Pre-Deployment Testing
 
-- [ ] **Feature Engineering**
+- [x] **Feature Engineering**
   - [x] Loads historical data correctly
   - [x] Creates placeholder rows for today's games
   - [x] Engineers 849 features per allowlist
   - [x] Preserves metadata columns
   - [x] Output has 856 columns (7 metadata + 849 features)
+  - [x] **Deterministic column ordering** (NEW)
 
-- [ ] **Inference**
-  - [ ] Loads engineered data
-  - [ ] Filters to today's games
-  - [ ] Loads model from MLflow
-  - [ ] Loads postprocessing artifacts from MLflow
-  - [ ] Produces calibrated probabilities
-  - [ ] Generates prediction sets (conformal)
-  - [ ] Saves predictions with metadata
+- [x] **Inference**
+  - [x] Loads engineered data
+  - [x] Filters to today's games
+  - [x] Loads model from MLflow
+  - [x] Loads postprocessing artifacts from MLflow
+  - [x] **Loads feature schema from MLflow** (NEW)
+  - [x] **Validates and reorders features** (NEW)
+  - [x] Produces calibrated probabilities
+  - [x] Generates prediction sets (conformal)
+  - [x] Saves predictions with metadata
 
-- [ ] **Dashboard Prep**
+- [ ] **Dashboard Prep** (BLOCKED by data schema issue)
   - [ ] Loads predictions
-  - [ ] Loads actual results
+  - [ ] Loads actual results (ERROR: missing is_home_team column)
   - [ ] Calculates performance metrics
   - [ ] Generates team performance analysis
   - [ ] Outputs complete dashboard CSV
 
 - [ ] **End-to-End Pipeline**
-  - [ ] All 5 stages run successfully
+  - [x] Stages 1-4 run successfully (webscraping, processing, feature eng, inference)
+  - [ ] Stage 5 blocked (dashboard prep data schema issue)
   - [ ] Data flows correctly between stages
   - [ ] Error handling works
   - [ ] Logging is comprehensive
@@ -608,9 +736,18 @@ data/
   - [x] Model registered to MLflow model registry
   - [x] Postprocessing artifacts saved with model (calibrator, conformal_predictor)
   - [x] Preprocessor artifact saved with model
-  - [ ] Model promoted to "Production" stage (manual step after validation)
+  - [x] **Feature schema artifact saved with model** (NEW)
+  - [x] Model promoted to "Production" stage (Version 5)
+  - [x] **Stage-based model loading implemented** (NEW)
   - [ ] Feature allowlist logged with run (TODO: add to model save workflow)
   - [x] Can load artifacts by run_id
+  - [x] Can load artifacts by stage name (Production/Staging/Archived)
+
+- [x] **Feature Engineering Stability** (NEW)
+  - [x] Deterministic column ordering implemented
+  - [x] Feature schema validation at inference time
+  - [x] Automatic feature reordering for mismatches
+  - [x] Defense-in-depth architecture (2 layers of protection)
 
 - [ ] **Monitoring**
   - [ ] Pipeline logs to structured format
@@ -669,30 +806,36 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 
 **✅ Completed:**
 0. ~~MLflow model registry integration with all artifacts~~ (DONE 2025-10-23)
+1. ~~Implement inference module with MLflow artifact loading~~ (DONE 2025-10-26)
+2. ~~Feature schema artifact system for production stability~~ (DONE 2025-10-26)
+3. ~~Deterministic feature engineering implementation~~ (DONE 2025-10-26)
+4. ~~Model version 5 trained and promoted to Production~~ (DONE 2025-10-26)
 
 **Immediate (Start Next):**
-1. **Implement inference module with MLflow artifact loading** ← YOU ARE HERE
-   - Create inference module structure
-   - Implement artifact loading from MLflow
-   - Test with saved model and artifacts
-   - Generate predictions for today's games
+5. **Create pipeline orchestration script** ← YOU ARE HERE
+   - Combine all 5 stages into single script
+   - Add error handling and logging
+   - Test end-to-end flow (skip dashboard prep for now due to blocker)
 
-2. Test dashboard_prep module end-to-end
+6. **Fix dashboard_prep data schema issue**
+   - Investigate `is_home_team` column requirement
+   - Update data processing or dashboard prep code
+   - Complete dashboard prep testing
 
 **Short Term:**
-3. Create pipeline orchestration script
-4. Add comprehensive error handling and logging
-5. Fix calibration optimization indexing bug (see [CALIBRATION_OPTIMIZATION_BUG.md](CALIBRATION_OPTIMIZATION_BUG.md))
+7. Add comprehensive error handling and logging
+8. Fix calibration optimization indexing bug (see [CALIBRATION_OPTIMIZATION_BUG.md](CALIBRATION_OPTIMIZATION_BUG.md))
+9. Add feature allowlist logging to model training (note in Phase 0)
 
 **Medium Term:**
-6. Docker containerization
-7. GitHub Actions deployment setup
-8. Production monitoring setup
+10. Docker containerization
+11. GitHub Actions deployment setup
+12. Production monitoring setup
 
 **Long Term:**
-9. UI dashboard development (Vercel/Next.js)
-10. Model retraining automation
-11. A/B testing framework for model versions
+13. UI dashboard development (Vercel/Next.js)
+14. Model retraining automation
+15. A/B testing framework for model versions
 
 ## Important Notes from Conversation
 
@@ -741,7 +884,16 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-10-23
+**Document Version**: 2.0
+**Last Updated**: 2025-10-26
 **Author**: Claude (AI Assistant)
-**Status**: Ready for implementation
+**Status**: Phases 0, 0.5, and 1 Complete - Ready for Phase 3 (End-to-End Testing)
+
+**Major Updates in v2.0:**
+- Added Phase 0.5: Feature Schema & Deterministic Features (critical production stability work)
+- Updated Phase 1 to COMPLETED status with full testing results
+- Updated Phase 2 with partial completion status and data schema blocker
+- Added model version history table (versions 1-5)
+- Updated all testing checklists with current status
+- Added new production readiness category for feature engineering stability
+- Updated next steps with completed items 0-4
