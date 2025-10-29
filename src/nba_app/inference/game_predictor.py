@@ -423,13 +423,9 @@ class GamePredictor:
                     "Generating conformal prediction sets"
                 )
                 # Conformal predictor expects calibrated probabilities
-                conformal_results = self.conformal_predictor.predict(
-                    calibrated_probs,
-                    return_sets=True,
-                    return_intervals=True
-                )
+                conformal_results = self.conformal_predictor.transform(calibrated_probs)
                 prediction_sets = conformal_results.get('prediction_sets')
-                intervals = conformal_results.get('intervals')
+                intervals = conformal_results.get('probability_intervals')
 
             return calibrated_probs, prediction_sets, intervals
 
@@ -483,8 +479,9 @@ class GamePredictor:
 
             # Add uncertainty intervals
             if intervals is not None:
-                output_df['prob_lower'] = intervals.get('lower')
-                output_df['prob_upper'] = intervals.get('upper')
+                # intervals is a numpy array with shape (n, 2) where [:, 0] is lower, [:, 1] is upper
+                output_df['prob_lower'] = intervals[:, 0]
+                output_df['prob_upper'] = intervals[:, 1]
                 output_df['interval_width'] = output_df['prob_upper'] - output_df['prob_lower']
 
             # Add metadata

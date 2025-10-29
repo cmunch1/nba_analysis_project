@@ -939,7 +939,9 @@ class ModelTester(BaseModelTester):
                                results: ModelTrainingResults,
                                X_cal: pd.DataFrame,
                                y_cal: pd.Series,
-                               model_name: str) -> ModelTrainingResults:
+                               model_name: str,
+                               y_cal_conformal: pd.Series = None,
+                               predictions_cal_conformal: np.ndarray = None) -> ModelTrainingResults:
         """
         Calibrate probability predictions using configured method.
 
@@ -951,6 +953,8 @@ class ModelTester(BaseModelTester):
             X_cal: Calibration features (typically validation set)
             y_cal: Calibration labels
             model_name: Name of the model
+            y_cal_conformal: Optional larger calibration set for conformal prediction only
+            predictions_cal_conformal: Optional larger prediction set for conformal prediction only
 
         Returns:
             Updated results with calibrated predictions
@@ -1005,8 +1009,18 @@ class ModelTester(BaseModelTester):
             # Optionally apply conformal prediction layer
             conformal_cfg = getattr(self._postprocessing_cfg, 'conformal', None)
             if conformal_cfg and getattr(conformal_cfg, 'enable', False):
+                # Use larger calibration set if provided for more stable conformal quantiles
+                y_cal_for_conformal = y_cal_conformal if y_cal_conformal is not None else y_cal
+                predictions_for_conformal = predictions_cal_conformal if predictions_cal_conformal is not None else results.predictions
+
+                # Need to calibrate the combined predictions if using larger set
+                if y_cal_conformal is not None and predictions_cal_conformal is not None:
+                    calibrated_probs_conformal = calibrator.transform(y_pred=predictions_for_conformal)
+                else:
+                    calibrated_probs_conformal = calibrated_probs
+
                 min_samples = getattr(conformal_cfg, 'min_calibration_samples', 50)
-                if len(y_cal) >= min_samples:
+                if len(y_cal_for_conformal) >= min_samples:
                     alphas_cfg = getattr(conformal_cfg, 'alphas', None)
                     alpha_prediction_set = getattr(alphas_cfg, 'prediction_set', 0.1) if alphas_cfg else 0.1
                     alpha_probability_interval = getattr(alphas_cfg, 'probability_interval', 0.2) if alphas_cfg else 0.2
@@ -1023,8 +1037,8 @@ class ModelTester(BaseModelTester):
                     )
 
                     conformal_predictor.fit(
-                        y_pred=calibrated_probs,
-                        y_true=np.asarray(y_cal, dtype=int)
+                        y_pred=calibrated_probs_conformal,
+                        y_true=np.asarray(y_cal_for_conformal, dtype=int)
                     )
                     conformal_outputs = conformal_predictor.transform(calibrated_probs)
 
@@ -1039,6 +1053,8 @@ class ModelTester(BaseModelTester):
                         logging.INFO,
                         "Conformal prediction applied",
                         model_name=model_name,
+                        n_calibration_samples=len(y_cal_for_conformal),
+                        using_combined_dataset=y_cal_conformal is not None,
                         alpha_prediction_set=alpha_prediction_set,
                         alpha_probability_interval=alpha_probability_interval,
                         empirical_coverage=results.conformal_metrics.get('empirical_coverage_prediction_set') if results.conformal_metrics else None,
@@ -1049,7 +1065,7 @@ class ModelTester(BaseModelTester):
                         logging.INFO,
                         "Skipping conformal prediction due to insufficient calibration samples",
                         model_name=model_name,
-                        n_calibration_samples=len(y_cal),
+                        n_calibration_samples=len(y_cal_for_conformal),
                         min_required=min_samples
                     )
 

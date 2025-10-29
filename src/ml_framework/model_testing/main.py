@@ -274,7 +274,8 @@ def process_single_model(
             training_results=val_results,
             experiment_name=model_cfg.experiment_name,
             experiment_description=model_cfg.experiment_description,
-            is_oof=False
+            is_oof=False,
+            oof_results_for_conformal=oof_results  # Pass OOF results for larger conformal calibration set
         )
 
     return val_results if model_cfg.perform_validation_set_testing else oof_results
@@ -299,6 +300,7 @@ def process_model_evaluation(
     is_oof: bool,
     X_eval=None,
     y_eval=None,
+    oof_results_for_conformal=None,
 ) -> ModelTrainingResults:
     """Process model evaluation with visualization integration."""
 
@@ -351,11 +353,37 @@ def process_model_evaluation(
         # Apply probability calibration if enabled
         # Use results.target_data which contains the actual targets for predictions
         # (important for OOF where predictions may be subset of full training data)
+        # For validation evaluation with OOF results available, use combined data for conformal calibration
+        y_cal_combined = results.target_data
+        predictions_cal_combined = results.predictions
+
+        if not is_oof and oof_results_for_conformal is not None:
+            # Combine OOF and validation predictions for larger conformal calibration set
+            import numpy as np
+            if hasattr(oof_results_for_conformal, 'target_data') and hasattr(oof_results_for_conformal, 'predictions'):
+                y_cal_combined = pd.concat([
+                    pd.Series(oof_results_for_conformal.target_data),
+                    pd.Series(results.target_data)
+                ], ignore_index=True)
+                predictions_cal_combined = np.concatenate([
+                    oof_results_for_conformal.predictions,
+                    results.predictions
+                ])
+                app_logger.structured_log(
+                    logging.INFO,
+                    "Using combined OOF + validation data for conformal calibration",
+                    oof_samples=len(oof_results_for_conformal.target_data),
+                    val_samples=len(results.target_data),
+                    total_samples=len(y_cal_combined)
+                )
+
         results = model_tester.calibrate_probabilities(
             results=results,
             X_cal=None,  # Not needed for direct probability calibration
             y_cal=results.target_data,
-            model_name=model_name
+            model_name=model_name,
+            y_cal_conformal=y_cal_combined,
+            predictions_cal_conformal=predictions_cal_combined
         )
 
         # If calibration was applied, calculate calibrated metrics

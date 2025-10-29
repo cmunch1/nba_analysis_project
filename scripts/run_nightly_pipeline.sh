@@ -51,7 +51,7 @@ PIPELINE_LOG="${LOG_DIR}/pipeline_${TIMESTAMP}.log"
 
 # Default options
 SKIP_WEBSCRAPING=false
-SKIP_DASHBOARD=true  # Default to skipping dashboard due to known blocker
+SKIP_DASHBOARD=false  # Default to including dashboard
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do

@@ -9,7 +9,9 @@ dashboard_prep:
     predictions_pattern: "predictions_{date}.csv"
 
     # Actual game results (from processed data)
-    actual_results: "data/processed/games_boxscores.csv"
+    # Use teams_boxscores.csv (team-centric, 2 rows per game) instead of games_boxscores.csv
+    # This has the is_home_team column that results_aggregator expects
+    actual_results: "data/processed/teams_boxscores.csv"
 
     # Model evaluation metrics (from model_testing)
     evaluation_dir: "data/evaluation"
@@ -32,7 +34,7 @@ dashboard_prep:
   # Tomorrow's Predictions Section
   predictions:
     # How many days ahead to include
-    forecast_days: 1
+    forecast_days: 0  # 0 = today, 1 = tomorrow
 
     # Columns to include
     include_columns:
@@ -47,8 +49,8 @@ dashboard_prep:
       - prob_upper
       - prediction_set  # Conformal prediction set
 
-    # Highlight high-confidence predictions
-    high_confidence_threshold: 0.75
+    # Highlight high win probability predictions (for "High Win Probability" chip)
+    high_probability_threshold: 0.60
 
   # Yesterday's Results Section
   results:
@@ -75,7 +77,7 @@ dashboard_prep:
     time_windows:
       - name: "season"
         description: "Entire current season"
-        start_date: "2024-10-22"  # NBA season start
+        start_date: "2025-10-22"  # NBA season start
 
       - name: "7day"
         description: "Last 7 days"
@@ -111,7 +113,7 @@ dashboard_prep:
         format: "integer"
 
       - name: "avg_confidence"
-        display_name: "Average Confidence"
+        display_name: "Average Win Probability"
         format: "percentage"
 
   # Team-Level Performance Section
