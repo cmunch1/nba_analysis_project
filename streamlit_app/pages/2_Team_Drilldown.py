@@ -9,6 +9,26 @@ import streamlit as st
 
 from streamlit_app.data_loader import load_latest_dataset
 
+# Hide the main "app" page from navigation and add title above nav
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebarNav"] li:first-child {
+        display: none;
+    }
+    [data-testid="stSidebarNav"]::before {
+        content: "NBA Predictions and Analysis";
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 600;
+        padding: 1rem 1rem 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 
 def main() -> None:
     st.title("Team Drilldown")

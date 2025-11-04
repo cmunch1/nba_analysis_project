@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
+
+from streamlit_app.di_container import StreamlitAppContainer
 
 
 @dataclass
@@ -21,48 +23,27 @@ def render_filter_panel(
     high_probability_threshold: float,
 ) -> MatchupFilterState:
     """
-    Render sidebar controls for matchup filtering and return the current state.
+    Render simplified sidebar with only probability threshold slider.
+    Date and team filters removed as they're unnecessary for today's games.
     """
-    available_dates = _extract_unique_dates(dataset)
-    available_teams = _extract_unique_teams(dataset)
-
     with st.sidebar:
-        st.subheader("Filter Matchups")
+        st.subheader("Filter Options")
 
-        selected_date = None
-        if available_dates:
-            default_date = max(available_dates)
-            label_to_date = {date.strftime("%b %d, %Y"): date for date in available_dates}
-            date_label = st.selectbox(
-                "Game date",
-                options=["All dates"] + list(label_to_date.keys()),
-                index=(list(label_to_date.keys()).index(default_date.strftime("%b %d, %Y")) + 1)
-                if default_date is not None
-                else 0,
-            )
-            if date_label != "All dates":
-                selected_date = label_to_date[date_label]
-
-        selected_teams: List[str] = []
-        if available_teams:
-            selected_teams = st.multiselect(
-                "Teams",
-                options=sorted(available_teams),
-                default=[],
-            )
-
-        default_threshold = float(min(max(high_probability_threshold, 0.0), 1.0))
         min_win_probability = st.slider(
-            "Probability Threshold",
+            "Win Probability Threshold",
             min_value=0.0,
             max_value=1.0,
             value=0.35,
             step=0.05,
+            help="Show only games where predicted winner has at least this probability"
         )
 
+        st.markdown("---")
+        st.caption("💡 Navigate to **Historical Performance** for past predictions and analysis")
+
     return MatchupFilterState(
-        selected_date=selected_date,
-        selected_teams=selected_teams,
+        selected_date=None,  # No date filtering
+        selected_teams=[],    # No team filtering
         min_win_probability=min_win_probability,
     )
 
@@ -89,8 +70,11 @@ def filter_matchups(dataset: pd.DataFrame, filters: MatchupFilterState) -> pd.Da
     if "confidence" in filtered.columns:
         filtered = filtered.loc[filtered["confidence"].fillna(0.0) >= filters.min_win_probability]
 
-    # Display predictions only for rows that include a probability column.
-    if "calibrated_home_win_prob" in filtered.columns:
+    # Sort by win probability (confidence) - highest first
+    if "confidence" in filtered.columns:
+        filtered = filtered.sort_values("confidence", ascending=False)
+    elif "calibrated_home_win_prob" in filtered.columns:
+        # Fallback to home win probability if confidence column not available
         filtered = filtered.sort_values("calibrated_home_win_prob", ascending=False)
 
     return filtered.reset_index(drop=True)
@@ -124,12 +108,26 @@ def render_matchup_grid(
 
 def _render_card(row: pd.Series, high_probability_threshold: float) -> None:
     """Render a single matchup card."""
-    home_team = row.get("home_team", "Home")
-    away_team = row.get("away_team", "Away")
+    home_team_abbrev = row.get("home_team", "Home")
+    away_team_abbrev = row.get("away_team", "Away")
     game_time = row.get("game_time") or row.get("game_date")
     prediction_raw = row.get("predicted_winner", "N/A")
     win_prob = row.get("calibrated_home_win_prob")
     confidence = row.get("confidence")
+
+    # Load team name mapping from config
+    container = StreamlitAppContainer()
+    config = container.config()
+
+    # Convert SimpleNamespace to dict
+    if hasattr(config, 'abbrev_to_full_name'):
+        team_names = vars(config.abbrev_to_full_name)
+    else:
+        team_names = {}
+
+    # Get full team names
+    home_team = team_names.get(home_team_abbrev, home_team_abbrev)
+    away_team = team_names.get(away_team_abbrev, away_team_abbrev)
 
     # Convert "home"/"away" to actual team names
     if prediction_raw == "home":
@@ -140,17 +138,33 @@ def _render_card(row: pd.Series, high_probability_threshold: float) -> None:
         predicted_team = prediction_raw
 
     card = st.container(border=True)
-    card.subheader(f"{home_team} vs {away_team}")
+
+    # Display as "Away @ Home" format - single line with no spacing
+    card.markdown(f"**{away_team} @ {home_team}**")
+
     if game_time:
         card.caption(f"Tip-off: {game_time}")
 
-    info_columns = card.columns(2)
-    info_columns[0].metric("Predicted Winner", predicted_team if pd.notnull(predicted_team) else "N/A")
-
+    # Calculate win probability for the predicted winner
     if pd.notnull(win_prob):
-        info_columns[1].metric(
-            "Home Win Probability", f"{win_prob * 100:0.1f}%"
-        )
+        if prediction_raw == "away":
+            winner_prob = 1 - win_prob  # Away team probability
+        else:
+            winner_prob = win_prob  # Home team probability
+    else:
+        winner_prob = None
+
+    # Display prediction info with smaller font for values
+    info_columns = card.columns(2)
+
+    with info_columns[0]:
+        st.caption("Predicted Winner")
+        st.markdown(f"<span style='font-size: 1.2em;'>{predicted_team if pd.notnull(predicted_team) else 'N/A'}</span>", unsafe_allow_html=True)
+
+    if winner_prob is not None:
+        with info_columns[1]:
+            st.caption("Win Probability")
+            st.markdown(f"<span style='font-size: 1.2em;'>{winner_prob * 100:0.1f}%</span>", unsafe_allow_html=True)
 
     chips = _build_reliability_chips(row, high_probability_threshold)
     if chips:
@@ -179,19 +193,3 @@ def _format_interval(lower: Optional[float], upper: Optional[float]) -> Optional
     if pd.notnull(lower) and pd.notnull(upper):
         return f"{lower * 100:0.1f}% – {upper * 100:0.1f}%"
     return None
-
-
-def _extract_unique_dates(dataset: pd.DataFrame) -> List[pd.Timestamp]:
-    if "game_date" not in dataset.columns:
-        return []
-    valid_dates = pd.to_datetime(dataset["game_date"], errors="coerce").dropna().dt.normalize()
-    unique_dates = sorted(valid_dates.unique())
-    return [pd.Timestamp(date) for date in unique_dates]
-
-
-def _extract_unique_teams(dataset: pd.DataFrame) -> List[str]:
-    columns = [col for col in ("home_team", "away_team") if col in dataset.columns]
-    teams: List[str] = []
-    for column in columns:
-        teams.extend(dataset[column].dropna().unique().tolist())
-    return sorted(set(teams))

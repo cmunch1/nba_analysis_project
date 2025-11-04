@@ -11,6 +11,25 @@ import streamlit as st
 
 from streamlit_app.data_loader import load_latest_dataset
 
+# Hide the main "app" page from navigation and add title above nav
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebarNav"] li:first-child {
+        display: none;
+    }
+    [data-testid="stSidebarNav"]::before {
+        content: "NBA Predictions and Analysis";
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 600;
+        padding: 1rem 1rem 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 WINDOW_OPTIONS = {
     "Entire season": None,
@@ -36,7 +55,13 @@ def main() -> None:
         st.info("No dashboard data available yet.")
         return
 
-    evaluation = _prepare_evaluation_frame(dataset)
+    # Filter to only show results section (not predictions or metrics)
+    if 'section' in dataset.columns:
+        results_dataset = dataset[dataset['section'] == 'results'].copy()
+    else:
+        results_dataset = dataset
+
+    evaluation = _prepare_evaluation_frame(results_dataset)
     if evaluation.frame.empty:
         st.warning(
             "Historical metrics require actual results and calibrated probabilities."
@@ -101,7 +126,7 @@ def _render_calibration_chart(frame: pd.DataFrame, probability_column: str) -> N
     )
     calibration = (
         frame.assign(prob_bin=bins)
-        .groupby("prob_bin")
+        .groupby("prob_bin", observed=False)
         .agg(
             predicted_prob=(probability_column, "mean"),
             actual_rate=("actual_outcome", "mean"),
@@ -167,7 +192,7 @@ def _render_daily_accuracy(frame: pd.DataFrame) -> None:
         labels={"game_date": "Game date", "accuracy": "Accuracy"},
     )
     fig.update_traces(mode="lines+markers")
-    fig.update_yaxis(range=[0, 1])
+    fig.update_yaxes(range=[0, 1])
     st.plotly_chart(fig, use_container_width=True)
 
     with st.expander("Daily metric details"):
