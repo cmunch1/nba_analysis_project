@@ -1,0 +1,1448 @@
+NBA Analysis Project - Configuration Tree
+════════════════════════════════════════
+
+Generated: 2025-11-04 07:58:06
+
+Configuration Hierarchy (namespace structure):
+
+├── app_file_handler: {} (dict)
+├── config_dir: configs/nba (PosixPath)
+├── dashboard_prep/
+│   ├── input_paths/
+│   │   ├── predictions_dir: data/predictions (str)
+│   │   ├── predictions_pattern: predictions_{date}.csv (str)
+│   │   ├── actual_results: data/processed/teams_boxscores.csv (str)
+│   │   ├── evaluation_dir: data/evaluation (str)
+│   │   ├── mlflow_tracking_uri: ${MLFLOW_TRACKING_URI} (str)
+│   │   └── mlflow_experiment_name: nba_win_prediction (str)
+│   ├── output/
+│   │   ├── output_dir: data/dashboard (str)
+│   │   ├── output_filename: dashboard_data.csv (str)
+│   │   ├── archive_snapshots: True (bool)
+│   │   ├── snapshot_dir: data/dashboard/archive (str)
+│   │   └── snapshot_filename_pattern: dashboard_data_{date}.csv (str)
+│   ├── predictions/
+│   │   ├── forecast_days: 0 (int)
+│   │   ├── include_columns [10 items]
+│   │   └── high_probability_threshold: 0.6 (float)
+│   ├── results/
+│   │   ├── lookback_days: 10 (int)
+│   │   └── include_columns [11 items]
+│   ├── performance/
+│   │   ├── time_windows [3 items]
+│   │   │   ├── {'name': 'season', 'description': 'Entire current season', 'start_date': '2025-10-22'}
+│   │   │   ├── {'name': '7day', 'description': 'Last 7 days', 'days_back': 7}
+│   │   │   └── {'name': '30day', 'description': 'Last 30 days', 'days_back': 30}
+│   │   └── metrics [6 items]
+│   ├── team_performance/
+│   │   ├── min_games: 10 (int)
+│   │   ├── metrics [5 items]
+│   │   │   ├── accuracy
+│   │   │   ├── avg_confidence
+│   │   │   ├── total_predictions
+│   │   │   ├── home_accuracy
+│   │   │   └── away_accuracy
+│   │   ├── sort_by: accuracy (str)
+│   │   └── sort_order: descending (str)
+│   ├── drift/
+│   │   ├── daily_metrics [5 items]
+│   │   │   ├── date
+│   │   │   ├── accuracy
+│   │   │   ├── brier_score
+│   │   │   ├── calibration_error
+│   │   │   └── avg_confidence
+│   │   ├── trend_window_days: 60 (int)
+│   │   └── drift_threshold/
+│   │       ├── accuracy_drop: 0.1 (float)
+│   │       └── calibration_error_increase: 0.05 (float)
+│   ├── calibration/
+│   │   ├── num_bins: 10 (int)
+│   │   ├── min_bin_size: 20 (int)
+│   │   └── include_curve_data: True (bool)
+│   └── validation/
+│       ├── require_predictions: True (bool)
+│       ├── require_results: False (bool)
+│       └── min_season_games: 50 (int)
+├── default_percentage_value: 75 (int)
+├── regular_game_minutes: 240 (int)
+├── season_year_offset: 2000 (int)
+├── regular_season_game_id_threshold: 2 (int)
+├── game_id_column: GAME_ID (str)
+├── new_game_id_column: game_id (str)
+├── team_id_column: TEAM_ID (str)
+├── new_team_id_column: team_id (str)
+├── date_column: GAME_DATE (str)
+├── new_date_column: game_date (str)
+├── home_team_column: is_home_team (str)
+├── win_column: is_win (str)
+├── season_column: season (str)
+├── is_playoff_column: is_playoff (str)
+├── is_overtime_column: is_overtime (str)
+├── sub_season_id_column: sub_season_id (str)
+├── home_game_suffix: home (str)
+├── visitor_game_suffix: visitor (str)
+├── combined_cases_suffix: all (str)
+├── game_info_columns [7 items]
+├── team_info_columns [4 items]
+│   ├── team_id
+│   ├── is_home_team
+│   ├── team
+│   └── match_up
+├── processed_schema [73 items]
+├── app_version: 1.0.0 (str)
+├── environment: development (str)
+├── app_name: NBA Prediction App (str)
+├── maintainer_email: cmunch1@yahoo.com (str)
+├── api_rate_limit: not implemented (str)
+├── data_retention_days: not implemented (str)
+├── features/
+│   ├── use_proxy: not implemented (str)
+│   ├── enable_caching: not implemented (str)
+│   └── perform_data_validation: not implemented (str)
+├── notifications/
+│   ├── email_alerts: not implemented (str)
+│   ├── slack_alerts: not implemented (str)
+│   └── alert_recipients [2 items]
+│       ├── admin@example.com
+│       └── analyst@example.com
+├── external_services/
+│   └── team_logos_cdn: https://cdn.nba.com/logos/ (str)
+├── default_language: en-US (str)
+├── timezone: UTC (str)
+├── extend_rolling_avgs: True (bool)
+├── extend_streaks: True (bool)
+├── include_postseason: True (bool)
+├── feature_allowlist/
+│   ├── enabled: True (bool)
+│   ├── allowlist_file: ml_artifacts/features/allowlists/feature_allowl... (str)
+│   └── mode: allowlist (str)
+├── season_start: 10-1 (str)
+├── season_end: 7-1 (str)
+├── target_column: is_win (str)
+├── home_team_prefix: h_ (str)
+├── visitor_team_prefix: v_ (str)
+├── team_rolling_avg_periods [6 items]
+├── matchup_rolling_avg_periods [4 items]
+│   ├── 1
+│   ├── 2
+│   ├── 3
+│   └── 4
+├── elo_update_new_rows_only: False (bool)
+├── k_factor: 20 (int)
+├── home_advantage: 100 (int)
+├── initial_elo: 1500 (int)
+├── elo_width: 400 (int)
+├── team_elo_before_column: elo_team_before (str)
+├── opp_elo_before_column: elo_opp_before (str)
+├── win_prob_column: elo_win_prob (str)
+├── team_elo_after_column: elo_team_after (str)
+├── elo_change_column: elo_change (str)
+├── validation_split: 0.2 (float)
+├── stratify_column: month (str)
+├── validation_last_n_seasons: 3 (int)
+├── random_state: 42 (int)
+├── abbrev_to_full_name/
+│   ├── ATL: Atlanta Hawks (str)
+│   ├── BOS: Boston Celtics (str)
+│   ├── BRK: Brooklyn Nets (str)
+│   ├── CHA: Charlotte Hornets (str)
+│   ├── CHI: Chicago Bulls (str)
+│   ├── CLE: Cleveland Cavaliers (str)
+│   ├── DAL: Dallas Mavericks (str)
+│   ├── DEN: Denver Nuggets (str)
+│   ├── DET: Detroit Pistons (str)
+│   ├── GSW: Golden State Warriors (str)
+│   ├── HOU: Houston Rockets (str)
+│   ├── IND: Indiana Pacers (str)
+│   ├── LAC: LA Clippers (str)
+│   ├── LAL: LA Lakers (str)
+│   ├── MEM: Memphis Grizzlies (str)
+│   ├── MIA: Miami Heat (str)
+│   ├── MIL: Milwaukee Bucks (str)
+│   ├── MIN: Minnesota Timberwolves (str)
+│   ├── NOP: New Orleans Pelicans (str)
+│   ├── NYK: New York Knicks (str)
+│   ├── OKC: Oklahoma City Thunder (str)
+│   ├── ORL: Orlando Magic (str)
+│   ├── PHI: Philadelphia 76ers (str)
+│   ├── PHX: Phoenix Suns (str)
+│   ├── POR: Portland Trail Blazers (str)
+│   ├── SAC: Sacramento Kings (str)
+│   ├── SAS: San Antonio Spurs (str)
+│   ├── TOR: Toronto Raptors (str)
+│   ├── UTA: Utah Jazz (str)
+│   └── WAS: Washington Wizards (str)
+├── team_id_to_abbrev/
+│   ├── 1610612737: ATL (str)
+│   ├── 1610612738: BOS (str)
+│   ├── 1610612751: BRK (str)
+│   ├── 1610612766: CHA (str)
+│   ├── 1610612741: CHI (str)
+│   ├── 1610612739: CLE (str)
+│   ├── 1610612742: DAL (str)
+│   ├── 1610612743: DEN (str)
+│   ├── 1610612765: DET (str)
+│   ├── 1610612744: GSW (str)
+│   ├── 1610612745: HOU (str)
+│   ├── 1610612754: IND (str)
+│   ├── 1610612746: LAC (str)
+│   ├── 1610612747: LAL (str)
+│   ├── 1610612763: MEM (str)
+│   ├── 1610612748: MIA (str)
+│   ├── 1610612749: MIL (str)
+│   ├── 1610612750: MIN (str)
+│   ├── 1610612740: NOP (str)
+│   ├── 1610612752: NYK (str)
+│   ├── 1610612760: OKC (str)
+│   ├── 1610612753: ORL (str)
+│   ├── 1610612755: PHI (str)
+│   ├── 1610612756: PHX (str)
+│   ├── 1610612757: POR (str)
+│   ├── 1610612758: SAC (str)
+│   ├── 1610612759: SAS (str)
+│   ├── 1610612761: TOR (str)
+│   ├── 1610612762: UTA (str)
+│   └── 1610612764: WAS (str)
+├── historical_teams/
+│   ├── SEA: 1610612760 (str)
+│   ├── NJN: 1610612751 (str)
+│   ├── NOH: 1610612740 (str)
+│   ├── CHH: 1610612766 (str)
+│   ├── VAN: 1610612763 (str)
+│   └── NOK: 1610612740 (str)
+├── newly_scraped_directory: data/newly_scraped/ (str)
+├── cumulative_scraped_directory: data/cumulative_scraped/ (str)
+├── processed_data_directory: data/processed/ (str)
+├── engineered_data_directory: data/engineered/ (str)
+├── training_data_directory: data/training/ (str)
+├── evaluation_data_directory: data/evaluation/ (str)
+├── predictions_directory: data/predictions/ (str)
+├── scraped_boxscore_files [5 items]
+│   ├── games_traditional.csv
+│   ├── games_advanced.csv
+│   ├── games_four-factors.csv
+│   ├── games_misc.csv
+│   └── games_scoring.csv
+├── todays_matchups_file: todays_matchups.csv (str)
+├── todays_games_ids_file: todays_games_ids.csv (str)
+├── team_centric_data_file: teams_boxscores.csv (str)
+├── game_centric_data_file: games_boxscores.csv (str)
+├── engineered_data_file: engineered_features.csv (str)
+├── column_mapping_file: column_mapping.json (str)
+├── training_data_file: training_data.csv (str)
+├── validation_data_file: validation_data.csv (str)
+├── evaluation_data_file: evaluation_data.csv (str)
+├── inference/
+│   ├── model/
+│   │   ├── identifier: models:/nba_win_predictor/Production (str)
+│   │   └── fallback_identifier: None (NoneType)
+│   ├── data_sources/
+│   │   ├── schedule_file: data/newly_scraped/schedule_{date}.csv (str)
+│   │   ├── historical_boxscores: data/cumulative_scraped/box_scores.csv (str)
+│   │   └── lookback_days: 30 (int)
+│   ├── feature_engineering/
+│   │   └── use_training_config: True (bool)
+│   ├── postprocessing/
+│   │   ├── enable_calibration: True (bool)
+│   │   ├── enable_conformal: True (bool)
+│   │   └── skip_if_missing: False (bool)
+│   ├── output/
+│   │   ├── predictions_dir: data/predictions (str)
+│   │   ├── filename_pattern: predictions_{date}.csv (str)
+│   │   ├── include_raw_probabilities: True (bool)
+│   │   ├── include_prediction_sets: True (bool)
+│   │   ├── include_probability_intervals: True (bool)
+│   │   └── include_model_metadata: True (bool)
+│   ├── filtering/
+│   │   ├── max_days_ahead: 2 (int)
+│   │   ├── skip_incomplete_features: True (bool)
+│   │   └── min_team_games: 5 (int)
+│   └── validation/
+│       ├── validate_features: True (bool)
+│       ├── validate_probabilities: True (bool)
+│       └── detect_distribution_shift: True (bool)
+├── game_date_header_variations [4 items]
+│   ├── Game Date
+│   ├── Game_Date
+│   ├── GAME DATE
+│   └── Game Date
+├── full_scrape: False (bool)
+├── start_season: 2006 (int)
+├── off_season_start_month: 8 (int)
+├── regular_season_start_month: 10 (int)
+├── play_in_month: 4 (int)
+├── enable_validation_scraping: False (bool)
+├── team_mapping_file: team_mapping.yaml (str)
+├── nba_boxscores_url: https://www.nba.com/stats/teams/boxscores (str)
+├── nba_schedule_url: https://www.nba.com/schedule (str)
+├── regular_season_text: Regular+Season (str)
+├── play_in_season_text: PlayIn (str)
+├── playoffs_season_text: Playoffs (str)
+├── stat_types [5 items]
+│   ├── traditional
+│   ├── advanced
+│   ├── four-factors
+│   ├── misc
+│   └── scoring
+├── table_class_name: Crom_table__p1iZz (str)
+├── pagination_class_name: Pagination_pageDropdown__KgjBU (str)
+├── dropdown_class_name: DropDown_select__4pIg9 (str)
+├── teams_and_games_class_name: Anchor_anchor__cSc3P (str)
+├── games_per_day_class_name: ScheduleDay_sdGames__NGdO5 (str)
+├── day_class_name: ScheduleDay_sdDay__3s2Xt (str)
+├── teams_links_class_name: Anchor_anchor__cSc3P Link_styled__okbXW (str)
+├── game_links_class_name: Anchor_anchor__cSc3P TabLink_link__f_15h (str)
+├── no_data_class_name: NoDataMessage_base__xUA61 (str)
+├── schedule_preview_text: PREVIEW (str)
+├── schedule_home_team_id_column: home_id (str)
+├── schedule_visitor_team_id_column: visitor_id (str)
+├── schedule_game_id_column: game_id (str)
+├── page_load_timeout: 30 (int)
+├── dynamic_content_timeout: 30 (int)
+├── max_retries: 2 (int)
+├── retry_delay: 2 (int)
+├── wait_time: 10 (int)
+├── browsers [2 items]
+│   ├── chrome
+│   └── firefox
+├── chrome_options/
+│   ├── --headless: new (str)
+│   ├── --no-sandbox: None (NoneType)
+│   ├── --start-maximized: None (NoneType)
+│   ├── --disable-dev-shm-usage: None (NoneType)
+│   ├── --ignore-certificate-errors: None (NoneType)
+│   ├── --ignore-ssl-errors: None (NoneType)
+│   ├── --disable-gpu: None (NoneType)
+│   ├── --disable-extensions: None (NoneType)
+│   ├── --disable-popup-blocking: None (NoneType)
+│   ├── --disable-notifications: None (NoneType)
+│   ├── --remote-debugging-port: 9222 (int)
+│   ├── --disable-3d-apis: None (NoneType)
+│   ├── --disable-blink-features=AutomationControlled: None (NoneType)
+│   ├── --disable-web-security: None (NoneType)
+│   ├── --disable-features=VizDisplayCompositor: None (NoneType)
+│   ├── --single-process: None (NoneType)
+│   └── --user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple... (str)
+├── firefox_options/
+│   ├── --headless: None (NoneType)
+│   ├── --disable-blink-features=AutomationControlled: None (NoneType)
+│   └── --user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:53... (str)
+├── scoreboard_base_url: https://www.basketball-reference.com/boxscores/ (str)
+├── selectors/
+│   ├── games_container: #content (str)
+│   ├── team_links: a[href^="/teams/"] (str)
+│   ├── box_score_link: a[href^="/boxscores/"][href$=".html"]:not([href... (str)
+│   ├── score_spans: span (str)
+│   └── final_text: Final (str)
+├── parsing/
+│   ├── game_identification: box_score_links (str)
+│   ├── team_identification_method: ordinal_and_url_verification (str)
+│   └── verify_home_team_from_url: True (bool)
+├── team_abbrev/
+│   ├── extraction_pattern: /teams/{ABBREV}/ (str)
+│   └── url_path_index: 2 (int)
+├── scores/
+│   ├── visitor_score_position: first_span_before_final (str)
+│   └── home_score_position: first_span_after_final (str)
+├── error_handling/
+│   ├── skip_empty_dates: True (bool)
+│   ├── log_unknown_teams: True (bool)
+│   ├── warn_on_unknown_teams: True (bool)
+│   └── fail_on_verification_mismatch: True (bool)
+├── rate_limiting/
+│   ├── delay_between_dates: 1.0 (float)
+│   ├── max_retries: 3 (int)
+│   └── retry_delay: 2.0 (float)
+├── logging/
+│   ├── log_games_found: True (bool)
+│   ├── log_verification: True (bool)
+│   └── debug_parsing: False (bool)
+└── core/
+    ├── artifact_paths_config/
+    │   ├── artifact_root: ml_artifacts (str)
+    │   ├── models/
+    │   │   ├── root: ${artifact_root}/models (str)
+    │   │   ├── checkpoints: ${artifact_root}/models/checkpoints (str)
+    │   │   └── final: ${artifact_root}/models/final (str)
+    │   ├── experiments/
+    │   │   ├── root: ${artifact_root}/experiments (str)
+    │   │   ├── hyperparameters: ${artifact_root}/experiments/hyperparameters (str)
+    │   │   └── runs: ${artifact_root}/experiments/runs (str)
+    │   ├── features/
+    │   │   ├── root: ${artifact_root}/features (str)
+    │   │   ├── allowlists: ${artifact_root}/features/allowlists (str)
+    │   │   ├── audits: ${artifact_root}/features/audits (str)
+    │   │   ├── pruning: ${artifact_root}/features/pruning (str)
+    │   │   ├── pruning_reports: ${artifact_root}/features/pruning/reports (str)
+    │   │   └── schemas: ${artifact_root}/features/schemas (str)
+    │   └── predictions/
+    │       └── root: ${artifact_root}/predictions (str)
+    ├── visualization_config/
+    │   └── chart_options/
+    │       ├── feature_importance/
+    │       │   ├── enabled: True (bool)
+    │       │   ├── top_n: 20 (int)
+    │       │   └── figure_size [2 items]
+    │       │       ├── 12
+    │       │       └── 8
+    │       ├── metrics/
+    │       │   ├── enabled: True (bool)
+    │       │   ├── confusion_matrix/
+    │       │   │   ├── enabled: True (bool)
+    │       │   │   ├── figure_size [2 items]
+    │       │   │   │   ├── 10
+    │       │   │   │   └── 8
+    │       │   │   └── color_map: Blues (str)
+    │       │   └── roc_curve/
+    │       │       ├── enabled: True (bool)
+    │       │       └── figure_size [2 items]
+    │       │           ├── 10
+    │       │           └── 8
+    │       ├── learning_curve/
+    │       │   ├── enabled: True (bool)
+    │       │   ├── figure_size [2 items]
+    │       │   │   ├── 10
+    │       │   │   └── 6
+    │       │   └── n_points: 10 (int)
+    │       ├── shap/
+    │       │   ├── enabled: True (bool)
+    │       │   ├── summary_plot/
+    │       │   │   ├── enabled: True (bool)
+    │       │   │   ├── max_display: 20 (int)
+    │       │   │   └── figure_size [2 items]
+    │       │   │       ├── 12
+    │       │   │       └── 8
+    │       │   └── dependence_plots/
+    │       │       ├── enabled: True (bool)
+    │       │       ├── features [0 items]
+    │       │       └── figure_size [2 items]
+    │       │           ├── 10
+    │       │           └── 7
+    │       └── model_interpretation/
+    │           ├── enabled: True (bool)
+    │           ├── force_plot/
+    │           │   ├── enabled: True (bool)
+    │           │   ├── figure_size [2 items]
+    │           │   │   ├── 12
+    │           │   │   └── 6
+    │           │   └── force_plot_indices [3 items]
+    │           │       ├── 0
+    │           │       ├── 1
+    │           │       └── 2
+    │           └── background_samples: 100 (int)
+    ├── model_testing_config/
+    │   ├── experiment_name: NBA Predictor (str)
+    │   ├── experiment_description: NBA Predictor (str)
+    │   ├── sort_columns [2 items]
+    │   │   ├── season
+    │   │   └── season_progress
+    │   ├── sort_order [2 items]
+    │   │   ├── True
+    │   │   └── True
+    │   ├── primary_id_column: game_id (str)
+    │   ├── non_useful_columns [6 items]
+    │   ├── categorical_features [2 items]
+    │   │   ├── h_team_id
+    │   │   └── v_team_id
+    │   ├── perform_preprocessing: False (bool)
+    │   ├── current_hyperparameters: /home/chris/projects/nba_analysis_project/src/m... (str)
+    │   ├── hyperparameter_history_dir: /home/chris/projects/nba_analysis_project/src/m... (str)
+    │   ├── hyperparameter_metadata [9 items]
+    │   ├── perform_oof_cross_validation: True (bool)
+    │   ├── perform_validation_set_testing: True (bool)
+    │   ├── save_oof_predictions: False (bool)
+    │   ├── save_validation_predictions: True (bool)
+    │   ├── log_experiment: True (bool)
+    │   ├── save_model_to_registry: True (bool)
+    │   ├── model_registry/
+    │   │   ├── model_name: nba_win_predictor (str)
+    │   │   ├── stage: None (NoneType)
+    │   │   └── tags/
+    │   │       ├── project: nba_predictor (str)
+    │   │       ├── framework: xgboost (str)
+    │   │       └── task: binary_classification (str)
+    │   ├── cross_validation_type: TimeSeriesSplit (str)
+    │   ├── n_splits: 5 (int)
+    │   ├── random_state: 42 (int)
+    │   ├── models/
+    │   │   ├── xgboost: True (bool)
+    │   │   ├── lightgbm: False (bool)
+    │   │   ├── catboost: False (bool)
+    │   │   ├── sklearn_randomforest: False (bool)
+    │   │   ├── sklearn_logisticregression: False (bool)
+    │   │   ├── sklearn_histgradientboosting: False (bool)
+    │   │   └── pytorch: False (bool)
+    │   ├── generate_learning_curve_data: True (bool)
+    │   ├── calculate_shap_values: True (bool)
+    │   ├── max_shap_interaction_memory_gb: 256.0 (float)
+    │   ├── calculate_shap_interactions: False (bool)
+    │   ├── charts_output_dir: /home/chris/projects/nba_analysis_project/src/m... (str)
+    │   ├── generate_feature_audit: False (bool)
+    │   ├── save_feature_audit: False (bool)
+    │   ├── feature_audit_format: csv (str)
+    │   ├── feature_audit_metrics/
+    │   │   ├── compute_basic_stats: True (bool)
+    │   │   ├── compute_shap_importance: True (bool)
+    │   │   ├── compute_permutation_importance: True (bool)
+    │   │   ├── permutation_n_repeats: 5 (int)
+    │   │   ├── compute_correlation_matrix: True (bool)
+    │   │   ├── compute_vif: False (bool)
+    │   │   ├── correlation_method: pearson (str)
+    │   │   ├── compute_stability_score: True (bool)
+    │   │   ├── stability_top_k: 20 (int)
+    │   │   └── compute_target_correlation: True (bool)
+    │   ├── feature_audit_thresholds/
+    │   │   ├── near_zero_importance_percentile: 10 (int)
+    │   │   ├── near_zero_importance_threshold: 0.0 (float)
+    │   │   ├── high_missing_threshold: 0.4 (float)
+    │   │   ├── high_collinearity_threshold: 0.95 (float)
+    │   │   ├── low_stability_threshold: 0.2 (float)
+    │   │   └── drop_candidate_threshold: 2 (int)
+    │   ├── feature_audit_output_dir: /home/chris/projects/nba_analysis_project/src/m... (str)
+    │   ├── feature_audit_versioning: True (bool)
+    │   ├── enable_feature_pruning: False (bool)
+    │   └── feature_pruning/
+    │       ├── drop_candidate_threshold: 2 (int)
+    │       ├── min_acceptable_auc_delta: -0.01 (float)
+    │       ├── min_acceptable_accuracy_delta: -0.02 (float)
+    │       ├── min_features_to_keep: 10 (int)
+    │       ├── max_features_to_drop_pct: 0.8 (float)
+    │       ├── save_pruned_datasets: False (bool)
+    │       ├── save_comparison_report: True (bool)
+    │       └── comparison_report_dir: /home/chris/projects/nba_analysis_project/src/m... (str)
+    ├── preprocessing_config/
+    │   └── preprocessing/
+    │       ├── default/
+    │       │   ├── numerical/
+    │       │   │   ├── imputation: None (NoneType)
+    │       │   │   ├── scaling: None (NoneType)
+    │       │   │   └── handling_outliers: None (NoneType)
+    │       │   ├── categorical/
+    │       │   │   ├── encoding: None (NoneType)
+    │       │   │   └── handling_missing: None (NoneType)
+    │       │   ├── feature_selection/
+    │       │   │   ├── method: None (NoneType)
+    │       │   │   └── params: {} (dict)
+    │       │   ├── interactions: None (NoneType)
+    │       │   └── dimensionality_reduction: None (NoneType)
+    │       └── model_specific/
+    │           ├── LogisticRegression/
+    │           │   ├── numerical/
+    │           │   │   ├── imputation: mean (str)
+    │           │   │   ├── scaling: standard (str)
+    │           │   │   └── handling_outliers: None (NoneType)
+    │           │   ├── categorical/
+    │           │   │   ├── encoding: one_hot (str)
+    │           │   │   └── handling_missing: constant (str)
+    │           │   ├── feature_selection/
+    │           │   │   ├── method: variance_threshold (str)
+    │           │   │   └── params/
+    │           │   │       └── threshold: 0.01 (float)
+    │           │   ├── interactions: None (NoneType)
+    │           │   └── dimensionality_reduction: None (NoneType)
+    │           ├── RandomForest/
+    │           │   ├── numerical/
+    │           │   │   ├── imputation: mean (str)
+    │           │   │   ├── scaling: None (NoneType)
+    │           │   │   └── handling_outliers: None (NoneType)
+    │           │   ├── categorical/
+    │           │   │   ├── encoding: ordinal (str)
+    │           │   │   └── handling_missing: None (NoneType)
+    │           │   ├── feature_selection/
+    │           │   │   ├── method: None (NoneType)
+    │           │   │   └── params: {} (dict)
+    │           │   ├── interactions: None (NoneType)
+    │           │   └── dimensionality_reduction: None (NoneType)
+    │           ├── XGBoost/
+    │           │   ├── numerical/
+    │           │   │   ├── imputation: None (NoneType)
+    │           │   │   ├── scaling: None (NoneType)
+    │           │   │   └── handling_outliers: None (NoneType)
+    │           │   ├── categorical/
+    │           │   │   ├── encoding: ordinal (str)
+    │           │   │   └── handling_missing: None (NoneType)
+    │           │   ├── feature_selection/
+    │           │   │   ├── method: None (NoneType)
+    │           │   │   └── params: {} (dict)
+    │           │   ├── interactions: None (NoneType)
+    │           │   └── dimensionality_reduction: None (NoneType)
+    │           ├── LightGBM/
+    │           │   ├── numerical/
+    │           │   │   ├── imputation: None (NoneType)
+    │           │   │   ├── scaling: None (NoneType)
+    │           │   │   └── handling_outliers: None (NoneType)
+    │           │   ├── categorical/
+    │           │   │   ├── encoding: ordinal (str)
+    │           │   │   └── handling_missing: None (NoneType)
+    │           │   ├── feature_selection/
+    │           │   │   ├── method: None (NoneType)
+    │           │   │   └── params: {} (dict)
+    │           │   ├── interactions: None (NoneType)
+    │           │   └── dimensionality_reduction: None (NoneType)
+    │           ├── CatBoost/
+    │           │   ├── numerical/
+    │           │   │   ├── imputation: None (NoneType)
+    │           │   │   ├── scaling: None (NoneType)
+    │           │   │   └── handling_outliers: None (NoneType)
+    │           │   ├── categorical/
+    │           │   │   ├── encoding: catboost_native (str)
+    │           │   │   └── handling_missing: None (NoneType)
+    │           │   ├── feature_selection/
+    │           │   │   ├── method: None (NoneType)
+    │           │   │   └── params: {} (dict)
+    │           │   ├── interactions: None (NoneType)
+    │           │   └── dimensionality_reduction: None (NoneType)
+    │           ├── HistGradientBoosting/
+    │           │   ├── numerical/
+    │           │   │   ├── imputation: None (NoneType)
+    │           │   │   ├── scaling: None (NoneType)
+    │           │   │   └── handling_outliers: None (NoneType)
+    │           │   ├── categorical/
+    │           │   │   ├── encoding: ordinal (str)
+    │           │   │   └── handling_missing: None (NoneType)
+    │           │   ├── feature_selection/
+    │           │   │   ├── method: None (NoneType)
+    │           │   │   └── params: {} (dict)
+    │           │   ├── interactions: None (NoneType)
+    │           │   └── dimensionality_reduction: None (NoneType)
+    │           ├── PyTorch/
+    │           │   ├── numerical/
+    │           │   │   ├── imputation: mean (str)
+    │           │   │   ├── scaling: standard (str)
+    │           │   │   └── handling_outliers: clip (str)
+    │           │   ├── categorical/
+    │           │   │   ├── encoding: one_hot (str)
+    │           │   │   └── handling_missing: constant (str)
+    │           │   ├── feature_selection/
+    │           │   │   ├── method: None (NoneType)
+    │           │   │   └── params: {} (dict)
+    │           │   ├── interactions: None (NoneType)
+    │           │   └── dimensionality_reduction: None (NoneType)
+    │           └── NeuralNetwork/
+    │               ├── numerical/
+    │               │   ├── imputation: mean (str)
+    │               │   ├── scaling: standard (str)
+    │               │   └── handling_outliers: clip (str)
+    │               ├── categorical/
+    │               │   ├── encoding: one_hot (str)
+    │               │   └── handling_missing: constant (str)
+    │               ├── feature_selection/
+    │               │   ├── method: None (NoneType)
+    │               │   └── params: {} (dict)
+    │               ├── interactions: None (NoneType)
+    │               └── dimensionality_reduction: None (NoneType)
+    ├── optuna_config/
+    │   └── optuna/
+    │       ├── scoring: auc (str)
+    │       ├── direction: maximize (str)
+    │       ├── pruner: median (str)
+    │       ├── n_startup_trials: 20 (int)
+    │       ├── n_warmup_steps: 5 (int)
+    │       └── interval_steps: 1 (int)
+    ├── postprocessing_config/
+    │   ├── calibration/
+    │   │   ├── enable: True (bool)
+    │   │   ├── optimize: True (bool)
+    │   │   ├── optimization/
+    │   │   │   ├── methods [2 items]
+    │   │   │   │   ├── sigmoid
+    │   │   │   │   └── isotonic
+    │   │   │   ├── evaluation_bins [6 items]
+    │   │   │   ├── selection_metric: brier_score (str)
+    │   │   │   ├── cv_folds: 5 (int)
+    │   │   │   └── use_cv: True (bool)
+    │   │   ├── method: isotonic (str)
+    │   │   ├── cv_folds: 5 (int)
+    │   │   ├── save_curves: True (bool)
+    │   │   ├── save_metrics: True (bool)
+    │   │   ├── curve_bins: 10 (int)
+    │   │   └── save_to_registry: True (bool)
+    │   └── conformal/
+    │       ├── enable: False (bool)
+    │       ├── method: split (str)
+    │       ├── alphas/
+    │       │   ├── prediction_set: 0.1 (float)
+    │       │   └── probability_interval: 0.15 (float)
+    │       ├── score_function: probability_shortfall (str)
+    │       ├── class_labels [2 items]
+    │       │   ├── away
+    │       │   └── home
+    │       ├── allow_empty_set: False (bool)
+    │       ├── min_calibration_samples: 500 (int)
+    │       ├── save_metrics: True (bool)
+    │       ├── save_diagnostics: True (bool)
+    │       └── save_to_registry: True (bool)
+    ├── app_logging_config/
+    │   ├── model_testing_log_file: model_testing.log (str)
+    │   ├── log_level: INFO (str)
+    │   ├── use_structured_logging: True (bool)
+    │   ├── log_to_console: True (bool)
+    │   ├── log_to_file: True (bool)
+    │   ├── log_filename_fallback: log_file.log (str)
+    │   ├── log_current_run_only: True (bool)
+    │   ├── log_path: ./logs (str)
+    │   ├── log_size_max: 2 (int)
+    │   ├── log_backup_count: 1 (int)
+    │   ├── error_filename_fallback: error_file.log (str)
+    │   ├── error_size_max: 2 (int)
+    │   └── error_backup_count: 1 (int)
+    ├── hyperparameters/
+    │   ├── sklearn_randomforest/
+    │   │   └── baseline/
+    │   │       ├── n_estimators: 100 (int)
+    │   │       ├── max_depth: 10 (int)
+    │   │       ├── min_samples_split: 5 (int)
+    │   │       ├── min_samples_leaf: 2 (int)
+    │   │       ├── max_features: sqrt (str)
+    │   │       ├── random_state: 42 (int)
+    │   │       ├── n_jobs: -1 (int)
+    │   │       └── verbose: 0 (int)
+    │   ├── xgboost/
+    │   │   └── baseline/
+    │   │       ├── tree_method: hist (str)
+    │   │       ├── device: cuda (str)
+    │   │       ├── max_depth: 4 (int)
+    │   │       ├── learning_rate: 0.05 (float)
+    │   │       ├── subsample: 0.8 (float)
+    │   │       ├── colsample_bytree: 0.8 (float)
+    │   │       ├── min_child_weight: 2 (int)
+    │   │       ├── gamma: 0.1 (float)
+    │   │       ├── reg_alpha: 0.1 (float)
+    │   │       ├── reg_lambda: 1 (int)
+    │   │       ├── scale_pos_weight: 1 (int)
+    │   │       ├── objective: binary:logistic (str)
+    │   │       ├── random_state: 42 (int)
+    │   │       └── eval_metric: auc (str)
+    │   ├── sklearn_histgradientboosting/
+    │   │   └── baseline/
+    │   │       ├── learning_rate: 0.1 (float)
+    │   │       ├── max_iter: 100 (int)
+    │   │       ├── max_depth: 6 (int)
+    │   │       ├── min_samples_leaf: 20 (int)
+    │   │       ├── l2_regularization: 1.0 (float)
+    │   │       ├── max_bins: 255 (int)
+    │   │       ├── random_state: 42 (int)
+    │   │       └── verbose: 0 (int)
+    │   ├── pytorch/
+    │   │   └── baseline/
+    │   │       ├── learning_rate: 0.001 (float)
+    │   │       ├── weight_decay: 1e-05 (float)
+    │   │       ├── dropout_rate: 0.2 (float)
+    │   │       ├── batch_size: 64 (int)
+    │   │       ├── epochs: 100 (int)
+    │   │       ├── early_stopping_patience: 10 (int)
+    │   │       ├── hidden_sizes [3 items]
+    │   │       │   ├── 128
+    │   │       │   ├── 64
+    │   │       │   └── 32
+    │   │       ├── optimizer: adam (str)
+    │   │       ├── momentum: 0.9 (float)
+    │   │       └── random_state: 42 (int)
+    │   ├── sklearn_logisticregression/
+    │   │   └── baseline/
+    │   │       ├── C: 1.0 (float)
+    │   │       ├── penalty: l2 (str)
+    │   │       ├── solver: saga (str)
+    │   │       ├── class_weight: None (NoneType)
+    │   │       ├── random_state: 42 (int)
+    │   │       ├── n_jobs: -1 (int)
+    │   │       ├── verbose: 0 (int)
+    │   │       └── max_iter: 1000 (int)
+    │   ├── catboost/
+    │   │   └── baseline/
+    │   │       ├── learning_rate: 0.05 (float)
+    │   │       ├── depth: 6 (int)
+    │   │       ├── l2_leaf_reg: 3.0 (float)
+    │   │       ├── random_strength: 1.0 (float)
+    │   │       ├── bagging_temperature: 0.5 (float)
+    │   │       ├── leaf_estimation_iterations: 5 (int)
+    │   │       ├── min_data_in_leaf: 20 (int)
+    │   │       ├── random_seed: 42 (int)
+    │   │       ├── eval_metric: AUC (str)
+    │   │       ├── loss_function: Logloss (str)
+    │   │       ├── task_type: GPU (str)
+    │   │       └── verbose: False (bool)
+    │   └── lightgbm/
+    │       └── baseline/
+    │           ├── device: cpu (str)
+    │           ├── objective: binary (str)
+    │           ├── metric: auc (str)
+    │           ├── verbose: -1 (int)
+    │           ├── force_col_wise: True (bool)
+    │           ├── learning_rate: 0.05 (float)
+    │           ├── num_leaves: 31 (int)
+    │           ├── max_depth: 6 (int)
+    │           ├── min_data_in_leaf: 20 (int)
+    │           ├── feature_fraction: 0.8 (float)
+    │           ├── bagging_fraction: 0.8 (float)
+    │           ├── bagging_freq: 5 (int)
+    │           ├── lambda_l1: 0.1 (float)
+    │           ├── lambda_l2: 1.0 (float)
+    │           ├── min_gain_to_split: 0.1 (float)
+    │           └── random_state: 42 (int)
+    └── models/
+        ├── catboost_config/
+        │   ├── num_boost_round: 10000 (int)
+        │   ├── early_stopping_rounds: 100 (int)
+        │   ├── verbose_eval: 100 (int)
+        │   ├── perform_hyperparameter_optimization: False (bool)
+        │   ├── use_baseline_hyperparameters: True (bool)
+        │   ├── optimizer: Optuna (str)
+        │   ├── static_params/
+        │   │   ├── random_seed: 42 (int)
+        │   │   ├── eval_metric: AUC (str)
+        │   │   ├── loss_function: Logloss (str)
+        │   │   ├── task_type: GPU (str)
+        │   │   └── verbose: False (bool)
+        │   └── optimization/
+        │       ├── n_trials: 100 (int)
+        │       └── param_space/
+        │           ├── learning_rate [4 items]
+        │           │   ├── 0.001
+        │           │   ├── 1.0
+        │           │   ├── float
+        │           │   └── True
+        │           ├── depth [3 items]
+        │           │   ├── 1
+        │           │   ├── 12
+        │           │   └── int
+        │           ├── l2_leaf_reg [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 12
+        │           │   ├── float
+        │           │   └── True
+        │           ├── random_strength [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 12
+        │           │   ├── float
+        │           │   └── True
+        │           ├── bagging_temperature [3 items]
+        │           │   ├── 0.0
+        │           │   ├── 1.0
+        │           │   └── float
+        │           ├── leaf_estimation_iterations [3 items]
+        │           │   ├── 1
+        │           │   ├── 10
+        │           │   └── int
+        │           └── min_data_in_leaf [3 items]
+        │               ├── 1
+        │               ├── 100
+        │               └── int
+        ├── xgboost_config/
+        │   ├── num_boost_round: 10000 (int)
+        │   ├── early_stopping_rounds: 100 (int)
+        │   ├── verbose_eval: 100 (int)
+        │   ├── enable_categorical: False (bool)
+        │   ├── perform_hyperparameter_optimization: False (bool)
+        │   ├── use_baseline_hyperparameters: False (bool)
+        │   ├── optimizer: Optuna (str)
+        │   ├── static_params/
+        │   │   ├── device: cuda (str)
+        │   │   ├── random_state: 42 (int)
+        │   │   ├── objective: binary:logistic (str)
+        │   │   ├── eval_metric: auc (str)
+        │   │   └── tree_method: hist (str)
+        │   └── optimization/
+        │       ├── n_trials: 200 (int)
+        │       └── param_space/
+        │           ├── learning_rate [4 items]
+        │           │   ├── 0.001
+        │           │   ├── 1.0
+        │           │   ├── float
+        │           │   └── True
+        │           ├── max_bin [3 items]
+        │           │   ├── 2
+        │           │   ├── 256
+        │           │   └── int
+        │           ├── max_depth [3 items]
+        │           │   ├── 1
+        │           │   ├── 15
+        │           │   └── int
+        │           ├── alpha [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 12
+        │           │   ├── float
+        │           │   └── True
+        │           ├── gamma [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 12
+        │           │   ├── float
+        │           │   └── True
+        │           ├── reg_lambda [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 12
+        │           │   ├── float
+        │           │   └── True
+        │           ├── colsample_bytree [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 1.0
+        │           │   ├── float
+        │           │   └── True
+        │           ├── subsample [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 1.0
+        │           │   ├── float
+        │           │   └── True
+        │           ├── min_child_weight [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 12
+        │           │   ├── float
+        │           │   └── True
+        │           └── scale_pos_weight [3 items]
+        │               ├── 1
+        │               ├── 15
+        │               └── int
+        ├── pytorch_config/
+        │   ├── epochs: 100 (int)
+        │   ├── early_stopping_patience: 10 (int)
+        │   ├── batch_size: 64 (int)
+        │   ├── perform_hyperparameter_optimization: False (bool)
+        │   ├── use_baseline_hyperparameters: True (bool)
+        │   ├── optimizer: Optuna (str)
+        │   ├── static_params/
+        │   │   ├── random_state: 42 (int)
+        │   │   ├── optimizer: adam (str)
+        │   │   ├── epochs: 100 (int)
+        │   │   ├── early_stopping_patience: 10 (int)
+        │   │   └── batch_size: 64 (int)
+        │   └── optimization/
+        │       ├── n_trials: 50 (int)
+        │       └── param_space/
+        │           ├── learning_rate [4 items]
+        │           │   ├── 0.0001
+        │           │   ├── 0.1
+        │           │   ├── float
+        │           │   └── True
+        │           ├── weight_decay [4 items]
+        │           │   ├── 1e-06
+        │           │   ├── 0.01
+        │           │   ├── float
+        │           │   └── True
+        │           ├── dropout_rate [3 items]
+        │           │   ├── 0.1
+        │           │   ├── 0.5
+        │           │   └── float
+        │           ├── batch_size [3 items]
+        │           │   ├── 32
+        │           │   ├── 128
+        │           │   └── int
+        │           ├── hidden_sizes [2 items]
+        │           │   ├── [[64, 32], [128, 64], [128, 64, 32], [256, 128, 64]]
+        │           │   └── categorical
+        │           └── optimizer [2 items]
+        │               ├── ['adam', 'sgd']
+        │               └── categorical
+        ├── sklearn_randomforest_config/
+        │   ├── perform_hyperparameter_optimization: False (bool)
+        │   ├── use_baseline_hyperparameters: True (bool)
+        │   ├── optimizer: Optuna (str)
+        │   ├── static_params/
+        │   │   ├── random_state: 42 (int)
+        │   │   ├── n_jobs: -1 (int)
+        │   │   └── verbose: 0 (int)
+        │   └── optimization/
+        │       ├── n_trials: 100 (int)
+        │       └── param_space/
+        │           ├── n_estimators [3 items]
+        │           │   ├── 10
+        │           │   ├── 1000
+        │           │   └── int
+        │           ├── max_depth [3 items]
+        │           │   ├── 1
+        │           │   ├── 20
+        │           │   └── int
+        │           ├── min_samples_split [3 items]
+        │           │   ├── 2
+        │           │   ├── 20
+        │           │   └── int
+        │           ├── min_samples_leaf [3 items]
+        │           │   ├── 1
+        │           │   ├── 10
+        │           │   └── int
+        │           └── max_features [3 items]
+        │               ├── 0.1
+        │               ├── 1.0
+        │               └── float
+        ├── sklearn_histgradientboosting_config/
+        │   ├── perform_hyperparameter_optimization: False (bool)
+        │   ├── use_baseline_hyperparameters: True (bool)
+        │   ├── optimizer: Optuna (str)
+        │   ├── static_params/
+        │   │   ├── random_state: 42 (int)
+        │   │   └── verbose: 0 (int)
+        │   └── optimization/
+        │       ├── n_trials: 100 (int)
+        │       └── param_space/
+        │           ├── learning_rate [4 items]
+        │           │   ├── 0.001
+        │           │   ├── 1.0
+        │           │   ├── float
+        │           │   └── True
+        │           ├── max_iter [3 items]
+        │           │   ├── 10
+        │           │   ├── 1000
+        │           │   └── int
+        │           ├── max_depth [3 items]
+        │           │   ├── 1
+        │           │   ├── 20
+        │           │   └── int
+        │           ├── min_samples_leaf [3 items]
+        │           │   ├── 1
+        │           │   ├── 100
+        │           │   └── int
+        │           ├── l2_regularization [4 items]
+        │           │   ├── 1e-16
+        │           │   ├── 12
+        │           │   ├── float
+        │           │   └── True
+        │           └── max_bins [3 items]
+        │               ├── 2
+        │               ├── 255
+        │               └── int
+        ├── sklearn_logisticregression_config/
+        │   ├── perform_hyperparameter_optimization: False (bool)
+        │   ├── use_baseline_hyperparameters: True (bool)
+        │   ├── optimizer: Optuna (str)
+        │   ├── static_params/
+        │   │   ├── random_state: 42 (int)
+        │   │   ├── n_jobs: -1 (int)
+        │   │   ├── verbose: 0 (int)
+        │   │   └── max_iter: 1000 (int)
+        │   └── optimization/
+        │       ├── n_trials: 100 (int)
+        │       └── param_space/
+        │           ├── C [4 items]
+        │           │   ├── 0.0001
+        │           │   ├── 1.0e4
+        │           │   ├── float
+        │           │   └── True
+        │           ├── penalty [3 items]
+        │           │   ├── l1
+        │           │   ├── l2
+        │           │   └── categorical
+        │           ├── solver [3 items]
+        │           │   ├── saga
+        │           │   ├── liblinear
+        │           │   └── categorical
+        │           └── class_weight [3 items]
+        │               ├── None
+        │               ├── balanced
+        │               └── categorical
+        └── lightgbm_config/
+            ├── num_boost_round: 10000 (int)
+            ├── early_stopping_rounds: 100 (int)
+            ├── verbose_eval: 100 (int)
+            ├── perform_hyperparameter_optimization: False (bool)
+            ├── use_baseline_hyperparameters: True (bool)
+            ├── optimizer: Optuna (str)
+            ├── static_params/
+            │   ├── device: cpu (str)
+            │   ├── random_state: 42 (int)
+            │   ├── objective: binary (str)
+            │   ├── metric: auc (str)
+            │   ├── verbose: -1 (int)
+            │   └── force_col_wise: True (bool)
+            └── optimization/
+                ├── n_trials: 100 (int)
+                └── param_space/
+                    ├── learning_rate [4 items]
+                    │   ├── 0.001
+                    │   ├── 1.0
+                    │   ├── float
+                    │   └── True
+                    ├── num_leaves [3 items]
+                    │   ├── 2
+                    │   ├── 256
+                    │   └── int
+                    ├── max_depth [3 items]
+                    │   ├── 1
+                    │   ├── 15
+                    │   └── int
+                    ├── min_data_in_leaf [3 items]
+                    │   ├── 1
+                    │   ├── 100
+                    │   └── int
+                    ├── lambda_l1 [4 items]
+                    │   ├── 1e-16
+                    │   ├── 12
+                    │   ├── float
+                    │   └── True
+                    ├── lambda_l2 [4 items]
+                    │   ├── 1e-16
+                    │   ├── 12
+                    │   ├── float
+                    │   └── True
+                    ├── feature_fraction [4 items]
+                    │   ├── 1e-16
+                    │   ├── 1.0
+                    │   ├── float
+                    │   └── True
+                    ├── bagging_fraction [4 items]
+                    │   ├── 1e-16
+                    │   ├── 1.0
+                    │   ├── float
+                    │   └── True
+                    ├── bagging_freq [3 items]
+                    │   ├── 1
+                    │   ├── 10
+                    │   └── int
+                    └── min_gain_to_split [4 items]
+                        ├── 1e-16
+                        ├── 12
+                        ├── float
+                        └── True
+
+========================================
+
+Configuration File Contents:
+
+configs/
+├── nba/
+│   ├── app_config.yaml
+│       • api_rate_limit
+│       • app_name
+│       • app_version
+│       • data_retention_days
+│       • default_language
+│       • environment
+│       • external_services
+│       • features
+│       • maintainer_email
+│       • notifications
+│       • timezone
+│   ├── dashboard_prep_config.yaml
+│       • dashboard_prep
+│   ├── data_access_config.yaml
+│       • column_mapping_file
+│       • cumulative_scraped_directory
+│       • engineered_data_directory
+│       • engineered_data_file
+│       • evaluation_data_directory
+│       • evaluation_data_file
+│       • game_centric_data_file
+│       • newly_scraped_directory
+│       • predictions_directory
+│       • processed_data_directory
+│       • scraped_boxscore_files
+│       • team_centric_data_file
+│       • todays_games_ids_file
+│       • todays_matchups_file
+│       • training_data_directory
+│       • training_data_file
+│       • validation_data_file
+│   ├── data_processing_config.yaml
+│       • combined_cases_suffix
+│       • date_column
+│       • default_percentage_value
+│       • game_id_column
+│       • game_info_columns
+│       • home_game_suffix
+│       • home_team_column
+│       • is_overtime_column
+│       • is_playoff_column
+│       • new_date_column
+│       • new_game_id_column
+│       • new_team_id_column
+│       • processed_schema
+│       • regular_game_minutes
+│       • regular_season_game_id_threshold
+│       • season_column
+│       • season_year_offset
+│       • sub_season_id_column
+│       • team_id_column
+│       • team_info_columns
+│       • visitor_game_suffix
+│       • win_column
+│   ├── feature_engineering_config.yaml
+│       • elo_change_column
+│       • elo_update_new_rows_only
+│       • elo_width
+│       • extend_rolling_avgs
+│       • extend_streaks
+│       • feature_allowlist
+│       • home_advantage
+│       • home_team_prefix
+│       • include_postseason
+│       • initial_elo
+│       • k_factor
+│       • matchup_rolling_avg_periods
+│       • opp_elo_before_column
+│       • random_state
+│       • season_column
+│       • season_end
+│       • season_start
+│       • stratify_column
+│       • target_column
+│       • team_elo_after_column
+│       • team_elo_before_column
+│       • team_rolling_avg_periods
+│       • validation_last_n_seasons
+│       • validation_split
+│       • visitor_team_prefix
+│       • win_prob_column
+│   ├── inference_config.yaml
+│       • inference
+│   ├── team_mapping.yaml
+│       • abbrev_to_full_name
+│       • historical_teams
+│       • team_id_to_abbrev
+│   ├── validation_scraper_config.yaml
+│       • error_handling
+│       • logging
+│       • parsing
+│       • rate_limiting
+│       • scoreboard_base_url
+│       • scores
+│       • selectors
+│       • team_abbrev
+│   └── webscraping_config.yaml
+│       • browsers
+│       • chrome_options
+│       • day_class_name
+│       • dropdown_class_name
+│       • dynamic_content_timeout
+│       • enable_validation_scraping
+│       • firefox_options
+│       • full_scrape
+│       • game_date_header_variations
+│       • game_links_class_name
+│       • games_per_day_class_name
+│       • max_retries
+│       • nba_boxscores_url
+│       • nba_schedule_url
+│       • no_data_class_name
+│       • off_season_start_month
+│       • page_load_timeout
+│       • pagination_class_name
+│       • play_in_month
+│       • play_in_season_text
+│       • playoffs_season_text
+│       • regular_season_start_month
+│       • regular_season_text
+│       • retry_delay
+│       • schedule_game_id_column
+│       • schedule_home_team_id_column
+│       • schedule_preview_text
+│       • schedule_visitor_team_id_column
+│       • start_season
+│       • stat_types
+│       • table_class_name
+│       • team_mapping_file
+│       • teams_and_games_class_name
+│       • teams_links_class_name
+│       • validation_data_file
+│       • wait_time
+└── core/
+    ├── app_logging_config.yaml
+        • error_backup_count
+        • error_filename_fallback
+        • error_size_max
+        • log_backup_count
+        • log_current_run_only
+        • log_filename_fallback
+        • log_level
+        • log_path
+        • log_size_max
+        • log_to_console
+        • log_to_file
+        • model_testing_log_file
+        • use_structured_logging
+    ├── artifact_paths_config.yaml
+        • artifact_root
+        • experiments
+        • features
+        • models
+        • predictions
+    ├── hyperparameters/
+    │   ├── catboost/
+    │   │   ├── baseline.yaml
+                • bagging_temperature
+                • depth
+                • eval_metric
+                • l2_leaf_reg
+                • leaf_estimation_iterations
+                • learning_rate
+                • loss_function
+                • min_data_in_leaf
+                • random_seed
+                • random_strength
+                • task_type
+                • verbose
+    │   ├── lightgbm/
+    │   │   ├── baseline.yaml
+                • bagging_fraction
+                • bagging_freq
+                • device
+                • feature_fraction
+                • force_col_wise
+                • lambda_l1
+                • lambda_l2
+                • learning_rate
+                • max_depth
+                • metric
+                • min_data_in_leaf
+                • min_gain_to_split
+                • num_leaves
+                • objective
+                • random_state
+                • verbose
+    │   ├── pytorch/
+    │   │   ├── baseline.yaml
+                • batch_size
+                • dropout_rate
+                • early_stopping_patience
+                • epochs
+                • hidden_sizes
+                • learning_rate
+                • momentum
+                • optimizer
+                • random_state
+                • weight_decay
+    │   ├── sklearn_histgradientboosting/
+    │   │   ├── baseline.yaml
+                • l2_regularization
+                • learning_rate
+                • max_bins
+                • max_depth
+                • max_iter
+                • min_samples_leaf
+                • random_state
+                • verbose
+    │   ├── sklearn_logisticregression/
+    │   │   ├── baseline.yaml
+                • C
+                • class_weight
+                • max_iter
+                • n_jobs
+                • penalty
+                • random_state
+                • solver
+                • verbose
+    │   ├── sklearn_randomforest/
+    │   │   ├── baseline.yaml
+                • max_depth
+                • max_features
+                • min_samples_leaf
+                • min_samples_split
+                • n_estimators
+                • n_jobs
+                • random_state
+                • verbose
+    │   ├── xgboost/
+    │   │   ├── baseline.yaml
+                • colsample_bytree
+                • device
+                • eval_metric
+                • gamma
+                • learning_rate
+                • max_depth
+                • min_child_weight
+                • objective
+                • random_state
+                • reg_alpha
+                • reg_lambda
+                • scale_pos_weight
+                • subsample
+                • tree_method
+    ├── model_testing_config.yaml
+        • calculate_shap_interactions
+        • calculate_shap_values
+        • categorical_features
+        • charts_output_dir
+        • cross_validation_type
+        • current_hyperparameters
+        • enable_feature_pruning
+        • experiment_description
+        • experiment_name
+        • feature_audit_format
+        • feature_audit_metrics
+        • feature_audit_output_dir
+        • feature_audit_thresholds
+        • feature_audit_versioning
+        • feature_pruning
+        • generate_feature_audit
+        • generate_learning_curve_data
+        • hyperparameter_history_dir
+        • hyperparameter_metadata
+        • log_experiment
+        • max_shap_interaction_memory_gb
+        • model_registry
+        • models
+        • n_splits
+        • non_useful_columns
+        • perform_oof_cross_validation
+        • perform_preprocessing
+        • perform_validation_set_testing
+        • primary_id_column
+        • random_state
+        • save_feature_audit
+        • save_model_to_registry
+        • save_oof_predictions
+        • save_validation_predictions
+        • sort_columns
+        • sort_order
+    ├── models/
+    │   ├── catboost_config.yaml
+            • early_stopping_rounds
+            • num_boost_round
+            • optimization
+            • optimizer
+            • perform_hyperparameter_optimization
+            • static_params
+            • use_baseline_hyperparameters
+            • verbose_eval
+    │   ├── lightgbm_config.yaml
+            • early_stopping_rounds
+            • num_boost_round
+            • optimization
+            • optimizer
+            • perform_hyperparameter_optimization
+            • static_params
+            • use_baseline_hyperparameters
+            • verbose_eval
+    │   ├── pytorch_config.yaml
+            • batch_size
+            • early_stopping_patience
+            • epochs
+            • optimization
+            • optimizer
+            • perform_hyperparameter_optimization
+            • static_params
+            • use_baseline_hyperparameters
+    │   ├── sklearn_histgradientboosting_config.yaml
+            • optimization
+            • optimizer
+            • perform_hyperparameter_optimization
+            • static_params
+            • use_baseline_hyperparameters
+    │   ├── sklearn_logisticregression_config.yaml
+            • optimization
+            • optimizer
+            • perform_hyperparameter_optimization
+            • static_params
+            • use_baseline_hyperparameters
+    │   ├── sklearn_randomforest_config.yaml
+            • optimization
+            • optimizer
+            • perform_hyperparameter_optimization
+            • static_params
+            • use_baseline_hyperparameters
+    │   ├── xgboost_config.yaml
+            • early_stopping_rounds
+            • enable_categorical
+            • num_boost_round
+            • optimization
+            • optimizer
+            • perform_hyperparameter_optimization
+            • static_params
+            • use_baseline_hyperparameters
+            • verbose_eval
+    ├── optuna_config.yaml
+        • optuna
+    ├── postprocessing_config.yaml
+        • calibration
+        • conformal
+    ├── preprocessing_config.yaml
+        • preprocessing
+    └── visualization_config.yaml
+        • chart_options

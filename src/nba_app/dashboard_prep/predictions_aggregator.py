@@ -61,9 +61,10 @@ class PredictionsAggregator:
         """
         try:
             if prediction_date is None:
-                # Default to tomorrow's predictions
-                tomorrow = datetime.now() + timedelta(days=1)
-                prediction_date = tomorrow.strftime('%Y-%m-%d')
+                # Use forecast_days from config (0 = today, 1 = tomorrow, etc.)
+                forecast_days = self.config.dashboard_prep.predictions.forecast_days
+                target_date = datetime.now() + timedelta(days=forecast_days)
+                prediction_date = target_date.strftime('%Y-%m-%d')
 
             self.app_logger.structured_log(
                 logging.INFO,
@@ -149,7 +150,7 @@ class PredictionsAggregator:
             dashboard_df['section'] = 'predictions'
 
             # Add high-confidence flag
-            confidence_threshold = self.config.dashboard_prep.predictions.high_confidence_threshold
+            confidence_threshold = self.config.dashboard_prep.predictions.high_probability_threshold
             if 'confidence' in dashboard_df.columns:
                 dashboard_df['high_confidence'] = dashboard_df['confidence'] >= confidence_threshold
             elif 'calibrated_home_win_prob' in dashboard_df.columns:

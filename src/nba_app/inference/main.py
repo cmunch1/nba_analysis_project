@@ -370,7 +370,9 @@ def _format_predictions(todays_features: pd.DataFrame,
     output_df = pd.DataFrame()
 
     # Game identifiers
-    output_df['game_id'] = todays_features['game_id'].values
+    # Normalize game_id to match processed data format (strip first character)
+    # Webscraping outputs 8-digit IDs (e.g., "22500026") but processing strips first char -> "2500026"
+    output_df['game_id'] = todays_features['game_id'].astype(str).str[1:].values
     output_df['game_date'] = todays_features['game_date'].values
 
     # Team names (extract from engineered features)

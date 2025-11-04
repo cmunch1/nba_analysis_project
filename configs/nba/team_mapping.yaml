@@ -5,6 +5,39 @@
 # Format:
 # nba_team_id: bbref_abbreviation
 
+# Abbreviation to Full Team Name Mapping
+abbrev_to_full_name:
+  'ATL': 'Atlanta Hawks'
+  'BOS': 'Boston Celtics'
+  'BRK': 'Brooklyn Nets'
+  'CHA': 'Charlotte Hornets'
+  'CHI': 'Chicago Bulls'
+  'CLE': 'Cleveland Cavaliers'
+  'DAL': 'Dallas Mavericks'
+  'DEN': 'Denver Nuggets'
+  'DET': 'Detroit Pistons'
+  'GSW': 'Golden State Warriors'
+  'HOU': 'Houston Rockets'
+  'IND': 'Indiana Pacers'
+  'LAC': 'LA Clippers'
+  'LAL': 'LA Lakers'
+  'MEM': 'Memphis Grizzlies'
+  'MIA': 'Miami Heat'
+  'MIL': 'Milwaukee Bucks'
+  'MIN': 'Minnesota Timberwolves'
+  'NOP': 'New Orleans Pelicans'
+  'NYK': 'New York Knicks'
+  'OKC': 'Oklahoma City Thunder'
+  'ORL': 'Orlando Magic'
+  'PHI': 'Philadelphia 76ers'
+  'PHX': 'Phoenix Suns'
+  'POR': 'Portland Trail Blazers'
+  'SAC': 'Sacramento Kings'
+  'SAS': 'San Antonio Spurs'
+  'TOR': 'Toronto Raptors'
+  'UTA': 'Utah Jazz'
+  'WAS': 'Washington Wizards'
+
 # Current NBA Teams (30 teams)
 team_id_to_abbrev:
   '1610612737': 'ATL'  # Atlanta Hawks

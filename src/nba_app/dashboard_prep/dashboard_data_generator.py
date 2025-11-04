@@ -323,7 +323,9 @@ class DashboardDataGenerator:
                 num_rows=len(dashboard_df)
             )
 
-            self.data_access.save_dataframes([dashboard_df], [str(output_path)])
+            # Use pandas directly to save to avoid path doubling issue
+            # data_access prepends its own directory, so we save directly
+            dashboard_df.to_csv(output_path, index=False)
 
             # Archive snapshot if enabled
             if self.config.dashboard_prep.output.archive_snapshots:
@@ -360,7 +362,8 @@ class DashboardDataGenerator:
             snapshot_filename = snapshot_pattern.replace('{date}', today)
             snapshot_path = snapshot_dir / snapshot_filename
 
-            self.data_access.save_dataframes([dashboard_df], [str(snapshot_path)])
+            # Use pandas directly to save to avoid path doubling issue
+            dashboard_df.to_csv(snapshot_path, index=False)
 
             self.app_logger.structured_log(
                 logging.INFO,

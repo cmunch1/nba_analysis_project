@@ -33,9 +33,11 @@
 │   │   └── visualization_config.yaml
 │   └── nba/
 │       ├── app_config.yaml
+│       ├── dashboard_prep_config.yaml
 │       ├── data_access_config.yaml
 │       ├── data_processing_config.yaml
 │       ├── feature_engineering_config.yaml
+│       ├── inference_config.yaml
 │       ├── team_mapping.yaml
 │       ├── validation_scraper_config.yaml
 │       └── webscraping_config.yaml
@@ -46,6 +48,13 @@
 │   │   ├── games_misc.csv
 │   │   ├── games_scoring.csv
 │   │   └── games_traditional.csv
+│   ├── dashboard/
+│   │   ├── archive/
+│   │   │   ├── dashboard_data_2025-11-01.csv
+│   │   │   ├── dashboard_data_2025-11-02.csv
+│   │   │   ├── dashboard_data_2025-11-03.csv
+│   │   │   └── dashboard_data_2025-11-04.csv
+│   │   └── dashboard_data.csv
 │   ├── engineered/
 │   │   └── engineered_features.csv
 │   ├── newly_scraped/
@@ -61,6 +70,25 @@
 │   │   ├── LGBM_oof_predictions.csv
 │   │   ├── LGBM_val_predictions.csv
 │   │   ├── lightgbm_val_predictions.csv
+│   │   ├── predictions_2025-10-24.csv
+│   │   ├── predictions_2025-10-24.csv.bak
+│   │   ├── predictions_2025-10-26.csv
+│   │   ├── predictions_2025-10-26.csv.bak
+│   │   ├── predictions_2025-10-27.csv
+│   │   ├── predictions_2025-10-27.csv.bak
+│   │   ├── predictions_2025-10-28.csv
+│   │   ├── predictions_2025-10-28.csv.bak
+│   │   ├── predictions_2025-10-29.csv
+│   │   ├── predictions_2025-10-29.csv.bak
+│   │   ├── predictions_2025-10-30.csv
+│   │   ├── predictions_2025-10-30.csv.bak
+│   │   ├── predictions_2025-10-31.csv
+│   │   ├── predictions_2025-10-31.csv.bak
+│   │   ├── predictions_2025-11-01.csv
+│   │   ├── predictions_2025-11-01.csv.bak
+│   │   ├── predictions_2025-11-02.csv
+│   │   ├── predictions_2025-11-03.csv
+│   │   ├── predictions_2025-11-04.csv
 │   │   ├── SKLearn_HistGradientBoosting_val_predictions.csv
 │   │   ├── SKLearn_RandomForest_val_predictions.csv
 │   │   ├── XGBoost_oof_predictions.csv
@@ -72,6 +100,7 @@
 │   │   ├── games_boxscores-fixed.csv
 │   │   ├── games_boxscores.csv
 │   │   ├── teams_boxscores-fixed.csv
+│   │   ├── teams_boxscores-invalid.csv
 │   │   └── teams_boxscores.csv
 │   ├── test_data/
 │   │   ├── games_advanced.csv
@@ -84,8 +113,6 @@
 │       └── validation_data.csv
 ├── docs/
 │   ├── AI/
-│   │   ├── config_reference.txt
-│   │   ├── config_tree.txt
 │   │   ├── core_framework_usage.md
 │   │   ├── directory_tree.txt
 │   │   └── interfaces.md
@@ -96,13 +123,19 @@
 │   │   └── nba-boxscore-data-dictionary.md
 │   ├── src/
 │   │   └── readme.md
+│   ├── CALIBRATION_OPTIMIZATION_BUG.md
+│   ├── conformal_predictor_guide.md
+│   ├── DEPLOYMENT_PLAN.md
 │   ├── future_refactors.md
-│   └── readme.md
+│   ├── readme.md
+│   └── streamlit_dashboard_reference.md
 ├── noteboooks/
 │   ├── baseline.ipynb
 │   └── eda.ipynb
 ├── scripts/
-│   └── analyze_calibration.py
+│   ├── analyze_calibration.py
+│   ├── README.md
+│   └── run_nightly_pipeline.sh
 ├── src/
 │   ├── ml_framework/
 │   │   ├── core/
@@ -138,6 +171,191 @@
 │   │   │   └── history/
 │   │   ├── inference/
 │   │   │   └── model_predictor.py
+│   │   ├── ml_artifacts/
+│   │   │   ├── experiments/
+│   │   │   │   └── hyperparameters/
+│   │   │   │       ├── current_best/
+│   │   │   │       └── history/
+│   │   │   └── visualizations/
+│   │   │       └── charts/
+│   │   │           └── xgboost/
+│   │   │               ├── oof_20251020_073526/
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251023_083749/
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251023_125805/
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251023_130456/
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251023_132228/
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251023_133324/
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251023_133758/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251024_115447/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251026_083311/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251026_085121/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251026_092521/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251027_090131/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── oof_20251027_090242/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251020_073534/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251023_083754/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251023_125811/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251023_130502/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251023_132234/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251023_133329/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251023_133805/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251024_115454/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251026_083318/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251026_085128/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251026_092529/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               ├── validation_20251027_090138/
+│   │   │               │   ├── calibration_curve.png
+│   │   │               │   ├── calibration_metrics.png
+│   │   │               │   ├── confusion_matrix.png
+│   │   │               │   ├── feature_importance.png
+│   │   │               │   ├── probability_histogram.png
+│   │   │               │   ├── roc_curve.png
+│   │   │               │   └── shap_summary.png
+│   │   │               └── validation_20251027_090249/
+│   │   │                   ├── calibration_curve.png
+│   │   │                   ├── calibration_metrics.png
+│   │   │                   ├── confusion_matrix.png
+│   │   │                   ├── feature_importance.png
+│   │   │                   ├── probability_histogram.png
+│   │   │                   ├── roc_curve.png
+│   │   │                   └── shap_summary.png
 │   │   ├── model_registry/
 │   │   │   ├── base_model_registry.py
 │   │   │   └── mlflow_model_registry.py
@@ -179,12 +397,12 @@
 │   │   ├── postprocessing/
 │   │   │   ├── base_postprocessor.py
 │   │   │   ├── calibration_optimizer.py
+│   │   │   ├── conformal_predictor.py
 │   │   │   └── probability_calibrator.py
 │   │   ├── preprocessing/
 │   │   │   ├── base_preprocessor.py
 │   │   │   └── preprocessor.py
 │   │   ├── uncertainty/
-│   │   │   └── uncertainty_calibrator.py
 │   │   └── visualization/
 │   │       ├── charts/
 │   │       │   ├── base_chart.py
@@ -207,6 +425,14 @@
 │   │           ├── base_chart_orchestrator.py
 │   │           └── chart_orchestrator.py
 │   └── nba_app/
+│       ├── dashboard_prep/
+│       │   ├── dashboard_data_generator.py
+│       │   ├── di_container.py
+│       │   ├── main.py
+│       │   ├── performance_calculator.py
+│       │   ├── predictions_aggregator.py
+│       │   ├── results_aggregator.py
+│       │   └── team_performance_analyzer.py
 │       ├── data_processing/
 │       │   ├── base_data_processing_classes.py
 │       │   ├── di_container.py
@@ -219,7 +445,14 @@
 │       │   ├── feature_engineer.py
 │       │   ├── feature_schema.py
 │       │   ├── feature_selector.py
-│       │   └── main.py
+│       │   ├── main.py
+│       │   └── matchup_processor.py
+│       ├── inference/
+│       │   ├── di_container.py
+│       │   ├── game_predictor.py
+│       │   ├── main.py
+│       │   ├── main_complex_OLD.py
+│       │   └── schedule_loader.py
 │       ├── webscraping/
 │       │   ├── old/
 │       │   │   ├── test_websraping.py
@@ -237,22 +470,41 @@
 │       │   ├── validation_scraper.py
 │       │   └── web_driver.py
 │       └── data_validator.py
+├── streamlit_app/
+│   ├── assets/
+│   ├── components/
+│   │   ├── kpi_panel.py
+│   │   └── matchup_cards.py
+│   ├── pages/
+│   │   ├── 0_Todays_Predictions.py
+│   │   ├── 1_Historical_Performance.py
+│   │   └── 2_Team_Drilldown.py
+│   ├── services/
+│   │   └── dashboard_data_service.py
+│   ├── app.py
+│   ├── data_loader.py
+│   ├── di_container.py
+│   └── README.md
 ├── tests/
 │   ├── ml_framework/
-│   └── nba_app/
-│       ├── data_processing/
-│       │   └── test_process_scraped_nba_data.py
-│       ├── feature_engineering/
-│       │   └── test_feature_engineer.py
-│       ├── webscraping/
-│       │   ├── test_boxscore_scraper.py
-│       │   ├── test_integration.py
-│       │   ├── test_nba_scraper.py
-│       │   ├── test_page_scraper.py
-│       │   ├── test_schedule_scraper.py
-│       │   └── test_validation_scraper.py
-│       ├── conftest.py
-│       └── test_data_validator.py
+│   ├── nba_app/
+│   │   ├── data_processing/
+│   │   │   └── test_process_scraped_nba_data.py
+│   │   ├── feature_engineering/
+│   │   │   └── test_feature_engineer.py
+│   │   ├── webscraping/
+│   │   │   ├── test_boxscore_scraper.py
+│   │   │   ├── test_integration.py
+│   │   │   ├── test_nba_scraper.py
+│   │   │   ├── test_page_scraper.py
+│   │   │   ├── test_schedule_scraper.py
+│   │   │   └── test_validation_scraper.py
+│   │   ├── conftest.py
+│   │   └── test_data_validator.py
+│   └── postprocessing/
+│       └── test_conformal_predictor.py
+├── CALIBRATION_OPTIMIZATION_BUG.md
+├── DEPLOYMENT_PLAN.md
 ├── directory_tree.txt
 ├── pyproject.toml
 ├── README.md

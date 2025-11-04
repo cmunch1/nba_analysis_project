@@ -158,6 +158,21 @@ class ResultsAggregator:
                 )
                 return pd.DataFrame()
 
+            # Preserve team names and game_date from actual results (remove suffixes)
+            if 'home_team_actual' in validated_df.columns:
+                validated_df['home_team'] = validated_df['home_team_actual']
+                validated_df['away_team'] = validated_df['away_team_actual']
+            elif 'home_team_predicted' in validated_df.columns:
+                # Fallback to predicted if actual not available
+                validated_df['home_team'] = validated_df['home_team_predicted']
+                validated_df['away_team'] = validated_df['away_team_predicted']
+
+            # Preserve game_date from actual results
+            if 'game_date_actual' in validated_df.columns:
+                validated_df['game_date'] = validated_df['game_date_actual']
+            elif 'game_date_predicted' in validated_df.columns:
+                validated_df['game_date'] = validated_df['game_date_predicted']
+
             # Calculate prediction accuracy
             validated_df['prediction_correct'] = (
                 validated_df['actual_winner'] == validated_df['predicted_winner']

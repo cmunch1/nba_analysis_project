@@ -52,10 +52,10 @@ dashboard_prep:
     # Highlight high win probability predictions (for "High Win Probability" chip)
     high_probability_threshold: 0.60
 
-  # Yesterday's Results Section
+  # Recent Results Section
   results:
-    # How many days back to include
-    lookback_days: 1
+    # How many days back to include (1 = yesterday only, 7 = last week, etc.)
+    lookback_days: 10
 
     # Columns to include
     include_columns:
