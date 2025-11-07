@@ -6,17 +6,19 @@ This guide summarizes the Streamlit implementation that powers the NBA predictio
 
 ```
 streamlit_app/
-├── app.py                      # Landing page (matchup filters, KPIs, cards)
+├── app.py                      # Auto-redirect landing page
 ├── data_loader.py              # Cached data access helpers (DI-backed)
 ├── di_container.py             # Streamlit-specific dependency container
 ├── README.md                   # Quick start instructions
 ├── components/
 │   ├── __init__.py
+│   ├── calibration_charts.py   # Calibration analysis and threshold metrics
 │   ├── kpi_panel.py            # Summary metric display
 │   └── matchup_cards.py        # Filter controls + matchup grid rendering
 └── pages/
-    ├── 1_Historical_Performance.py
-    └── 2_Team_Drilldown.py
+    ├── 0_Todays_Predictions.py # Main predictions view
+    ├── 1_Historical_Performance.py # Historical results and accuracy analysis
+    └── 2_Model_Analysis.py     # Technical model diagnostics
 ```
 
 All components pull configuration, logging, and file handling from `ml_framework.core.common_di_container.CommonDIContainer` to stay aligned with the rest of the project.
@@ -74,18 +76,24 @@ All components tolerate missing columns by checking their presence before render
 Streamlit automatically exposes files under `streamlit_app/pages/` as additional tabs.
 
 - **Historical Performance (1_Historical_Performance.py):**
+  - **Data Source:** Uses pre-calculated metrics from dashboard prep pipeline (single source of truth)
   - **Section Filtering:** Automatically filters to show only 'results' section (games with actual outcomes)
-  - **Calibration Curve:** Scatter plot comparing predicted probabilities to observed win rates
-  - **Daily Accuracy Trend:** Line chart showing accuracy over time with game counts
-  - **Metric Snapshot:** Summary statistics (games evaluated, overall accuracy, avg win probability)
-  - **Recent Updates:**
-    - Fixed deprecation warnings (`update_yaxis` → `update_yaxes`, added `observed=False` to groupby)
-    - Now displays all historical games (increased from 8 to 57 via `lookback_days: 10` config)
-  - **Required Columns:** `game_date`, `calibrated_home_win_prob`, `actual_home_score`, `actual_away_score` or `actual_winner`
+  - **Individual Chart Filters:** Each section has its own time period filter (7/14/30/All days) instead of global filter
+  - **Daily Performance:** Shows daily accuracy, season running accuracy, period average, and season average baseline with 7-day rolling window option
+  - **Threshold Analysis:** Error rate vs confidence threshold chart with key threshold summary table
+  - **Team Accuracy:** Horizontal bar chart ranking teams by model accuracy (minimum 5 games required)
+  - **Recent Games Detail:** Game-by-game table with conditional formatting highlighting errors by confidence level
+  - **Navigation:** Jump links to each section for easy page navigation
+  - **Required Columns:** `game_date`, `predicted_winner_prob`, `prediction_correct`, `predicted_winner_won`, `home_team`, `away_team`
 
-- **Team Drilldown (2_Team_Drilldown.py):**
-  - Per-team confidence timeline, home/away accuracy bars, and recent games table
-  - Works with `home_team`, `away_team`, `predicted_winner`, optional `actual_winner`, and probability columns
+- **Model Analysis (2_Model_Analysis.py):**
+  - **Audience:** Technical users and ML practitioners
+  - **Calibration Diagnostics:** 20-bin calibration curve with sharpness distribution, Brier score metrics, and bin-level statistics
+  - **Drift Monitoring:** Accuracy over time with 7-day rolling average, Brier score trends, calibration error trends, and drift summary statistics
+  - **Error Analysis:** High-level error metrics (placeholder for future detailed analysis)
+  - **Individual Filters:** Each section has its own time period filter (14/30/All days for calibration, 14/30/All for drift)
+  - **Data Source:** Uses pre-calculated drift metrics from dashboard prep pipeline
+  - **Required Columns:** `predicted_winner_prob`, `predicted_winner_won`, `game_date`, drift section with `date`, `accuracy`, `brier_score`, `calibration_error`
 
 Add new analytical views by creating additional files in `streamlit_app/pages/`—re-use `data_loader.load_latest_dataset()` so each page shares the same cached data.
 
@@ -117,6 +125,90 @@ Add new analytical views by creating additional files in `streamlit_app/pages/`�
 For deeper debugging, enable Streamlit's developer tools (`?` menu → "Developer options") or tail the application log configured by the DI container.
 
 ## Recent Changes
+
+### 2025-11-07: Historical Performance and Model Analysis Refactoring
+
+**Architecture Change - Single Source of Truth:**
+- Moved all metric calculations from Streamlit to dashboard prep pipeline
+- Streamlit now uses pre-calculated `prediction_correct`, `predicted_winner_won`, and drift metrics
+- Enables use of other BI tools (Power BI, Tableau) with same authoritative dashboard data
+- Eliminated calculation discrepancies between pages
+
+**Historical Performance Page Overhaul:**
+- **Removed global filter** - Each chart now has its own time period filter for independent analysis
+- **Daily Performance Section:**
+  - Added individual filter: 7/14/30/All days (default: All)
+  - Shows daily accuracy, season running accuracy, period average, and season average baseline
+  - Increased from 10 days to 365 days of historical data (`lookback_days: 365`)
+- **Threshold Analysis Section:**
+  - Added individual filter: 14/30/All days (default: All)
+  - Shows error rate vs confidence threshold with key threshold summary
+- **Team Accuracy Section (NEW):**
+  - Added individual filter: 14/30/All days (default: All)
+  - Horizontal bar chart ranking teams from worst to best accuracy
+  - Color-coded: green (≥70%), orange (60-70%), red (<60%)
+  - Minimum 5 games per team required
+- **Recent Games Detail Section (NEW):**
+  - Game-by-game table with conditional formatting
+  - Error highlighting by confidence level: light red (<60%), orange (60-70%), dark red (≥70%)
+  - Correct predictions shown in green
+  - Filterable by error severity with configurable max games display
+- **Removed calibration curve** - Moved to new Model Analysis page for technical users
+- **Added navigation** - Jump links to each section within page
+- **Cross-page link** - Added link to Model Analysis page for technical diagnostics
+
+**Model Analysis Page (NEW):**
+- **Purpose:** Technical model diagnostics for ML practitioners
+- **Calibration Diagnostics Section:**
+  - 20-bin calibration curve (50-100% range for normalized probabilities)
+  - Combined sharpness distribution + calibration line chart
+  - Overall Brier score, average predicted probability, and actual win rate metrics
+  - Bin-level statistics table with games, avg predicted, actual rate, Brier score
+  - Individual filter: 14/30/All days (default: All)
+- **Drift Monitoring Section:**
+  - Accuracy over time with 7-day rolling average
+  - Uses pre-calculated drift data from dashboard prep pipeline
+  - Optional Brier score and calibration error trend charts (if available in data)
+  - Drift summary statistics: mean accuracy, std dev, worst day, best day
+  - Individual filter: 14/30/All days (default: All)
+- **Error Analysis Section:**
+  - Placeholder with high-level metrics
+  - Framework for future detailed error pattern analysis
+- **Navigation:** Jump links to each section for easy page navigation
+
+**Configuration Changes:**
+- Updated `dashboard_prep_config.yaml`:
+  - `results.lookback_days: 365` (increased from 10 to include entire season)
+  - Added `predicted_winner_prob` and `predicted_winner_won` to results columns
+  - Enabled drift monitoring section with daily metrics
+
+**New Component:**
+- Created `streamlit_app/components/calibration_charts.py`:
+  - `prepare_calibration_bins()` - Bins predictions with 50%+ probability into 20 bins
+  - `calculate_threshold_metrics()` - Computes error rate and accuracy at each confidence threshold
+  - `create_calibration_bin_chart()` - Combined sharpness + calibration visualization
+  - `create_threshold_error_chart()` - Error rate vs threshold chart
+  - `calculate_brier_score()` - Brier score calculation for model evaluation
+
+**Pipeline Changes:**
+- Updated `results_aggregator.py`:
+  - Added `predicted_winner_prob` normalization (always ≥50%)
+  - Added `predicted_winner_won` binary outcome
+  - Pre-calculates all metrics used by Streamlit
+
+**Bug Fixes:**
+- Fixed accuracy discrepancy: Predictions page showed 68.0% while Historical Performance showed 71.6%
+  - Root cause: Results section only had 10 days (67 games, 71.6%) vs metrics section with all games (97 games, 68.0%)
+  - Fix: Increased lookback_days to 365 so both pages use consistent data
+- Fixed 7-day filter showing entire season instead of 7 days
+  - Added post-merge filtering to ensure only filtered dates are displayed
+
+**Key Files Modified:**
+- `streamlit_app/pages/1_Historical_Performance.py` - Major refactor with individual filters and new sections
+- `streamlit_app/pages/2_Model_Analysis.py` - New technical diagnostics page
+- `streamlit_app/components/calibration_charts.py` - New calibration analysis component
+- `src/nba_app/dashboard_prep/results_aggregator.py` - Added probability normalization
+- `configs/nba/dashboard_prep_config.yaml` - Increased lookback, added new columns
 
 ### 2025-11-04: Streamlit UI Overhaul
 

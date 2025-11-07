@@ -190,6 +190,20 @@ class ResultsAggregator:
                     validated_df['calibrated_home_win_prob'] - validated_df['actual_home_win']
                 )
 
+                # Create normalized probability (predicted winner's probability)
+                # This normalizes to always show the probability of the predicted winner
+                validated_df['predicted_winner_prob'] = validated_df.apply(
+                    lambda row: row['calibrated_home_win_prob']
+                    if row['predicted_winner'] == 'home'
+                    else (1 - row['calibrated_home_win_prob']),
+                    axis=1
+                )
+
+                # Also determine if the predicted winner actually won (for correct outcome calculation)
+                validated_df['predicted_winner_won'] = (
+                    validated_df['predicted_winner'] == validated_df['actual_winner']
+                ).astype(int)
+
             self.app_logger.structured_log(
                 logging.INFO,
                 "Results validated against predictions",

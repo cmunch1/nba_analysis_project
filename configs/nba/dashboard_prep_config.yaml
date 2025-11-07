@@ -55,7 +55,8 @@ dashboard_prep:
   # Recent Results Section
   results:
     # How many days back to include (1 = yesterday only, 7 = last week, etc.)
-    lookback_days: 10
+    # Set to large number to include entire season for Historical Performance page
+    lookback_days: 365  # Entire season
 
     # Columns to include
     include_columns:
@@ -68,6 +69,8 @@ dashboard_prep:
       - actual_away_score
       - predicted_winner
       - calibrated_home_win_prob
+      - predicted_winner_prob        # Normalized: predicted winner's probability
+      - predicted_winner_won         # Binary: 1 if predicted winner won, 0 otherwise
       - prediction_correct
       - prediction_error  # |predicted_prob - actual_outcome|
 
