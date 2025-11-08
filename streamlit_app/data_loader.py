@@ -32,7 +32,7 @@ def list_archived_snapshots(limit: Optional[int] = None) -> List[Path]:
     return service.list_archived_snapshots(limit=limit)
 
 
-def get_high_confidence_threshold() -> float:
+def get_high_probability_threshold() -> float:
     """Return the configured high win probability threshold."""
     service = container.dashboard_data_service()
-    return service.get_high_confidence_threshold()
+    return service.get_high_probability_threshold()

@@ -71,19 +71,15 @@ class DashboardDataService:
                 expected_path=str(data_path),
             ) from exc
 
-    def get_high_confidence_threshold(self) -> float:
+    def get_high_probability_threshold(self) -> float:
         """
         Retrieve the configured high win probability threshold for predictions.
         """
         try:
-            # Try new config key first
             return float(self.config.dashboard_prep.predictions.high_probability_threshold)
         except AttributeError:
-            # Fall back to old config key for backwards compatibility
-            try:
-                return float(self.config.dashboard_prep.predictions.high_confidence_threshold)
-            except AttributeError:
-                return 0.35
+            # Default to 60% if not configured
+            return 0.60
 
     def list_archived_snapshots(self, limit: Optional[int] = None) -> List[Path]:
         """

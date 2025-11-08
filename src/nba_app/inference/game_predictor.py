@@ -468,8 +468,8 @@ class GamePredictor:
                 lambda p: 'home' if p >= 0.5 else 'away'
             )
 
-            # Prediction confidence
-            output_df['confidence'] = output_df['calibrated_home_win_prob'].apply(
+            # Predicted probability (calibrated probability of predicted winner)
+            output_df['predicted_probability'] = output_df['calibrated_home_win_prob'].apply(
                 lambda p: max(p, 1 - p)
             )
 

@@ -19,11 +19,9 @@ def render_kpi_panel(
         return
 
     total_games = len(dataset)
-    confidence_series = dataset["confidence"] if "confidence" in dataset.columns else pd.Series(dtype=float)
-    high_prob_games = (
-        int((confidence_series >= high_probability_threshold).sum()) if not confidence_series.empty else 0
-    )
-    avg_win_probability = confidence_series.mean() if not confidence_series.empty else np.nan
+    predicted_prob_series = dataset.get("predicted_probability", pd.Series(dtype=float))
+    high_prob_games = int((predicted_prob_series >= high_probability_threshold).sum()) if not predicted_prob_series.empty else 0
+    avg_win_probability = predicted_prob_series.mean() if not predicted_prob_series.empty else np.nan
 
     accuracy = _compute_accuracy(dataset)
 

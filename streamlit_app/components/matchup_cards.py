@@ -67,15 +67,11 @@ def filter_matchups(dataset: pd.DataFrame, filters: MatchupFilterState) -> pd.Da
                 team_mask = team_mask | filtered[col].isin(filters.selected_teams)
             filtered = filtered.loc[team_mask]
 
-    if "confidence" in filtered.columns:
-        filtered = filtered.loc[filtered["confidence"].fillna(0.0) >= filters.min_win_probability]
+    # Filter by predicted probability threshold
+    filtered = filtered.loc[filtered["predicted_probability"].fillna(0.0) >= filters.min_win_probability]
 
-    # Sort by win probability (confidence) - highest first
-    if "confidence" in filtered.columns:
-        filtered = filtered.sort_values("confidence", ascending=False)
-    elif "calibrated_home_win_prob" in filtered.columns:
-        # Fallback to home win probability if confidence column not available
-        filtered = filtered.sort_values("calibrated_home_win_prob", ascending=False)
+    # Sort by predicted probability (highest first)
+    filtered = filtered.sort_values("predicted_probability", ascending=False)
 
     return filtered.reset_index(drop=True)
 
@@ -113,7 +109,7 @@ def _render_card(row: pd.Series, high_probability_threshold: float) -> None:
     game_time = row.get("game_time") or row.get("game_date")
     prediction_raw = row.get("predicted_winner", "N/A")
     win_prob = row.get("calibrated_home_win_prob")
-    confidence = row.get("confidence")
+    predicted_probability = row.get("predicted_probability")
 
     # Load team name mapping from config
     container = StreamlitAppContainer()
@@ -179,8 +175,8 @@ def _render_card(row: pd.Series, high_probability_threshold: float) -> None:
 def _build_reliability_chips(row: pd.Series, high_probability_threshold: float) -> List[str]:
     chips: List[str] = []
 
-    confidence = row.get("confidence")
-    if pd.notnull(confidence) and confidence >= high_probability_threshold:
+    predicted_probability = row.get("predicted_probability")
+    if pd.notnull(predicted_probability) and predicted_probability >= high_probability_threshold:
         chips.append("High Win Probability")
 
     if pd.notnull(row.get("prediction_error")) and row["prediction_error"] <= 0.2:

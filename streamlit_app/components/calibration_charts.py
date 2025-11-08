@@ -319,7 +319,7 @@ def create_calibration_bin_chart(bin_stats: pd.DataFrame) -> go.Figure:
 
 def create_threshold_error_chart(threshold_stats: pd.DataFrame) -> go.Figure:
     """
-    Create error rate vs confidence threshold chart.
+    Create error rate vs predicted probability threshold chart.
 
     Shows:
     - Line chart: error rate at each threshold (primary y-axis)
@@ -420,7 +420,7 @@ def create_threshold_error_chart(threshold_stats: pd.DataFrame) -> go.Figure:
 
     # Update layout
     fig.update_layout(
-        title="Error Rate vs Confidence Threshold",
+        title="Error Rate vs Predicted Probability Threshold",
         hovermode="x unified",
         showlegend=True,
         legend=dict(

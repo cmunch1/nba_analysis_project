@@ -193,14 +193,14 @@ def _render_calibration_diagnostics(frame: pd.DataFrame, probability_column: str
             A well-calibrated model's predictions can be trusted as true probabilities.
 
             - **Perfect calibration**: When the model predicts 70% probability, the outcome occurs ~70% of the time
-            - **Poor calibration**: Systematic over- or under-confidence in predictions
+            - **Poor calibration**: Systematic over- or under-prediction of true win rates
             - **Brier Score**: Measures both calibration and sharpness (lower is better, range 0-1)
 
             **Why it matters**: Calibrated probabilities enable better decision-making under uncertainty.
             For example, betting strategies require accurate probability estimates, not just correct predictions.
 
-            This chart shows where the model places its confidence (blue bars) and how well those
-            confidence levels match reality (blue line vs gray diagonal = perfect calibration).
+            This chart shows the distribution of the model's predicted probabilities (blue bars) and how well those
+            probability levels match actual win rates (blue line vs gray diagonal = perfect calibration).
             """
         )
 
@@ -463,10 +463,10 @@ def _render_error_analysis(frame: pd.DataFrame) -> None:
             - Opportunities for improvement
 
             This section will include:
-            - Error rate by confidence level
+            - Error rate by predicted probability level
             - Home vs away prediction accuracy
             - Error patterns by team
-            - High-confidence failure cases
+            - High-probability failure cases
             """
         )
 
@@ -482,16 +482,16 @@ def _render_error_analysis(frame: pd.DataFrame) -> None:
             st.metric("Total Errors", f"{int(total_errors)}", f"{error_rate:.1%} error rate")
 
         with col2:
-            high_conf_errors = frame[
+            high_prob_errors = frame[
                 (frame['predicted_probability'] >= 0.70) & (~frame['correct'])
             ]
-            st.metric("High Confidence Errors (70%+)", len(high_conf_errors))
+            st.metric("High Probability Errors (≥70%)", len(high_prob_errors))
 
         with col3:
-            low_conf_errors = frame[
+            low_prob_errors = frame[
                 (frame['predicted_probability'] < 0.60) & (~frame['correct'])
             ]
-            st.metric("Low Confidence Errors (<60%)", len(low_conf_errors))
+            st.metric("Low Probability Errors (<60%)", len(low_prob_errors))
 
 
 if __name__ == "__main__":

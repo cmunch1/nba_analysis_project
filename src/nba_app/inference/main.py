@@ -321,14 +321,14 @@ def main() -> None:
             data_access.save_dataframes([predictions_df], [output_filename])
 
             # Log summary statistics
-            avg_confidence = predictions_df['confidence'].mean() if 'confidence' in predictions_df.columns else None
+            avg_probability = predictions_df['predicted_probability'].mean() if 'predicted_probability' in predictions_df.columns else None
             home_win_pct = (predictions_df['predicted_winner'] == 'home').mean() * 100 if 'predicted_winner' in predictions_df.columns else None
 
             app_logger.structured_log(
                 logging.INFO,
                 "Inference pipeline completed successfully",
                 num_predictions=len(predictions_df),
-                avg_confidence=float(avg_confidence) if avg_confidence else None,
+                avg_predicted_probability=float(avg_probability) if avg_probability else None,
                 home_win_percentage=float(home_win_pct) if home_win_pct else None,
                 output_file=str(output_path)
             )
@@ -406,8 +406,8 @@ def _format_predictions(todays_features: pd.DataFrame,
         lambda p: 'home' if p >= 0.5 else 'away'
     )
 
-    # Confidence (max of home or away probability)
-    output_df['confidence'] = output_df['calibrated_home_win_prob'].apply(
+    # Predicted probability (calibrated probability of predicted winner)
+    output_df['predicted_probability'] = output_df['calibrated_home_win_prob'].apply(
         lambda p: max(p, 1 - p)
     )
 

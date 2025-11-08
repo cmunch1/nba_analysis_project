@@ -228,13 +228,8 @@ class PerformanceCalculator:
             elif metric_name == 'games_predicted':
                 return float(len(data))
 
-            elif metric_name == 'avg_confidence':
-                if 'confidence' in data.columns:
-                    return float(data['confidence'].mean())
-                elif 'calibrated_home_win_prob' in data.columns:
-                    # Calculate from probabilities
-                    confidence = data['calibrated_home_win_prob'].apply(lambda p: max(p, 1 - p))
-                    return float(confidence.mean())
+            elif metric_name == 'avg_predicted_probability':
+                return float(data['predicted_probability'].mean())
 
             self.app_logger.structured_log(
                 logging.WARNING,
@@ -329,7 +324,7 @@ class PerformanceCalculator:
                 metrics = {
                     'date': date,
                     'accuracy': float(date_data['prediction_correct'].mean()) if 'prediction_correct' in date_data.columns else None,
-                    'avg_confidence': float(date_data['confidence'].mean()) if 'confidence' in date_data.columns else None
+                    'avg_predicted_probability': float(date_data['predicted_probability'].mean()) if 'predicted_probability' in date_data.columns else None
                 }
 
                 # Calculate Brier score if available

@@ -16,7 +16,7 @@ class TeamPerformanceAnalyzer:
     """
     Analyzes model performance on a per-team basis.
 
-    Calculates accuracy, confidence, and prediction counts for each team,
+    Calculates accuracy, predicted probability, and prediction counts for each team,
     separated by home/away games.
     """
 
@@ -169,12 +169,14 @@ class TeamPerformanceAnalyzer:
         if 'prediction_correct' in team_games.columns:
             metrics['accuracy'] = float(team_games['prediction_correct'].mean())
 
-        # Average confidence
-        if 'confidence' in team_games.columns:
-            metrics['avg_confidence'] = float(team_games['confidence'].mean())
-        elif 'calibrated_home_win_prob' in team_games.columns:
-            confidence = team_games['calibrated_home_win_prob'].apply(lambda p: max(p, 1 - p))
-            metrics['avg_confidence'] = float(confidence.mean())
+        # Average predicted probability
+        # Use predicted_winner_prob if available, otherwise fall back to predicted_probability
+        if 'predicted_winner_prob' in team_games.columns:
+            metrics['avg_predicted_probability'] = float(team_games['predicted_winner_prob'].mean())
+        elif 'predicted_probability' in team_games.columns:
+            metrics['avg_predicted_probability'] = float(team_games['predicted_probability'].mean())
+        else:
+            metrics['avg_predicted_probability'] = None
 
         # Home/Away split
         if 'home_team' in team_games.columns:

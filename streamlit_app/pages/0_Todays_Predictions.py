@@ -11,7 +11,7 @@ from streamlit_app.components import (
     render_matchup_grid,
 )
 from streamlit_app.data_loader import (
-    get_high_confidence_threshold,
+    get_high_probability_threshold,
     load_latest_dataset,
 )
 
@@ -150,7 +150,7 @@ def main() -> None:
 
     render_header(latest_dataset, predictions_dataset)
 
-    high_prob_threshold = get_high_confidence_threshold()
+    high_prob_threshold = get_high_probability_threshold()
 
     filter_state: MatchupFilterState = render_filter_panel(predictions_dataset, high_prob_threshold)
     filtered_dataset = filter_matchups(predictions_dataset, filter_state)

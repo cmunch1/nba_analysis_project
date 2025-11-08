@@ -44,12 +44,12 @@ dashboard_prep:
       - away_team
       - predicted_winner
       - calibrated_home_win_prob
-      - confidence
-      - prob_lower  # Conformal interval
+      - predicted_probability
+      - prob_lower
       - prob_upper
-      - prediction_set  # Conformal prediction set
+      - prediction_set
 
-    # Highlight high win probability predictions (for "High Win Probability" chip)
+    # Highlight high win probability predictions
     high_probability_threshold: 0.60
 
   # Recent Results Section
@@ -115,19 +115,19 @@ dashboard_prep:
         display_name: "Total Predictions"
         format: "integer"
 
-      - name: "avg_confidence"
-        display_name: "Average Win Probability"
+      - name: "avg_predicted_probability"
+        display_name: "Average Predicted Probability"
         format: "percentage"
 
   # Team-Level Performance Section
   team_performance:
     # Minimum games required for team-specific stats
-    min_games: 10
+    min_games: 5  # Lowered for early season; will increase as more data accumulates
 
     # Metrics per team
     metrics:
       - accuracy
-      - avg_confidence
+      - avg_predicted_probability
       - total_predictions
       - home_accuracy  # When team plays at home
       - away_accuracy  # When team plays away
@@ -144,7 +144,7 @@ dashboard_prep:
       - accuracy
       - brier_score
       - calibration_error
-      - avg_confidence
+      - avg_predicted_probability
 
     # Lookback window for trend analysis
     trend_window_days: 60

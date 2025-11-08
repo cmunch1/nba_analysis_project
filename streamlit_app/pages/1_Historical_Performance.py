@@ -158,7 +158,6 @@ def _prepare_evaluation_frame(dataset: pd.DataFrame) -> EvaluationFrame:
     # Type conversions only - no calculations
     frame["predicted_probability"] = pd.to_numeric(frame[probability_column], errors="coerce")
     frame["game_date"] = pd.to_datetime(frame.get("game_date"), errors="coerce")
-    frame["confidence"] = pd.to_numeric(frame.get("confidence"), errors="coerce")
     frame["prediction_error"] = pd.to_numeric(frame.get("prediction_error"), errors="coerce")
 
     # Use pre-calculated prediction_correct from dashboard prep pipeline
@@ -394,17 +393,17 @@ def _render_daily_accuracy(frame: pd.DataFrame, drift_data: pd.DataFrame) -> Non
 
 
 def _render_threshold_analysis(frame: pd.DataFrame, probability_column: str) -> None:
-    """Render error rate vs confidence threshold analysis."""
-    st.subheader("🎯 Error Rate vs Confidence Threshold")
+    """Render error rate vs predicted probability threshold analysis."""
+    st.subheader("🎯 Error Rate vs Predicted Probability Threshold")
 
     with st.expander("ℹ️ What does this chart show?", expanded=False):
         st.markdown(
             """
-            This chart answers: **"If I only act on higher-confidence predictions, what error rate do I get?"**
+            This chart answers: **"If I only act on higher-probability predictions, what error rate do I get?"**
 
             - **Red line**: Error rate (1 - accuracy) for predictions at or above each threshold
             - **Gray area**: Number of games available at each threshold
-            - **Vertical lines**: Common confidence levels (60%, 70%, 80%)
+            - **Vertical lines**: Common probability thresholds (60%, 70%, 80%)
 
             **How to use**: If you want to maximize accuracy, find the threshold where the red line
             is lowest while still having enough games (gray area) to be statistically meaningful.
@@ -653,7 +652,7 @@ def _render_recent_games_table(frame: pd.DataFrame) -> None:
     else:
         display_df['Score'] = "N/A"
 
-    # Format probability (renamed from confidence)
+    # Format probability
     display_df['Probability'] = display_df['predicted_probability'].apply(
         lambda x: f"{x:.1%}" if pd.notna(x) else "N/A"
     )

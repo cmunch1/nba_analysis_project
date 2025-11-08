@@ -51,7 +51,7 @@ The landing page automatically loads the latest dashboard dataset and allows swi
   - **Full Team Names:** Displays "Houston Rockets @ Boston Celtics" instead of "HOU vs BOS"
   - **Matchup Format:** "Away @ Home" format (visitor team at home team's court)
   - **Predicted Winner:** Shows actual team name (e.g., "Boston Celtics") instead of generic "home"/"away"
-  - **Win Probability:** Displays the predicted winner's probability (not always home team)
+  - **Win Probability:** Displays the predicted winner's calibrated probability (not always home team)
   - **Reliability Chips:** "High Win Probability" for games ≥60%, "Recent Accuracy" based on historical performance
 - **Dataset preview:** Expandable table for quick inspection of the raw dashboard output in its current state.
 - **Section Filtering:** Automatically filters to show only 'predictions' section (excludes 'results' and 'metrics')
@@ -66,8 +66,9 @@ Because the filters, KPIs, and cards operate on the same data frame, you only ne
   - **SimpleNamespace Handling:** Converts config object to dict using `vars()` for `.get()` access
   - **Win Probability Logic:** Calculates `1 - home_win_prob` when away team is predicted winner
   - **Font Size Styling:** Uses HTML with `font-size: 0.95em` for predicted team and probability values
+  - **Terminology:** Uses `predicted_probability` column (calibrated probability of predicted winner)
   - Extend this function to display injuries, implied odds, or model-version metadata
-- `kpi_panel.render_kpi_panel`: Summary metrics for the filtered dataset. Add additional KPIs here (e.g., coverage rate) and ensure null-safe calculations.
+- `kpi_panel.render_kpi_panel`: Summary metrics for the filtered dataset. Uses `predicted_probability` for threshold-based filtering. Add additional KPIs here (e.g., coverage rate) and ensure null-safe calculations.
 
 All components tolerate missing columns by checking their presence before rendering metrics to keep the UI resilient while the pipeline evolves.
 
@@ -80,20 +81,33 @@ Streamlit automatically exposes files under `streamlit_app/pages/` as additional
   - **Section Filtering:** Automatically filters to show only 'results' section (games with actual outcomes)
   - **Individual Chart Filters:** Each section has its own time period filter (7/14/30/All days) instead of global filter
   - **Daily Performance:** Shows daily accuracy, season running accuracy, period average, and season average baseline with 7-day rolling window option
-  - **Threshold Analysis:** Error rate vs confidence threshold chart with key threshold summary table
+  - **Threshold Analysis:** Error rate vs predicted probability threshold chart with key threshold summary table
   - **Team Accuracy:** Horizontal bar chart ranking teams by model accuracy (minimum 5 games required)
-  - **Recent Games Detail:** Game-by-game table with conditional formatting highlighting errors by confidence level
+  - **Recent Games Detail:** Game-by-game table with conditional formatting highlighting errors by probability level
   - **Navigation:** Jump links to each section for easy page navigation
-  - **Required Columns:** `game_date`, `predicted_winner_prob`, `prediction_correct`, `predicted_winner_won`, `home_team`, `away_team`
+  - **Required Columns:** `game_date`, `predicted_winner_prob` (or `predicted_probability`), `prediction_correct`, `predicted_winner_won`, `home_team`, `away_team`
 
 - **Model Analysis (2_Model_Analysis.py):**
   - **Audience:** Technical users and ML practitioners
   - **Calibration Diagnostics:** 20-bin calibration curve with sharpness distribution, Brier score metrics, and bin-level statistics
   - **Drift Monitoring:** Accuracy over time with 7-day rolling average, Brier score trends, calibration error trends, and drift summary statistics
-  - **Error Analysis:** High-level error metrics (placeholder for future detailed analysis)
+  - **Error Analysis:** High-level error metrics categorized by predicted probability level (placeholder for future detailed analysis)
   - **Individual Filters:** Each section has its own time period filter (14/30/All days for calibration, 14/30/All for drift)
   - **Data Source:** Uses pre-calculated drift metrics from dashboard prep pipeline
-  - **Required Columns:** `predicted_winner_prob`, `predicted_winner_won`, `game_date`, drift section with `date`, `accuracy`, `brier_score`, `calibration_error`
+  - **Required Columns:** `predicted_winner_prob` (or `predicted_probability`), `predicted_winner_won`, `game_date`, drift section with `date`, `accuracy`, `brier_score`, `calibration_error`, `avg_predicted_probability`
+  - **Terminology:** Uses "predicted probability" (calibrated) throughout, avoiding ambiguous terms like "confidence"
+
+- **Team Drilldown (2_Team_Drilldown.py):**
+  - **Purpose:** Deep-dive analysis of model performance for individual teams
+  - **Data Source:** Uses pre-calculated team_performance section from dashboard prep pipeline (single source of truth)
+  - **Team Performance Summary:** Overall accuracy, total games predicted, average win probability, home game percentage
+  - **Home vs Away Performance:** Bar chart comparing prediction accuracy at home vs away (uses pre-calculated `home_accuracy` and `away_accuracy`)
+  - **Recent Performance Trend:** Dual-axis chart showing actual results (win/loss bars), prediction correctness (blue line), and predicted win probability (orange dashed line) over last 20 games
+  - **Recent Games Detail:** Configurable table (5-50 games) with date, location, opponent, result, prediction accuracy, win probability, and prediction error
+  - **Required Sections:** `team_performance` section with `team_name`, `accuracy`, `home_accuracy`, `away_accuracy`, `home_games`, `away_games`, `total_predictions`, `avg_predicted_probability`
+  - **Required Columns (results section):** `home_team`, `away_team`, `actual_winner`, `predicted_winner`, `predicted_winner_prob`, `prediction_correct`, `prediction_error`, `game_date`
+  - **Design Principle:** All calculations performed in dashboard prep pipeline; UI only visualizes pre-calculated data
+  - **Configuration:** Minimum games threshold controlled by `dashboard_prep.team_performance.min_games` (currently 5 for early season)
 
 Add new analytical views by creating additional files in `streamlit_app/pages/`—re-use `data_loader.load_latest_dataset()` so each page shares the same cached data.
 
@@ -125,6 +139,74 @@ Add new analytical views by creating additional files in `streamlit_app/pages/`�
 For deeper debugging, enable Streamlit's developer tools (`?` menu → "Developer options") or tail the application log configured by the DI container.
 
 ## Recent Changes
+
+### 2025-11-08: Team Drilldown Redesign with Pre-Calculated Metrics
+
+**Architecture Change - Single Source of Truth:**
+- Complete redesign of Team Drilldown page to use pre-calculated team_performance data from dashboard prep
+- Eliminated all UI-side calculations for accuracy metrics
+- Fixed home/away accuracy bug that was showing incorrect 100% values for several teams
+- Lowered `min_games` threshold from 10 to 5 for early season (will increase as more data accumulates)
+
+**Team Performance Data Pipeline:**
+- Fixed `team_performance_analyzer.py` to use `predicted_winner_prob` column instead of missing `predicted_probability`
+- Pipeline now generates team_performance section with 30 teams (with min 5 games each)
+- Added home/away accuracy split, total predictions, and average win probability per team
+
+**New Team Drilldown Features:**
+- **Team Performance Summary:** Clean 4-metric header showing total games, overall accuracy, avg win probability, home game percentage
+- **Home vs Away Performance:** Bar chart with actual pre-calculated accuracy values (no more 100% bugs)
+- **Recent Performance Trend:** Improved visualization replacing old prediction timeline
+  - Dual-axis chart with win/loss bars (green/red), prediction correctness line (blue), and win probability curve (orange)
+  - Shows last 20 games in chronological order
+  - Much more actionable than previous timeline mixing home/away contexts
+- **Recent Games Detail:** Configurable table (5-50 games) with full game details
+
+**Key Files Modified:**
+- `streamlit_app/pages/2_Team_Drilldown.py` - Complete rewrite following single-source-of-truth principle
+- `src/nba_app/dashboard_prep/team_performance_analyzer.py` - Fixed column reference bug
+- `configs/nba/dashboard_prep_config.yaml` - Lowered min_games from 10 to 5
+- `docs/streamlit_dashboard_reference.md` - Added Team Drilldown documentation
+
+**Design Principles Applied:**
+- All calculations in dashboard prep, not UI
+- No backward compatibility with old buggy calculations
+- Clean separation: pipeline computes, UI visualizes
+- Configuration-driven (min_games threshold in config)
+
+### 2025-11-07: Terminology Standardization - "Confidence" → "Predicted Probability"
+
+**Rationale:**
+- **Professional ML terminology**: Replaced ambiguous "confidence" with standard ML term "predicted probability"
+- **Clarity for ML practitioners**: Makes it clear we're referring to calibrated model output probabilities
+- **Avoids confusion**: "Confidence" could mean prediction intervals, calibration quality, or other concepts
+
+**Changes Made:**
+- **Configuration**: Updated `dashboard_prep_config.yaml`
+  - Column: `confidence` → `predicted_probability` (calibrated probability of predicted winner)
+  - Metric: `avg_confidence` → `avg_predicted_probability`
+- **Backend (dashboard_prep)**: Updated all Python modules
+  - `predictions_aggregator.py`: Uses `predicted_probability` column
+  - `performance_calculator.py`: Metric name changed to `avg_predicted_probability`
+  - `team_performance_analyzer.py`: Metrics use `avg_predicted_probability`
+- **Streamlit Components**: Updated all UI components
+  - `kpi_panel.py`: Uses `predicted_probability` column
+  - `matchup_cards.py`: Filtering and sorting on `predicted_probability`
+  - `calibration_charts.py`: Chart titles reference "predicted probability threshold"
+- **Streamlit Pages**: Updated all page files
+  - `0_Todays_Predictions.py`: Uses `get_high_probability_threshold()`
+  - `1_Historical_Performance.py`: Chart titles and descriptions updated
+  - `2_Model_Analysis.py`: Technical explanations use "predicted probability"
+  - `2_Team_Drilldown.py`: Column references updated
+- **Services**: Updated helper functions
+  - `data_loader.py`: `get_high_confidence_threshold()` → `get_high_probability_threshold()`
+  - `dashboard_data_service.py`: Method renamed to `get_high_probability_threshold()`
+- **Documentation**: This reference guide updated throughout
+
+**Display Terminology:**
+- UI labels use "Win Probability" or "Predicted Probability" (user-friendly)
+- Technical docs use "Predicted Probability (calibrated)" (precise)
+- Code uses `predicted_probability` (clear variable naming)
 
 ### 2025-11-07: Historical Performance and Model Analysis Refactoring
 

@@ -319,7 +319,7 @@ class ProbabilityCalibrator(BasePostprocessor):
         Calculate Expected Calibration Error (ECE).
 
         ECE measures the difference between predicted probabilities
-        and actual outcomes across different confidence bins.
+        and actual outcomes across different probability bins.
 
         Args:
             y_true: True labels

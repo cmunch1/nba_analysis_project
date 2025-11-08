@@ -149,23 +149,19 @@ class PredictionsAggregator:
             # Add section identifier for dashboard
             dashboard_df['section'] = 'predictions'
 
-            # Add high-confidence flag
-            confidence_threshold = self.config.dashboard_prep.predictions.high_probability_threshold
-            if 'confidence' in dashboard_df.columns:
-                dashboard_df['high_confidence'] = dashboard_df['confidence'] >= confidence_threshold
-            elif 'calibrated_home_win_prob' in dashboard_df.columns:
-                # Calculate confidence from probability
-                dashboard_df['confidence'] = dashboard_df['calibrated_home_win_prob'].apply(
-                    lambda p: max(p, 1 - p)
-                )
-                dashboard_df['high_confidence'] = dashboard_df['confidence'] >= confidence_threshold
+            # Add high-probability flag based on predicted probability
+            probability_threshold = self.config.dashboard_prep.predictions.high_probability_threshold
+            if 'predicted_probability' in dashboard_df.columns:
+                dashboard_df['high_probability'] = dashboard_df['predicted_probability'] >= probability_threshold
 
-            # Sort by game date, then by confidence (high to low)
-            if 'game_date' in dashboard_df.columns and 'confidence' in dashboard_df.columns:
+                # Sort by game date, then by predicted probability (high to low)
                 dashboard_df = dashboard_df.sort_values(
-                    ['game_date', 'confidence'],
+                    ['game_date', 'predicted_probability'],
                     ascending=[True, False]
                 )
+            else:
+                dashboard_df['high_probability'] = False
+                dashboard_df = dashboard_df.sort_values('game_date', ascending=True)
 
             self.app_logger.structured_log(
                 logging.INFO,
@@ -196,7 +192,7 @@ class PredictionsAggregator:
         if predictions_df.empty:
             return {
                 'num_games': 0,
-                'avg_confidence': None,
+                'avg_predicted_probability': None,
                 'home_win_percentage': None,
                 'high_confidence_count': 0
             }
@@ -205,15 +201,15 @@ class PredictionsAggregator:
             'num_games': len(predictions_df)
         }
 
-        if 'confidence' in predictions_df.columns:
-            summary['avg_confidence'] = float(predictions_df['confidence'].mean())
+        if 'predicted_probability' in predictions_df.columns:
+            summary['avg_predicted_probability'] = float(predictions_df['predicted_probability'].mean())
 
         if 'predicted_winner' in predictions_df.columns:
             summary['home_win_percentage'] = float(
                 (predictions_df['predicted_winner'] == 'home').mean() * 100
             )
 
-        if 'high_confidence' in predictions_df.columns:
-            summary['high_confidence_count'] = int(predictions_df['high_confidence'].sum())
+        if 'high_probability' in predictions_df.columns:
+            summary['high_probability_count'] = int(predictions_df['high_probability'].sum())
 
         return summary
