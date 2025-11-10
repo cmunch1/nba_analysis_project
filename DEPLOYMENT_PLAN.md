@@ -799,6 +799,112 @@ After Phase 3 completion, the dashboard needed fixes for historical data visibil
 **Impact:**
 This phase resolved critical data visibility issues and significantly improved user experience with professional UI elements and full team name displays.
 
+### Phase 3.6: Prediction Backfill and Dashboard Cache Improvements (COMPLETED ✅)
+
+**Priority:** HIGH
+**Status:** COMPLETED 2025-11-10
+
+**Context:**
+After Phase 3.5 completion, identified critical issues with date handling and data completeness when the pipeline misses days. Implemented automatic backfilling of predictions for missed games and fixed dashboard caching to properly reflect data updates.
+
+**Completed Tasks:**
+
+1. ✅ **Fixed Date Extraction from NBA Schedule:**
+   - **Problem**: Schedule scraper used `datetime.today()` instead of extracting actual game dates
+   - **Impact**: Games showed wrong dates (e.g., "tipoff 11/9/2025" for games on 11/8/2025)
+   - **Fix**: Added `_parse_game_date()` method in [schedule_scraper.py](src/nba_app/webscraping/schedule_scraper.py)
+     - Parses dates from NBA schedule page (formats: "FRI 11/8", "FRI, NOV 8")
+     - Saves game_date column to CSV files
+     - Handles year rollover correctly
+   - **Impact on Pipeline**: [matchup_processor.py](src/nba_app/feature_engineering/matchup_processor.py) now reads dates from CSV instead of defaulting to today
+
+2. ✅ **Added Staleness Warning to Dashboard:**
+   - **Problem**: Users couldn't tell when predictions were outdated
+   - **Fix**: Added warning banner in [0_Todays_Predictions.py:64-71](streamlit_app/pages/0_Todays_Predictions.py#L64-L71)
+     - Shows "⚠️ Showing yesterday's predictions. Pipeline has not run today."
+     - Shows "⚠️ Predictions are X days old. Pipeline has not run recently."
+     - Compares prediction date against today's date
+
+3. ✅ **Implemented Prediction Backfill System:**
+   - **Problem**: Pipeline only predicted games for current day, missing games when pipeline didn't run
+   - **Solution**: Automatic backfilling of predictions for recently missed days
+   - **Configuration** ([inference_config.yaml:73-82](configs/nba/inference_config.yaml#L73-L82)):
+     ```yaml
+     backfill:
+       enabled: true
+       lookback_days: 14
+       require_actual_results: true
+     ```
+   - **Implementation** ([inference/main.py](src/nba_app/inference/main.py)):
+     - Added `_identify_games_to_predict()` function (166 lines)
+     - Scans last N days for games with results but no predictions
+     - Verifies games have been played (h_is_win not null)
+     - Adds is_backfilled flag to predictions
+     - Saves predictions to correctly dated files (not mixed with today's)
+   - **Key Design Decisions**:
+     - Split predictions by game_date when saving
+     - No data leakage (feature engineering uses `.shift(1)`)
+     - Type consistency (game_id as integer throughout)
+
+4. ✅ **Fixed Dashboard Cache Invalidation:**
+   - **Problem**: Streamlit cache didn't detect when dashboard_data.csv was updated
+   - **Root Cause**: `@st.cache_data` only checks function arguments, not file changes
+   - **Fix**: File modification time tracking for cache invalidation
+     - Added `_get_dashboard_file_mtime()` in [data_loader.py:16-21](streamlit_app/data_loader.py#L16-L21)
+     - Updated `load_latest_dataset()` to accept mtime parameter (line 25)
+     - Updated all 4 dashboard pages to pass mtime:
+       - [0_Todays_Predictions.py:136](streamlit_app/pages/0_Todays_Predictions.py#L136)
+       - [1_Historical_Performance.py](streamlit_app/pages/1_Historical_Performance.py)
+       - [2_Model_Analysis.py](streamlit_app/pages/2_Model_Analysis.py)
+       - [3_Team_Drilldown.py](streamlit_app/pages/3_Team_Drilldown.py)
+
+5. ✅ **Enhanced Daily Performance Chart Tooltips:**
+   - **Requirement**: Show game count per day in chart tooltips
+   - **Fix**: Added custom tooltip with game count in [Historical_Performance.py](streamlit_app/pages/1_Historical_Performance.py)
+     ```python
+     customdata=daily["games"],
+     hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Accuracy: %{y:.1%}<br>Games: %{customdata}<extra></extra>"
+     ```
+   - Also improved Season Running Accuracy tooltip for consistency
+
+**Configuration Changes:**
+
+| File | Line | Change | Reason |
+|------|------|--------|--------|
+| inference_config.yaml | 73-82 | Added backfill section | Enable automatic prediction backfilling |
+| inference_config.yaml | 79 | `lookback_days: 14` | Check 14 days back for missed predictions |
+
+**Bug Fixes:**
+
+1. **DataFrame Boolean Check**: Fixed `if not all_game_ids:` → `if all_game_ids.empty:`
+2. **Type Mismatch**: Fixed game_id string vs integer type mismatches in filtering and merges
+3. **Merge Key Column**: Changed from `left_on=output_df['game_id']` to `on='game_id'`
+4. **Cache Detection**: Implemented file mtime tracking for Streamlit cache invalidation
+
+**Testing Results:**
+```bash
+✅ Backfill system working correctly
+✅ Predictions for Nov 9 games successfully backfilled
+✅ Dashboard cache properly invalidates on file changes
+✅ Staleness warning displays correctly when predictions are old
+✅ Daily Performance chart shows game counts in tooltips
+✅ All 4 dashboard pages updated with cache invalidation
+```
+
+**Files Modified:**
+1. [configs/nba/inference_config.yaml](configs/nba/inference_config.yaml) - Backfill configuration
+2. [src/nba_app/webscraping/schedule_scraper.py](src/nba_app/webscraping/schedule_scraper.py) - Date extraction
+3. [src/nba_app/feature_engineering/matchup_processor.py](src/nba_app/feature_engineering/matchup_processor.py) - Read dates from CSV
+4. [src/nba_app/inference/main.py](src/nba_app/inference/main.py) - Backfill implementation
+5. [streamlit_app/data_loader.py](streamlit_app/data_loader.py) - File mtime tracking
+6. [streamlit_app/pages/0_Todays_Predictions.py](streamlit_app/pages/0_Todays_Predictions.py) - Staleness warning, cache fix
+7. [streamlit_app/pages/1_Historical_Performance.py](streamlit_app/pages/1_Historical_Performance.py) - Cache fix, tooltip enhancement
+8. [streamlit_app/pages/2_Model_Analysis.py](streamlit_app/pages/2_Model_Analysis.py) - Cache fix
+9. [streamlit_app/pages/3_Team_Drilldown.py](streamlit_app/pages/3_Team_Drilldown.py) - Cache fix
+
+**Impact:**
+This phase ensures data completeness even when the pipeline misses days, provides clear user feedback when data is stale, and ensures the dashboard always reflects the latest data without requiring manual cache clearing.
+
 ### Phase 4: Docker Containerization
 
 **Priority:** MEDIUM
@@ -1055,6 +1161,13 @@ data/
   - [x] Fixed Streamlit deprecation warnings
   - [x] Section filtering implementation
 
+- [x] **Prediction Backfill & Dashboard Cache** (NEW - Phase 3.6)
+  - [x] Fixed date extraction from NBA schedule (actual game dates)
+  - [x] Added staleness warning to dashboard
+  - [x] Implemented automatic prediction backfill system
+  - [x] Fixed dashboard cache invalidation with file mtime tracking
+  - [x] Enhanced chart tooltips with game counts
+
 - [ ] **Docker**
   - [ ] Container builds successfully
   - [ ] Pipeline runs in container
@@ -1157,28 +1270,34 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
    - ~~Matchup format improvements (Away @ Home)~~
    - ~~Win probability for predicted winner~~
    - ~~Fixed Streamlit deprecation warnings~~
+9. ~~Prediction backfill and dashboard cache improvements~~ (DONE 2025-11-10)
+   - ~~Fixed date extraction from NBA schedule (actual game dates)~~
+   - ~~Added staleness warning to dashboard~~
+   - ~~Implemented automatic prediction backfill system (14-day lookback)~~
+   - ~~Fixed dashboard cache invalidation with file mtime tracking~~
+   - ~~Enhanced chart tooltips with game counts~~
 
 **Immediate (Start Next):**
-9. **Docker containerization** ← YOU ARE HERE
+10. **Docker containerization** ← YOU ARE HERE
    - Create Dockerfile for pipeline
    - Test container build and execution
    - Document Docker deployment
 
 **Short Term:**
-10. ~~Add comprehensive error handling and logging~~ (DONE - included in pipeline script)
-11. Fix calibration optimization indexing bug (see [CALIBRATION_OPTIMIZATION_BUG.md](CALIBRATION_OPTIMIZATION_BUG.md))
-12. Add feature allowlist logging to model training (note in Phase 0)
-13. Investigate alternative uncertainty quantification methods (conformal currently disabled)
+11. ~~Add comprehensive error handling and logging~~ (DONE - included in pipeline script)
+12. Fix calibration optimization indexing bug (see [CALIBRATION_OPTIMIZATION_BUG.md](CALIBRATION_OPTIMIZATION_BUG.md))
+13. Add feature allowlist logging to model training (note in Phase 0)
+14. Investigate alternative uncertainty quantification methods (conformal currently disabled)
 
 **Medium Term:**
-14. GitHub Actions deployment setup
-15. Production monitoring setup
+15. GitHub Actions deployment setup
+16. Production monitoring setup
 
 **Long Term:**
-16. ~~UI dashboard development~~ (DONE - Streamlit dashboard operational with full features)
-17. Model retraining automation
-18. A/B testing framework for model versions
-19. Enhanced dashboard features (interactive charts, team comparisons, etc.)
+17. ~~UI dashboard development~~ (DONE - Streamlit dashboard operational with full features)
+18. Model retraining automation
+19. A/B testing framework for model versions
+20. Enhanced dashboard features (interactive charts, team comparisons, etc.)
 
 ## Important Notes from Conversation
 
@@ -1214,6 +1333,23 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
   - Lower threshold for filtering gives users flexibility
   - Higher threshold for "High Win Probability" badge maintains credibility
 
+### Prediction Backfill Insights
+- **Data Completeness**: Backfill ensures predictions exist even when pipeline misses days
+  - Automatically scans last N days (configurable: 14 days default)
+  - Only backfills games that have been played (results available)
+  - Saves backfilled predictions to correctly dated files (not mixed with live predictions)
+- **No Data Leakage**: Backfilling is safe because feature engineering uses `.shift(1)`
+  - Rolling averages only use data from games before the current game
+  - Model sees exact same features whether predicted live or backfilled
+- **Type Consistency Critical**: game_id must be integer throughout pipeline
+  - Webscraping outputs 8-digit format ("22500026")
+  - Processing normalizes to 7-digit format ("2500026")
+  - Must maintain consistent type (integer) for filtering and merging
+- **Cache Invalidation**: Streamlit cache must track file modification times
+  - `@st.cache_data` doesn't detect underlying file changes
+  - Pass file mtime as parameter to force cache invalidation
+  - Apply to all pages that load dashboard data
+
 ### Model Training Already Configured
 - `save_to_registry: true` already set in postprocessing config
 - Artifacts (calibrator, conformal predictor) should be logged to MLflow during training
@@ -1243,10 +1379,23 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...
 
 ---
 
-**Document Version**: 2.3
-**Last Updated**: 2025-11-01
+**Document Version**: 2.4
+**Last Updated**: 2025-11-10
 **Author**: Claude (AI Assistant)
-**Status**: Phases 0, 0.5, 1, 2, 3, 3.5, 4 Complete - Ready for Phase 5 (Docker)
+**Status**: Phases 0, 0.5, 1, 2, 3, 3.5, 3.6, 4 Complete - Ready for Phase 5 (Docker)
+
+**Major Updates in v2.4:**
+- Added Phase 3.6: Prediction Backfill and Dashboard Cache Improvements (COMPLETED 2025-11-10)
+  - Fixed date extraction from NBA schedule to use actual game dates
+  - Added staleness warning to dashboard when predictions are old
+  - Implemented automatic prediction backfill system (14-day lookback)
+  - Fixed dashboard cache invalidation using file modification time tracking
+  - Enhanced Daily Performance chart tooltips with game counts
+- Added "Prediction Backfill Insights" section with lessons learned
+- Updated testing checklists with Phase 3.6 completion
+- Updated next steps with completed item 9 (backfill & cache improvements)
+- Added 9 files to modified files list in Phase 3.6
+- Renumbered remaining tasks (Docker now #10, monitoring #15-16, etc.)
 
 **Major Updates in v2.3:**
 - Added Phase 3.5: Dashboard Historical Data and UI Refinements (COMPLETED 2025-11-01)
