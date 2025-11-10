@@ -70,6 +70,17 @@ inference:
     # Minimum required historical games for team
     min_team_games: 5
 
+  # Backfill Settings
+  backfill:
+    # Enable backfilling predictions for recently missed days
+    enabled: true
+
+    # How many days back to check for missing predictions
+    lookback_days: 7
+
+    # Only backfill games that have actual results
+    require_actual_results: true
+
   # Validation
   validation:
     # Validate feature schema matches training

@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 
 import pandas as pd
@@ -11,6 +12,7 @@ from streamlit_app.components import (
     render_matchup_grid,
 )
 from streamlit_app.data_loader import (
+    _get_dashboard_file_mtime,
     get_high_probability_threshold,
     load_latest_dataset,
 )
@@ -47,7 +49,8 @@ def render_header(latest_data: pd.DataFrame, predictions_data: pd.DataFrame) -> 
     """Render top-of-page summary metrics."""
     st.title("Today's Predictions")
 
-    # Get and display prediction date as subtitle
+    # Get prediction date from data
+    latest_game_date = None
     available_dates = predictions_data.get("game_date")
     if available_dates is not None and not predictions_data.empty:
         date_series = pd.to_datetime(available_dates, errors='coerce')
@@ -59,6 +62,15 @@ def render_header(latest_data: pd.DataFrame, predictions_data: pd.DataFrame) -> 
             st.subheader("Date unavailable")
     else:
         st.subheader("Date unavailable")
+
+    # Check if predictions are stale
+    today = date.today()
+    if latest_game_date is not None and latest_game_date < today:
+        days_old = (today - latest_game_date).days
+        if days_old == 1:
+            st.warning(f"⚠️ Showing yesterday's predictions. Pipeline has not run today.")
+        else:
+            st.warning(f"⚠️ Predictions are {days_old} days old. Pipeline has not run recently.")
 
     st.markdown("---")
 
@@ -133,7 +145,7 @@ def render_dataset_preview(dataset: pd.DataFrame) -> None:
 def main() -> None:
     """Streamlit entry point."""
     try:
-        latest_dataset = load_latest_dataset()
+        latest_dataset = load_latest_dataset(_get_dashboard_file_mtime())
     except Exception as exc:  # Streamlit renders exceptions with tracebacks automatically.
         st.error("Unable to load the latest dashboard dataset.")
         st.exception(exc)

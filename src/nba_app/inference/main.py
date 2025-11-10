@@ -36,6 +36,166 @@ from ml_framework.postprocessing.conformal_predictor import ConformalPredictor
 LOG_FILE = "inference.log"
 
 
+def _identify_games_to_predict(todays_game_ids: list,
+                               engineered_df: pd.DataFrame,
+                               config,
+                               app_logger,
+                               error_handler) -> pd.DataFrame:
+    """
+    Identify all games that need predictions (today's games + backfill).
+
+    Args:
+        todays_game_ids: List of game IDs scheduled for today
+        engineered_df: Full engineered features dataframe
+        config: Configuration manager
+        app_logger: Logger instance
+        error_handler: Error handler
+
+    Returns:
+        DataFrame with columns: game_id, game_date, is_backfilled
+    """
+    from datetime import timedelta
+
+    games_list = []
+
+    # Add today's scheduled games
+    for game_id in todays_game_ids:
+        games_list.append({
+            'game_id': game_id,
+            'is_backfilled': False
+        })
+
+    # Check if backfill is enabled
+    backfill_enabled = (
+        hasattr(config, 'inference') and
+        hasattr(config.inference, 'backfill') and
+        hasattr(config.inference.backfill, 'enabled') and
+        config.inference.backfill.enabled
+    )
+
+    if not backfill_enabled:
+        app_logger.structured_log(
+            logging.INFO,
+            "Backfill disabled - only predicting today's games"
+        )
+        return pd.DataFrame(games_list)
+
+    # Get backfill configuration
+    lookback_days = getattr(config.inference.backfill, 'lookback_days', 7)
+    require_actual_results = getattr(config.inference.backfill, 'require_actual_results', True)
+
+    app_logger.structured_log(
+        logging.INFO,
+        "Checking for games to backfill",
+        lookback_days=lookback_days,
+        require_actual_results=require_actual_results
+    )
+
+    # Load existing predictions to see what's already predicted
+    predictions_dir = Path(config.inference.output.predictions_dir)
+    existing_game_ids = set()
+
+    if predictions_dir.exists():
+        for pred_file in predictions_dir.glob('predictions_*.csv'):
+            try:
+                existing_preds = pd.read_csv(pred_file)
+                if 'game_id' in existing_preds.columns:
+                    existing_game_ids.update(existing_preds['game_id'].astype(str).tolist())
+            except Exception as e:
+                app_logger.structured_log(
+                    logging.WARNING,
+                    "Error reading existing predictions file",
+                    file=str(pred_file),
+                    error=str(e)
+                )
+
+    app_logger.structured_log(
+        logging.INFO,
+        "Loaded existing predictions",
+        num_existing_predictions=len(existing_game_ids)
+    )
+
+    # Find games in engineered data from last N days that need predictions
+    today = datetime.now()
+    cutoff_date = (today - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
+
+    # Filter engineered data to recent games
+    if 'game_date' not in engineered_df.columns:
+        app_logger.structured_log(
+            logging.WARNING,
+            "game_date column not found in engineered data - skipping backfill"
+        )
+        return pd.DataFrame(games_list)
+
+    recent_games = engineered_df[
+        (engineered_df['game_date'] >= cutoff_date) &
+        (engineered_df['game_date'] < today.strftime('%Y-%m-%d'))
+    ].copy()
+
+    app_logger.structured_log(
+        logging.INFO,
+        "Found recent games in engineered data",
+        num_recent_games=len(recent_games)
+    )
+
+    # Normalize today's game IDs for comparison (strip leading digit if present)
+    normalized_todays_ids = set()
+    for gid in todays_game_ids:
+        gid_str = str(gid)
+        # If 8 digits, strip first digit to match processed format
+        if len(gid_str) == 8:
+            normalized_todays_ids.add(gid_str[1:])
+        normalized_todays_ids.add(gid_str)
+
+    # Check which games need predictions
+    for _, game_row in recent_games.iterrows():
+        game_id = str(game_row['game_id'])
+
+        # Skip if already predicted
+        if game_id in existing_game_ids:
+            continue
+
+        # Skip if it's in today's games (already added)
+        if game_id in normalized_todays_ids:
+            continue
+
+        # If require_actual_results, check that game has been played
+        if require_actual_results:
+            # Check if game has actual results by looking for h_is_win column
+            # h_is_win should be 0 or 1 if game was played, NaN if not
+            if 'h_is_win' in game_row and pd.notna(game_row['h_is_win']):
+                games_list.append({
+                    'game_id': game_id,
+                    'is_backfilled': True
+                })
+            else:
+                # Game hasn't been played yet, skip
+                continue
+        else:
+            # Don't require actual results, just backfill
+            games_list.append({
+                'game_id': game_id,
+                'is_backfilled': True
+            })
+
+    result_df = pd.DataFrame(games_list)
+
+    # Convert game_id to int to match engineered data type
+    if not result_df.empty and 'game_id' in result_df.columns:
+        result_df['game_id'] = result_df['game_id'].astype(int)
+
+    num_backfill = result_df['is_backfilled'].sum() if not result_df.empty else 0
+    app_logger.structured_log(
+        logging.INFO,
+        "Games identified for prediction",
+        num_todays_games=len(todays_game_ids),
+        num_backfill_games=int(num_backfill),
+        total_games=len(result_df)
+    )
+
+    return result_df
+
+
 def main() -> None:
     """
     Main function to run the NBA game prediction pipeline.
@@ -78,20 +238,20 @@ def main() -> None:
             todays_games_path = Path(config.newly_scraped_directory) / config.todays_games_ids_file
             todays_games_df = pd.read_csv(todays_games_path)
 
-            if todays_games_df.empty:
+            todays_game_ids = []
+            if not todays_games_df.empty:
+                todays_game_ids = todays_games_df['game_id'].tolist()
                 app_logger.structured_log(
                     logging.INFO,
-                    "No games scheduled for today - nothing to predict"
+                    "Today's games loaded",
+                    num_games=len(todays_game_ids),
+                    game_ids=todays_game_ids
                 )
-                return
-
-            todays_game_ids = todays_games_df['game_id'].tolist()
-            app_logger.structured_log(
-                logging.INFO,
-                "Today's games loaded",
-                num_games=len(todays_game_ids),
-                game_ids=todays_game_ids
-            )
+            else:
+                app_logger.structured_log(
+                    logging.INFO,
+                    "No games scheduled for today"
+                )
 
             # Step 2: Load engineered data (includes today's games with features)
             app_logger.structured_log(
@@ -103,21 +263,39 @@ def main() -> None:
             engineered_data_path = Path(config.engineered_data_directory) / config.engineered_data_file
             engineered_df = pd.read_csv(engineered_data_path)
 
-            # Step 3: Filter to only today's games
-            todays_features = engineered_df[engineered_df['game_id'].isin(todays_game_ids)]
+            # Step 3: Identify games to predict (today's games + backfill if enabled)
+            all_game_ids = _identify_games_to_predict(
+                todays_game_ids=todays_game_ids,
+                engineered_df=engineered_df,
+                config=config,
+                app_logger=app_logger,
+                error_handler=error_handler
+            )
 
-            if todays_features.empty:
+            if all_game_ids.empty:
+                app_logger.structured_log(
+                    logging.INFO,
+                    "No games to predict (no scheduled games and no backfill needed)"
+                )
+                return
+
+            # Filter to games that need predictions
+            games_to_predict = engineered_df[engineered_df['game_id'].isin(all_game_ids['game_id'])]
+
+            if games_to_predict.empty:
                 raise error_handler.create_error_handler(
                     'data_validation',
-                    "Today's games not found in engineered data - ensure feature_engineering ran with today's matchups",
-                    expected_game_ids=todays_game_ids
+                    "Games not found in engineered data",
+                    expected_game_ids=all_game_ids['game_id'].tolist()
                 )
 
             app_logger.structured_log(
                 logging.INFO,
-                "Today's games filtered from engineered data",
-                num_rows=len(todays_features),
-                num_features=len(todays_features.columns)
+                "Games to predict filtered from engineered data",
+                num_rows=len(games_to_predict),
+                num_features=len(games_to_predict.columns),
+                num_todays_games=len(todays_game_ids),
+                num_backfill_games=len(all_game_ids) - len(todays_game_ids)
             )
 
             # Step 4: Load production model
@@ -144,17 +322,17 @@ def main() -> None:
             app_logger.structured_log(
                 logging.INFO,
                 "Running inference",
-                input_shape=todays_features.shape
+                input_shape=games_to_predict.shape
             )
 
             # Drop metadata columns explicitly (workaround for config caching issue)
             metadata_cols = ['game_id', 'game_date', 'h_team', 'v_team', 'h_match_up', 'v_match_up', 'h_is_win']
-            features_only = todays_features.drop(columns=[col for col in metadata_cols if col in todays_features.columns])
+            features_only = games_to_predict.drop(columns=[col for col in metadata_cols if col in games_to_predict.columns])
 
             app_logger.structured_log(
                 logging.INFO,
                 "Metadata columns dropped",
-                original_shape=todays_features.shape,
+                original_shape=games_to_predict.shape,
                 features_shape=features_only.shape
             )
 
@@ -292,45 +470,68 @@ def main() -> None:
 
             # Step 7: Format predictions
             predictions_df = _format_predictions(
-                todays_features=todays_features,
+                todays_features=games_to_predict,
                 raw_probs=raw_probabilities,
                 calibrated_probs=calibrated_probs,
                 prediction_sets=prediction_sets,
                 prediction_intervals=prediction_intervals,
+                all_game_ids=all_game_ids,
                 app_logger=app_logger,
                 config=config
             )
 
-            # Step 8: Save predictions
+            # Step 8: Save predictions (split by game date)
             predictions_dir = Path(config.inference.output.predictions_dir)
             predictions_dir.mkdir(parents=True, exist_ok=True)
 
-            today_date = datetime.now().strftime('%Y-%m-%d')
-            filename_pattern = config.inference.output.filename_pattern
-            output_filename = filename_pattern.replace('{date}', today_date)
-            output_path = predictions_dir / output_filename
+            # Group predictions by game_date
+            if 'game_date' in predictions_df.columns:
+                for game_date, group_df in predictions_df.groupby('game_date'):
+                    filename_pattern = config.inference.output.filename_pattern
+                    output_filename = filename_pattern.replace('{date}', str(game_date))
+                    output_path = predictions_dir / output_filename
 
-            app_logger.structured_log(
-                logging.INFO,
-                "Saving predictions",
-                output_path=str(output_path),
-                num_predictions=len(predictions_df)
-            )
+                    # Check if backfilled
+                    num_backfilled = group_df['is_backfilled'].sum() if 'is_backfilled' in group_df.columns else 0
 
-            # save_dataframes expects just the filename (it adds the directory)
-            data_access.save_dataframes([predictions_df], [output_filename])
+                    app_logger.structured_log(
+                        logging.INFO,
+                        "Saving predictions for date",
+                        game_date=str(game_date),
+                        output_path=str(output_path),
+                        num_predictions=len(group_df),
+                        num_backfilled=int(num_backfilled)
+                    )
+
+                    # save_dataframes expects just the filename (it adds the directory)
+                    data_access.save_dataframes([group_df], [output_filename])
+            else:
+                # Fallback to single file if no game_date column
+                today_date = datetime.now().strftime('%Y-%m-%d')
+                filename_pattern = config.inference.output.filename_pattern
+                output_filename = filename_pattern.replace('{date}', today_date)
+
+                app_logger.structured_log(
+                    logging.INFO,
+                    "Saving predictions (no game_date column)",
+                    output_path=str(predictions_dir / output_filename),
+                    num_predictions=len(predictions_df)
+                )
+
+                data_access.save_dataframes([predictions_df], [output_filename])
 
             # Log summary statistics
             avg_probability = predictions_df['predicted_probability'].mean() if 'predicted_probability' in predictions_df.columns else None
             home_win_pct = (predictions_df['predicted_winner'] == 'home').mean() * 100 if 'predicted_winner' in predictions_df.columns else None
+            num_backfilled_total = predictions_df['is_backfilled'].sum() if 'is_backfilled' in predictions_df.columns else 0
 
             app_logger.structured_log(
                 logging.INFO,
                 "Inference pipeline completed successfully",
                 num_predictions=len(predictions_df),
+                num_backfilled=int(num_backfilled_total),
                 avg_predicted_probability=float(avg_probability) if avg_probability else None,
-                home_win_percentage=float(home_win_pct) if home_win_pct else None,
-                output_file=str(output_path)
+                home_win_percentage=float(home_win_pct) if home_win_pct else None
             )
 
     except Exception as e:
@@ -346,17 +547,19 @@ def _format_predictions(todays_features: pd.DataFrame,
                        calibrated_probs: np.ndarray,
                        prediction_sets: Optional[list],
                        prediction_intervals: Optional[list],
+                       all_game_ids: pd.DataFrame,
                        app_logger,
                        config) -> pd.DataFrame:
     """
     Format predictions into output DataFrame.
 
     Args:
-        todays_features: Engineered features for today's games
+        todays_features: Engineered features for games to predict
         raw_probs: Raw model probabilities
         calibrated_probs: Calibrated probabilities
         prediction_sets: Conformal prediction sets (optional)
         prediction_intervals: Conformal prediction intervals (optional)
+        all_game_ids: DataFrame with game_id and is_backfilled columns
         app_logger: Logger instance
         config: Configuration manager
 
@@ -370,9 +573,7 @@ def _format_predictions(todays_features: pd.DataFrame,
     output_df = pd.DataFrame()
 
     # Game identifiers
-    # Normalize game_id to match processed data format (strip first character)
-    # Webscraping outputs 8-digit IDs (e.g., "22500026") but processing strips first char -> "2500026"
-    output_df['game_id'] = todays_features['game_id'].astype(str).str[1:].values
+    output_df['game_id'] = todays_features['game_id'].values
     output_df['game_date'] = todays_features['game_date'].values
 
     # Team names (extract from engineered features)
@@ -426,6 +627,16 @@ def _format_predictions(todays_features: pd.DataFrame,
 
     if config.inference.output.include_model_metadata:
         output_df['model_identifier'] = config.inference.model.identifier
+
+    # Add backfill flag by merging with all_game_ids
+    output_df = output_df.merge(
+        all_game_ids[['game_id', 'is_backfilled']],
+        on='game_id',
+        how='left'
+    )
+
+    # Fill NaN with False (shouldn't happen, but be safe)
+    output_df['is_backfilled'] = output_df['is_backfilled'].fillna(False).astype(bool)
 
     return output_df
 

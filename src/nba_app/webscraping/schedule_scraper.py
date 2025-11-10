@@ -75,12 +75,12 @@ class ScheduleScraper(BaseScheduleScraper):
         with log_context(operation="scrape_matchups", search_day=search_day):
             try:
                 self.app_logger.structured_log( logging.INFO, "Starting to scrape matchups", search_day=search_day)
-                
+
                 self.page_scraper.go_to_url(self.config.nba_schedule_url)
                 self.app_logger.structured_log( logging.INFO, "Navigated to NBA schedule URL")
 
-                days_games = self._find_games_for_day(search_day)
-                
+                days_games, game_date = self._find_games_for_day(search_day)
+
                 if days_games is None:
                     # no games for the day
                     return False
@@ -88,10 +88,10 @@ class ScheduleScraper(BaseScheduleScraper):
                 matchups = self._extract_team_ids_schedule(days_games)
                 games = self._extract_game_ids_schedule(days_games)
 
-                self._save_matchups_and_games(matchups, games)
+                self._save_matchups_and_games(matchups, games, game_date)
 
-                self.app_logger.structured_log( logging.INFO, "Successfully scraped and saved matchups", 
-                               matchups_count=len(matchups), games_count=len(games))
+                self.app_logger.structured_log( logging.INFO, "Successfully scraped and saved matchups",
+                               matchups_count=len(matchups), games_count=len(games), game_date=game_date)
 
                 return True
 
@@ -104,7 +104,7 @@ class ScheduleScraper(BaseScheduleScraper):
                 raise self.error_handler.create_error_handler('scraping', f"Unexpected error during scraping: {str(e)}")
 
     @log_performance
-    def _find_games_for_day(self, search_day: str) -> Optional[WebElement]:
+    def _find_games_for_day(self, search_day: str) -> tuple[Optional[WebElement], Optional[str]]:
         """
         Find games for a specific day on the schedule page.
 
@@ -112,29 +112,37 @@ class ScheduleScraper(BaseScheduleScraper):
             search_day (str): The day to search for games.
 
         Returns:
-            Optional[WebElement]: A WebElement containing the games for the day, or None if not found.
+            Tuple of (WebElement, game_date):
+                - WebElement containing the games for the day, or None if not found
+                - Game date string in YYYY-MM-DD format, or None if not found
 
         Raises:
             ElementNotFoundError: If the required elements are not found on the page.
             ScrapingError: If there's an error during the scraping process.
         """
+        from datetime import datetime
+
         try:
             self.app_logger.structured_log( logging.INFO, "Searching for games", search_day=search_day)
-            
+
             game_days = self.page_scraper.get_elements_by_class(self.config.day_class_name)
             games_containers = self.page_scraper.get_elements_by_class(self.config.games_per_day_class_name)
 
             if not game_days or not games_containers:
                 raise self.error_handler.create_error_handler('element_not_found', "Game days or games containers not found on the page")
-            
+
             for day, days_games in zip(game_days, games_containers):
                 if search_day.upper() == day.text[:3].upper():
-                    self.app_logger.structured_log( logging.INFO, "Found games for the specified day", search_day=search_day)
-                    return days_games
+                    day_text = day.text
+                    game_date = self._parse_game_date(day_text)
+
+                    self.app_logger.structured_log( logging.INFO, "Found games for the specified day",
+                                   search_day=search_day, day_text=day_text, game_date=game_date)
+                    return days_games, game_date
 
 
             self.app_logger.structured_log( logging.WARNING, "No games found for the specified day", search_day=search_day)
-            return None
+            return None, None
         except Exception as e:
             # Check if it's already one of our error types (has app_logger)
             if hasattr(e, 'app_logger'):
@@ -142,6 +150,55 @@ class ScheduleScraper(BaseScheduleScraper):
             self.app_logger.structured_log( logging.ERROR, "Error finding games for day",
                            search_day=search_day, error_message=str(e), error_type=type(e).__name__)
             raise self.error_handler.create_error_handler('scraping', f"Error finding games for day {search_day}: {str(e)}")
+
+    def _parse_game_date(self, day_text: str) -> Optional[str]:
+        """
+        Parse game date from NBA schedule day text.
+
+        Args:
+            day_text (str): Text from day element, e.g., "FRI 11/8" or "FRI, NOV 8"
+
+        Returns:
+            Game date in YYYY-MM-DD format, or None if parsing fails
+        """
+        from datetime import datetime
+        import re
+
+        try:
+            current_year = datetime.now().year
+
+            # Try format: "FRI 11/8"
+            match = re.search(r'(\d{1,2})/(\d{1,2})', day_text)
+            if match:
+                month = int(match.group(1))
+                day = int(match.group(2))
+                game_date = datetime(current_year, month, day).strftime('%Y-%m-%d')
+                return game_date
+
+            # Try format: "FRI, NOV 8"
+            match = re.search(r'(\w{3})\s+(\d{1,2})', day_text)
+            if match:
+                month_abbr = match.group(1)
+                day = int(match.group(2))
+                month_map = {
+                    'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4,
+                    'MAY': 5, 'JUN': 6, 'JUL': 7, 'AUG': 8,
+                    'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
+                }
+                month = month_map.get(month_abbr.upper())
+                if month:
+                    game_date = datetime(current_year, month, day).strftime('%Y-%m-%d')
+                    return game_date
+
+            # Fallback: use today's date
+            self.app_logger.structured_log(logging.WARNING, "Could not parse game date from day text",
+                           day_text=day_text)
+            return datetime.now().strftime('%Y-%m-%d')
+
+        except Exception as e:
+            self.app_logger.structured_log(logging.WARNING, "Error parsing game date, using today's date",
+                           day_text=day_text, error=str(e))
+            return datetime.now().strftime('%Y-%m-%d')
 
     @log_performance
     def _extract_team_ids_schedule(self, todays_games: WebElement) -> List[List[str]]:
@@ -229,31 +286,39 @@ class ScheduleScraper(BaseScheduleScraper):
             raise self.error_handler.create_error_handler('data_extraction', f"Error extracting game IDs: {str(e)}")
 
     @log_performance
-    def _save_matchups_and_games(self, matchups: List[List[str]], games: List[str]) -> None:
+    def _save_matchups_and_games(self, matchups: List[List[str]], games: List[str], game_date: Optional[str] = None) -> None:
         """
         Converts matchups and game IDs dataframes and saves them to CSV files.
 
         Args:
             matchups (List[List[str]]): A list of lists containing visitor and home team IDs.
             games (List[str]): A list of game IDs.
+            game_date (str, optional): Game date in YYYY-MM-DD format.
 
         Raises:
             DataValidationError: If the input data is invalid.
             DataStorageError: If there's an error while saving the data.
         """
+        from datetime import datetime
+
         try:
-            self.app_logger.structured_log( logging.INFO, "Saving matchups and games", 
-                           matchups_count=len(matchups), games_count=len(games))
+            if game_date is None:
+                game_date = datetime.now().strftime('%Y-%m-%d')
+
+            self.app_logger.structured_log( logging.INFO, "Saving matchups and games",
+                           matchups_count=len(matchups), games_count=len(games), game_date=game_date)
             schedule_dataframes = []
             file_names = []
             if not matchups or not games:
                 raise self.error_handler.create_error_handler('data_validation', "Matchups or games list is empty")
 
             matchups_df = pd.DataFrame(matchups, columns=[self.config.schedule_visitor_team_id_column, self.config.schedule_home_team_id_column])
+            matchups_df['game_date'] = game_date
             schedule_dataframes.append(matchups_df)
             file_names.append(self.config.todays_matchups_file)
 
             games_df = pd.DataFrame(games, columns=[self.config.schedule_game_id_column])
+            games_df['game_date'] = game_date
             schedule_dataframes.append(games_df)
             file_names.append(self.config.todays_games_ids_file)
 

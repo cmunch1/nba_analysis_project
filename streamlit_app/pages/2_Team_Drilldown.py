@@ -14,7 +14,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from streamlit_app.data_loader import load_latest_dataset
+from streamlit_app.data_loader import _get_dashboard_file_mtime, load_latest_dataset
 
 # Hide the main "app" page from navigation and add title above nav
 st.markdown(
@@ -42,7 +42,7 @@ def main() -> None:
     st.title("Team Drilldown")
     st.caption("Deep-dive into model performance for a specific team using pre-calculated metrics from the dashboard prep pipeline.")
 
-    dataset = load_latest_dataset()
+    dataset = load_latest_dataset(_get_dashboard_file_mtime())
     if dataset.empty:
         st.info("No dashboard data available yet.")
         return

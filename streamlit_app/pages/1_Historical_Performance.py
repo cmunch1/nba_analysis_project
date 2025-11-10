@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from streamlit_app.components import calibration_charts
-from streamlit_app.data_loader import load_latest_dataset
+from streamlit_app.data_loader import _get_dashboard_file_mtime, load_latest_dataset
 
 # Hide the main "app" page from navigation and add title above nav
 st.markdown(
@@ -51,7 +51,7 @@ def main() -> None:
     st.title("Historical Performance")
     st.caption("Assess calibration, accuracy, and drift across recent prediction history.")
 
-    dataset = load_latest_dataset()
+    dataset = load_latest_dataset(_get_dashboard_file_mtime())
     if dataset.empty:
         st.info("No dashboard data available yet.")
         return

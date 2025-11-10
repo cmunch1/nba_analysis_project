@@ -140,10 +140,10 @@ class MatchupProcessor:
         Create placeholder rows for today's games matching processed data schema.
 
         Args:
-            matchups_df: DataFrame with columns [visitor_id, home_id]
-            games_df: DataFrame with column [game_id]
+            matchups_df: DataFrame with columns [visitor_id, home_id, game_date]
+            games_df: DataFrame with column [game_id, game_date]
             reference_df: Reference DataFrame to get column structure and dtypes
-            today_date: Date string (YYYY-MM-DD). If None, uses today.
+            today_date: Date string (YYYY-MM-DD). If None, extracts from DataFrames or uses today.
 
         Returns:
             DataFrame with placeholder rows (two rows per game: home and away)
@@ -161,7 +161,14 @@ class MatchupProcessor:
                 return pd.DataFrame(columns=reference_df.columns)
 
             if today_date is None:
-                today_date = datetime.now().strftime('%Y-%m-%d')
+                # Try to extract game_date from the DataFrames
+                if 'game_date' in games_df.columns and not games_df['game_date'].isna().all():
+                    today_date = games_df['game_date'].iloc[0]
+                elif 'game_date' in matchups_df.columns and not matchups_df['game_date'].isna().all():
+                    today_date = matchups_df['game_date'].iloc[0]
+                else:
+                    # Fallback to today's date
+                    today_date = datetime.now().strftime('%Y-%m-%d')
 
             self.app_logger.structured_log(
                 logging.INFO,
