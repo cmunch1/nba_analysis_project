@@ -341,7 +341,9 @@ def _render_daily_accuracy(frame: pd.DataFrame, drift_data: pd.DataFrame) -> Non
         mode="lines+markers",
         name="Daily Accuracy",
         line=dict(color="blue"),
-        marker=dict(size=8)
+        marker=dict(size=8),
+        customdata=daily["games"],
+        hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Accuracy: %{y:.1%}<br>Games: %{customdata}<extra></extra>"
     ))
 
     # Cumulative season accuracy line
@@ -350,7 +352,8 @@ def _render_daily_accuracy(frame: pd.DataFrame, drift_data: pd.DataFrame) -> Non
         y=daily["cumulative_accuracy"],
         mode="lines",
         name="Season Running Accuracy",
-        line=dict(color="green", width=2)
+        line=dict(color="green", width=2),
+        hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Cumulative: %{y:.1%}<extra></extra>"
     ))
 
     # Period average (horizontal line)
