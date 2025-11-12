@@ -32,6 +32,9 @@ streamlit run streamlit_app/app.py
 
 # Or use Docker
 docker-compose up nba-pipeline
+
+# Or open in VS Code Dev Container (interactive development)
+# Ctrl+Shift+P → "Dev Containers: Reopen in Container"
 ```
 
 **Public Datasets:**
@@ -56,7 +59,8 @@ View daily predictions and historical performance:
 - ✅ **Performance Tracking**: Daily accuracy metrics and model drift monitoring
 
 ### Software Engineering
-- ✅ **Docker Containerized**: Consistent environment everywhere
+- ✅ **Docker Containerized**: Consistent environment everywhere (CPU + GPU support)
+- ✅ **VS Code Dev Containers**: Interactive development inside containers
 - ✅ **Modular Workflows**: Separate data collection, ML pipeline, and dashboard
 - ✅ **Dependency Injection**: Clean, testable architecture throughout
 - ✅ **Comprehensive Logging**: Structured logs for debugging and monitoring
@@ -154,9 +158,12 @@ View daily predictions and historical performance:
 ### Getting Started
 - **[DOCKER_SETUP_SUMMARY.md](DOCKER_SETUP_SUMMARY.md)** - Complete Docker setup guide
 - **[docs/DOCKER.md](docs/DOCKER.md)** - Docker deployment reference
+- **[docs/GPU_SUPPORT.md](docs/GPU_SUPPORT.md)** - GPU acceleration guide
 - **[DEPLOYMENT_PLAN.md](DEPLOYMENT_PLAN.md)** - Full deployment roadmap
 
 ### For Contributors
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute
+- **[.devcontainer/README.md](.devcontainer/README.md)** - VS Code Dev Containers guide
 - **[docs/AI/core_framework_usage.md](docs/AI/core_framework_usage.md)** - Framework patterns and DI
 - **[docs/AI/interfaces.md](docs/AI/interfaces.md)** - Abstract interfaces
 - **[docs/streamlit_dashboard_reference.md](docs/streamlit_dashboard_reference.md)** - Dashboard guide

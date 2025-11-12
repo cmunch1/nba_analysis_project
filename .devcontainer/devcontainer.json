@@ -1,0 +1,90 @@
+{
+  "name": "NBA Analysis Project",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "nba-pipeline",
+  "workspaceFolder": "/app",
+
+  // Override command to keep container running for development
+  "overrideCommand": true,
+  "shutdownAction": "stopCompose",
+
+  // Features to add
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  // VS Code settings for the container
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/app/.venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.analysis.extraPaths": [
+          "/app/src"
+        ],
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.flake8Enabled": true,
+        "python.formatting.provider": "black",
+        "editor.formatOnSave": true,
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/*.pyc": true
+        }
+      },
+
+      // Extensions to install in the container
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "charliermarsh.ruff",
+        "GitHub.copilot",
+        "eamodio.gitlens",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+
+  // Port forwarding for Streamlit and MLflow
+  "forwardPorts": [8501, 5000],
+  "portsAttributes": {
+    "8501": {
+      "label": "Streamlit Dashboard",
+      "onAutoForward": "notify"
+    },
+    "5000": {
+      "label": "MLflow UI",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Run commands after container is created
+  "postCreateCommand": "echo 'Dev container ready! Python: $(/app/.venv/bin/python --version)'",
+
+  // Mount points
+  "mounts": [
+    // Mount your git config for commits
+    "source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind,consistency=cached",
+    // Mount SSH keys for git operations
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached"
+  ],
+
+  // Environment variables
+  "remoteEnv": {
+    "PYTHONPATH": "/app:${containerEnv:PYTHONPATH}",
+    "PATH": "/app/.venv/bin:${containerEnv:PATH}"
+  },
+
+  // User to run as (non-root for security)
+  "remoteUser": "nba"
+}
