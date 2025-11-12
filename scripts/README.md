@@ -1,6 +1,33 @@
 # Pipeline Scripts
 
-This directory contains scripts for orchestrating the NBA Analysis Project pipeline.
+This directory contains helper scripts for the NBA Analysis Project.
+
+## Overview
+
+| Script | Purpose | Requires Secrets |
+|--------|---------|------------------|
+| `run_nightly_pipeline.sh` | Main pipeline orchestration | No (optional proxy) |
+| `download_kaggle_data.sh` | Download public Kaggle datasets | No |
+| `setup_fork.sh` | Interactive setup wizard for forkers | No |
+| `detect_gpu.sh` | Detect GPU and recommend Docker setup | No |
+
+## Quick Start
+
+```bash
+# For new users - setup wizard
+./scripts/setup_fork.sh
+
+# Check GPU availability (for Docker)
+./scripts/detect_gpu.sh
+
+# Download data only
+./scripts/download_kaggle_data.sh
+
+# Run ML pipeline with Kaggle data
+./scripts/run_nightly_pipeline.sh --data-source kaggle
+```
+
+---
 
 ## run_nightly_pipeline.sh
 
@@ -197,3 +224,334 @@ To modify the pipeline:
 - [DEPLOYMENT_PLAN.md](../DEPLOYMENT_PLAN.md) - Full deployment roadmap
 - [configs/nba/](../configs/nba/) - Configuration files for each module
 - [src/nba_app/](../src/nba_app/) - Source code for pipeline modules
+
+---
+
+## download_kaggle_data.sh
+
+Simple script to download public NBA datasets from Kaggle. No authentication required for public datasets.
+
+### Usage
+
+```bash
+# Download default datasets
+./scripts/download_kaggle_data.sh
+
+# Download custom dataset
+./scripts/download_kaggle_data.sh --dataset username/dataset-name
+
+# Download custom processed data
+./scripts/download_kaggle_data.sh --processed username/processed-dataset
+
+# Show help
+./scripts/download_kaggle_data.sh --help
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--dataset USERNAME/DATASET` | Specify custom cumulative scraped data dataset |
+| `--processed USERNAME/DATASET` | Specify custom processed data dataset |
+| `-h`, `--help` | Show usage information |
+
+### What It Downloads
+
+1. **Cumulative Scraped Data** (~23 MB)
+   - `games_traditional.csv`
+   - `games_advanced.csv`
+   - `games_four-factors.csv`
+   - `games_misc.csv`
+   - `games_scoring.csv`
+
+2. **Processed Data** (~10 MB)
+   - `teams_boxscores.csv`
+   - `games_boxscores.csv`
+   - `column_mapping.json`
+
+### Example
+
+```bash
+$ ./scripts/download_kaggle_data.sh
+Downloading NBA data from Kaggle...
+
+Downloading cumulative scraped data...
+Dataset: YOUR_KAGGLE_USERNAME/nba-game-stats-daily
+✓ Cumulative scraped data downloaded
+Files:
+  data/cumulative_scraped/games_traditional.csv (15M)
+  data/cumulative_scraped/games_advanced.csv (12M)
+  ...
+
+Downloading processed data...
+Dataset: YOUR_KAGGLE_USERNAME/nba-processed-data
+✓ Processed data downloaded
+Files:
+  data/processed/teams_boxscores.csv (8.2M)
+  ...
+
+✓ Data download complete!
+
+Next steps:
+  1. Run ML pipeline: ./scripts/run_nightly_pipeline.sh --data-source kaggle
+  2. View dashboard: streamlit run streamlit_app/app.py
+```
+
+### Troubleshooting
+
+**Problem**: "Dataset not found"
+**Solution**: Verify dataset exists and is public at https://kaggle.com/datasets/YOUR_USERNAME/dataset-name
+
+**Problem**: Kaggle CLI not installed
+**Solution**: Script auto-installs with `pip install kaggle`
+
+---
+
+## setup_fork.sh
+
+Interactive setup wizard for people forking the repository. Guides through dependency installation and data source selection.
+
+### Usage
+
+```bash
+./scripts/setup_fork.sh
+```
+
+### What It Does
+
+1. **Checks Environment**
+   - Detects if repo is a fork
+   - Verifies project directory
+
+2. **Installs Dependencies**
+   - Installs `uv` if not present
+   - Runs `uv sync` to install all packages
+
+3. **Data Source Selection**
+   - **Option 1 (Kaggle)**: Downloads public datasets automatically
+   - **Option 2 (Local)**: Uses data already in repository
+   - **Option 3 (Scrape)**: Guides through proxy setup for scraping
+
+4. **Optional Testing**
+   - Offers to run quick pipeline test
+   - Validates setup is working
+
+### Interactive Flow
+
+```bash
+$ ./scripts/setup_fork.sh
+
+============================================
+  NBA Prediction Project - Setup Wizard
+============================================
+
+✓ Fork detected - great!
+
+Step 1: Installing Dependencies
+...
+✓ Dependencies installed
+
+Step 2: Choose Data Source
+
+You have three options:
+  1) Kaggle - Download public datasets (recommended for getting started)
+  2) Local - Use data already in the repository (if committed)
+  3) Scrape - Scrape fresh data yourself (requires proxy)
+
+Enter choice [1-3]: 1
+
+Setting up with Kaggle data...
+✓ Data downloaded successfully!
+
+Step 3: Testing Setup
+
+Would you like to run a quick test of the ML pipeline?
+Run test? [y/N]: y
+
+Running ML pipeline test (this may take a few minutes)...
+✓ Test completed successfully!
+
+============================================
+  Setup Complete!
+============================================
+
+Next steps:
+
+  Run ML Pipeline:
+    ./scripts/run_nightly_pipeline.sh --data-source kaggle
+
+  View Dashboard:
+    streamlit run streamlit_app/app.py
+
+  Run with Docker:
+    docker-compose up nba-pipeline
+
+  Test GitHub Actions:
+    Go to Actions → 'Local Development' → Run workflow
+
+Happy coding! 🏀
+```
+
+### For Different User Types
+
+**New Users / Contributors:**
+- Choose Option 1 (Kaggle)
+- No secrets required
+- Start experimenting immediately
+
+**Experienced Users:**
+- Choose Option 2 (Local) if you have data
+- Choose Option 3 (Scrape) if you want fresh data and have proxy
+
+**Project Maintainer:**
+- Choose Option 3 (Scrape)
+- Set `PROXY_URL` environment variable
+- Run full pipeline with scraping
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Setup completed successfully |
+| 1 | Setup failed (error during installation) |
+
+---
+
+## detect_gpu.sh
+
+Auto-detection script for GPU availability and Docker GPU support. Helps users determine if they should use CPU or GPU Docker images.
+
+### Usage
+
+```bash
+./scripts/detect_gpu.sh
+```
+
+### What It Checks
+
+1. **NVIDIA GPU Presence**
+   - Runs `nvidia-smi` to detect GPU
+   - Shows GPU model, driver version, memory
+
+2. **nvidia-docker Runtime**
+   - Checks if Docker can access GPU
+   - Validates nvidia-docker2 installation
+
+3. **Recommendations**
+   - Suggests appropriate docker-compose command
+   - Provides setup instructions if GPU found but docker not configured
+
+### Example Output
+
+**With GPU and nvidia-docker:**
+```bash
+$ ./scripts/detect_gpu.sh
+
+=== GPU Detection ===
+
+✓ NVIDIA GPU detected
+
+NVIDIA GeForce RTX 3090, 525.147.05, 24576 MiB
+
+✓ nvidia-docker runtime is available
+
+Recommended setup:
+  docker-compose -f docker-compose.gpu.yml up
+
+Or build GPU image:
+  docker build -f Dockerfile.gpu -t nba-pipeline:gpu .
+```
+
+**With GPU but no nvidia-docker:**
+```bash
+$ ./scripts/detect_gpu.sh
+
+=== GPU Detection ===
+
+✓ NVIDIA GPU detected
+
+NVIDIA GeForce RTX 3090, 525.147.05, 24576 MiB
+
+⚠ nvidia-docker runtime not detected
+
+To enable GPU support in Docker:
+  1. Install nvidia-docker2:
+     [installation commands...]
+
+  2. Test GPU access:
+     docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
+
+For now, use CPU version:
+  docker-compose up
+```
+
+**No GPU:**
+```bash
+$ ./scripts/detect_gpu.sh
+
+=== GPU Detection ===
+
+✗ No NVIDIA GPU detected
+
+Running on CPU. Use standard Docker setup:
+  docker-compose up
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | GPU detected and nvidia-docker available |
+| 1 | GPU detected but nvidia-docker not available |
+| 2 | No GPU detected |
+
+### Integration with setup_fork.sh
+
+The setup wizard automatically runs this script and:
+- Uses GPU docker-compose if available
+- Falls back to CPU if not
+- Provides instructions for enabling GPU support
+
+### Troubleshooting
+
+**Problem**: Script says no GPU but you have one
+**Solution**: Install nvidia-utils: `sudo apt-get install nvidia-utils-525` (or your driver version)
+
+**Problem**: GPU detected but docker can't access it
+**Solution**: Follow nvidia-docker2 installation instructions in script output
+
+---
+
+## Additional Scripts (Future)
+
+Planned helper scripts:
+
+- `upload_to_kaggle.sh` - Upload local data to Kaggle (maintainer only)
+- `clean_old_predictions.sh` - Archive old prediction files
+- `validate_data.sh` - Run data validation checks
+- `benchmark_pipeline.sh` - Performance benchmarking
+
+---
+
+## Environment Variables Reference
+
+All scripts respect these environment variables:
+
+| Variable | Used By | Purpose | Required |
+|----------|---------|---------|----------|
+| `MLFLOW_TRACKING_URI` | `run_nightly_pipeline.sh` | MLflow server location | No (defaults to local) |
+| `PROXY_URL` | `run_nightly_pipeline.sh` | Proxy for NBA.com scraping | Only for scraping |
+| `KAGGLE_USERNAME` | Kaggle upload scripts | Kaggle account username | Only for uploads |
+| `KAGGLE_KEY` | Kaggle upload scripts | Kaggle API key | Only for uploads |
+
+---
+
+## CI/CD Integration
+
+These scripts are used by GitHub Actions workflows:
+
+- **data_collection.yml**: Uses `run_nightly_pipeline.sh --data-source scrape`
+- **ml_pipeline.yml**: Downloads via Kaggle CLI, then runs pipeline
+- **local_dev.yml**: Uses `run_nightly_pipeline.sh` with user choice
+
+See [../.github/workflows/](../.github/workflows/) for workflow definitions.

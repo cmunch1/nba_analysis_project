@@ -1,0 +1,83 @@
+name: Data Collection (Nightly)
+
+# This workflow is intended for the project maintainer only
+# It scrapes fresh NBA data and uploads to Kaggle
+# Requires secrets: KAGGLE_USERNAME, KAGGLE_KEY, PROXY_URL
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 3am EST = 8am UTC
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  collect_and_publish:
+    runs-on: ubuntu-latest
+    # Only run on original repo, not forks (prevents errors from missing secrets)
+    if: github.repository == 'YOUR_GITHUB_USERNAME/nba_analysis_project'
+
+    # Use the pre-built Docker image
+    container:
+      image: ghcr.io/${{ github.repository }}:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /home/runner/work/${{ github.repository }}/data:/app/data
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle
+
+      - name: Download Previous Data from Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          mkdir -p data/cumulative_scraped data/processed
+
+          # Download existing cumulative data (or start fresh if first run)
+          kaggle datasets download -d ${{ secrets.KAGGLE_DATASET_ID }} \
+            -p data/cumulative_scraped --unzip || echo "First run - no existing data"
+
+      - name: Run Webscraping
+        run: python -m src.nba_app.webscraping.main
+        env:
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+
+      - name: Run Data Processing
+        run: python -m src.nba_app.data_processing.main
+
+      - name: Upload Cumulative Data to Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          # Count games for version message
+          GAME_COUNT=$(tail -n +2 data/cumulative_scraped/games_traditional.csv | wc -l)
+          VERSION_MSG="Daily update $(date +%Y-%m-%d): ${GAME_COUNT} games"
+
+          # Update cumulative scraped data
+          kaggle datasets version -p data/cumulative_scraped -m "$VERSION_MSG"
+
+      - name: Upload Processed Data to Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          # Count team records
+          TEAM_COUNT=$(tail -n +2 data/processed/teams_boxscores.csv | wc -l)
+          VERSION_MSG="Processed data $(date +%Y-%m-%d): ${TEAM_COUNT} team records"
+
+          # Update processed data
+          kaggle datasets version -p data/processed -m "$VERSION_MSG"
+
+      - name: Upload logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pipeline-logs
+          path: logs/
+          retention-days: 7

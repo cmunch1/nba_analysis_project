@@ -1,0 +1,103 @@
+name: ML Pipeline (Predictions)
+
+# This workflow uses public Kaggle data to generate predictions
+# No secrets required - anyone can run this on their fork
+# Auto-runs after data collection, or manually triggered
+
+on:
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      kaggle_dataset:
+        description: 'Kaggle dataset to use (username/dataset-name)'
+        required: false
+        default: 'YOUR_KAGGLE_USERNAME/nba-game-stats-daily'
+  workflow_run:
+    workflows: ["Data Collection (Nightly)"]
+    types: [completed]  # Auto-runs after data collection completes
+
+jobs:
+  generate_predictions:
+    runs-on: ubuntu-latest
+
+    # Use the pre-built Docker image
+    container:
+      image: ghcr.io/${{ github.repository }}:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle
+
+      - name: Download Data from Kaggle
+        run: |
+          mkdir -p data/cumulative_scraped data/processed
+
+          # Use input dataset or default (public read access - no auth needed)
+          DATASET="${{ github.event.inputs.kaggle_dataset || 'YOUR_KAGGLE_USERNAME/nba-game-stats-daily' }}"
+
+          echo "Downloading cumulative scraped data from Kaggle..."
+          kaggle datasets download -d "$DATASET" \
+            -p data/cumulative_scraped --unzip
+
+          echo "Downloading processed data from Kaggle..."
+          kaggle datasets download -d YOUR_KAGGLE_USERNAME/nba-processed-data \
+            -p data/processed --unzip
+
+      - name: Run Feature Engineering
+        run: python -m src.nba_app.feature_engineering.main
+
+      - name: Run Inference
+        env:
+          # Use local MLflow if no tracking URI provided
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'file:///mlruns' }}
+        run: python -m src.nba_app.inference.main
+
+      - name: Run Dashboard Prep
+        run: python -m src.nba_app.dashboard_prep.main
+
+      - name: Upload Predictions to Kaggle (Maintainer Only)
+        if: github.repository == 'YOUR_GITHUB_USERNAME/nba_analysis_project' && github.event_name == 'workflow_run'
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          # Find latest predictions file
+          LATEST_PRED=$(ls -t data/predictions/predictions_*.csv | head -1)
+          PRED_COUNT=$(tail -n +2 "$LATEST_PRED" | wc -l)
+
+          VERSION_MSG="Predictions $(date +%Y-%m-%d): ${PRED_COUNT} games"
+          kaggle datasets version -p data/predictions -m "$VERSION_MSG"
+
+      - name: Upload Dashboard Data Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dashboard-data
+          path: |
+            data/dashboard/dashboard_data.csv
+            data/predictions/predictions_*.csv
+          retention-days: 30
+
+      - name: Upload Logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ml-pipeline-logs
+          path: logs/
+          retention-days: 7
+
+      - name: Show Prediction Summary
+        run: |
+          echo "=== Prediction Summary ==="
+          LATEST_PRED=$(ls -t data/predictions/predictions_*.csv | head -1)
+          if [ -f "$LATEST_PRED" ]; then
+            PRED_COUNT=$(tail -n +2 "$LATEST_PRED" | wc -l)
+            echo "Generated ${PRED_COUNT} predictions"
+            echo "File: $LATEST_PRED"
+          else
+            echo "No predictions generated"
+          fi

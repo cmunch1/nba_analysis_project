@@ -1,0 +1,99 @@
+# NBA Analysis Project - Docker Image (GPU-enabled)
+# Multi-stage build for optimized image size with CUDA support
+
+# Stage 1: Builder - Install dependencies
+FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04 as builder
+
+# Install Python 3.11
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-dev \
+    python3-pip \
+    gcc \
+    g++ \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Make python3.11 the default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+# Install uv (fast Python package installer)
+RUN pip install --no-cache-dir uv
+
+# Set working directory
+WORKDIR /build
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install Python dependencies into /build/.venv
+# This will install GPU-enabled versions of torch, xgboost, etc.
+RUN uv sync --frozen
+
+# Stage 2: Runtime - Minimal image with CUDA runtime
+FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
+
+# Install Python 3.11 and runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3-pip \
+    chromium-browser \
+    chromium-chromedriver \
+    && rm -rf /var/lib/apt/lists/*
+
+# Make python3.11 the default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+# Create non-root user for security
+RUN useradd -m -u 1000 nba && \
+    mkdir -p /app && \
+    chown -R nba:nba /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python virtual environment from builder
+COPY --from=builder --chown=nba:nba /build/.venv /app/.venv
+
+# Copy application code
+COPY --chown=nba:nba src/ ./src/
+COPY --chown=nba:nba configs/ ./configs/
+COPY --chown=nba:nba scripts/ ./scripts/
+COPY --chown=nba:nba pyproject.toml ./
+
+# Create data directories
+RUN mkdir -p \
+    data/cumulative_scraped \
+    data/newly_scraped \
+    data/processed \
+    data/engineered \
+    data/predictions \
+    data/dashboard \
+    logs \
+    mlruns \
+    && chown -R nba:nba data logs mlruns
+
+# Switch to non-root user
+USER nba
+
+# Add virtual environment to PATH
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app:$PYTHONPATH"
+
+# Environment variables (override at runtime)
+ENV MLFLOW_TRACKING_URI="file:///app/mlruns"
+ENV PYTHONUNBUFFERED=1
+
+# CUDA environment variables
+ENV CUDA_VISIBLE_DEVICES="0"
+ENV NVIDIA_VISIBLE_DEVICES="all"
+ENV NVIDIA_DRIVER_CAPABILITIES="compute,utility"
+
+# Default command runs the full pipeline
+CMD ["python", "-m", "src.nba_app.inference.main"]
+
+# Health check (for container orchestration)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)"

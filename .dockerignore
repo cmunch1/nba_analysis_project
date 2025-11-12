@@ -1,0 +1,68 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Data directories (should be mounted as volumes)
+data/
+mlruns/
+logs/
+
+# Jupyter notebooks
+*.ipynb
+notebooks/
+noteboooks/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+
+# Streamlit (separate deployment)
+streamlit_app/
+
+# Artifacts
+ml_artifacts/models/
+ml_artifacts/experiments/runs/
+*.pkl
+*.pth
+*.h5
+
+# Large test data
+data/test_data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

@@ -1,0 +1,78 @@
+# GPU-enabled docker-compose for local development with NVIDIA GPU
+# Requires: nvidia-docker2 installed
+# Usage: docker-compose -f docker-compose.gpu.yml up
+
+version: '3.8'
+
+services:
+  # Main pipeline service with GPU support
+  nba-pipeline-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    image: nba-pipeline:gpu
+    container_name: nba-pipeline-gpu
+    environment:
+      # MLflow tracking (use local or remote)
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI:-file:///app/mlruns}
+      # Proxy for webscraping (optional)
+      - PROXY_URL=${PROXY_URL:-}
+      # Python settings
+      - PYTHONUNBUFFERED=1
+      # CUDA settings
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      # Mount data directories for persistence
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./mlruns:/app/mlruns
+      # Mount configs for easy updates
+      - ./configs:/app/configs:ro
+      # Mount ml_artifacts for model/feature access
+      - ./ml_artifacts:/app/ml_artifacts:ro
+    command: /app/scripts/run_nightly_pipeline.sh --data-source kaggle
+    networks:
+      - nba-network
+    restart: "no"  # Don't auto-restart (batch job)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Streamlit dashboard service (CPU-only, no GPU needed for serving)
+  nba-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    image: nba-dashboard:latest
+    container_name: nba-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Read-only access to data
+      - ./data/dashboard:/app/data/dashboard:ro
+      - ./data/predictions:/app/data/predictions:ro
+      - ./configs:/app/configs:ro
+    command: streamlit run streamlit_app/app.py
+    networks:
+      - nba-network
+    restart: unless-stopped
+    depends_on:
+      - nba-pipeline-gpu
+
+networks:
+  nba-network:
+    driver: bridge
+
+# Volumes for persistent data (optional - use if not mounting host dirs)
+volumes:
+  data-volume:
+  mlruns-volume:
+  logs-volume:

@@ -1,0 +1,120 @@
+name: Local Development (Test Your Fork)
+
+# This workflow is for testing and development
+# Choose your data source: Kaggle (public), local files, or scrape fresh
+# Useful for contributors and forkers to test changes
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_source:
+        description: 'Data source'
+        required: true
+        default: 'kaggle'
+        type: choice
+        options:
+          - kaggle
+          - local
+          - scrape
+      kaggle_dataset:
+        description: 'Kaggle dataset (if using kaggle source)'
+        required: false
+        default: 'YOUR_KAGGLE_USERNAME/nba-game-stats-daily'
+
+jobs:
+  test_pipeline:
+    runs-on: ubuntu-latest
+
+    # Use the pre-built Docker image
+    container:
+      image: ghcr.io/${{ github.repository }}:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Option 1: Download from Kaggle (default)
+      - name: Download from Kaggle
+        if: inputs.data_source == 'kaggle'
+        run: |
+          pip install kaggle
+          mkdir -p data/cumulative_scraped data/processed
+
+          echo "Downloading from Kaggle: ${{ inputs.kaggle_dataset }}"
+          kaggle datasets download -d "${{ inputs.kaggle_dataset }}" \
+            -p data/cumulative_scraped --unzip
+
+          kaggle datasets download -d YOUR_KAGGLE_USERNAME/nba-processed-data \
+            -p data/processed --unzip
+
+      # Option 2: Use local data committed to repo/fork
+      - name: Use Local Data
+        if: inputs.data_source == 'local'
+        run: |
+          echo "Using local data from repository"
+          echo "Checking for required directories..."
+          ls -lh data/cumulative_scraped/ data/processed/ || echo "Warning: Some data directories missing"
+
+      # Option 3: Scrape fresh data
+      - name: Scrape Fresh Data
+        if: inputs.data_source == 'scrape'
+        env:
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+        run: |
+          echo "Scraping fresh data..."
+          # Run webscraping and processing only
+          python -m src.nba_app.webscraping.main
+          python -m src.nba_app.data_processing.main
+
+      # Run the ML pipeline
+      - name: Run Feature Engineering
+        run: python -m src.nba_app.feature_engineering.main
+
+      - name: Run Inference
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'file:///mlruns' }}
+        run: python -m src.nba_app.inference.main
+
+      - name: Run Dashboard Prep
+        run: python -m src.nba_app.dashboard_prep.main
+
+      # Upload results for review
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ inputs.data_source }}
+          path: |
+            data/predictions/
+            data/dashboard/
+            data/engineered/
+            logs/
+          retention-days: 7
+
+      - name: Show Summary
+        run: |
+          echo "=== Pipeline Test Summary ==="
+          echo "Data Source: ${{ inputs.data_source }}"
+          echo ""
+
+          if [ -f "data/engineered/engineered_features.csv" ]; then
+            echo "✓ Feature Engineering completed"
+            FEAT_ROWS=$(tail -n +2 data/engineered/engineered_features.csv | wc -l)
+            echo "  Generated ${FEAT_ROWS} feature rows"
+          fi
+
+          LATEST_PRED=$(ls -t data/predictions/predictions_*.csv 2>/dev/null | head -1)
+          if [ -f "$LATEST_PRED" ]; then
+            echo "✓ Predictions generated"
+            PRED_COUNT=$(tail -n +2 "$LATEST_PRED" | wc -l)
+            echo "  Generated ${PRED_COUNT} predictions"
+            echo "  File: $LATEST_PRED"
+          fi
+
+          if [ -f "data/dashboard/dashboard_data.csv" ]; then
+            echo "✓ Dashboard data generated"
+            DASH_ROWS=$(tail -n +2 data/dashboard/dashboard_data.csv | wc -l)
+            echo "  Generated ${DASH_ROWS} dashboard rows"
+          fi

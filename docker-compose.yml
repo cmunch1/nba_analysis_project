@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Main pipeline service (CPU version)
+  # For GPU support, use: docker-compose -f docker-compose.gpu.yml up
+  nba-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nba-pipeline:latest
+    container_name: nba-pipeline
+    environment:
+      # MLflow tracking (use local or remote)
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI:-file:///app/mlruns}
+      # Proxy for webscraping (optional)
+      - PROXY_URL=${PROXY_URL:-}
+      # Python settings
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount data directories for persistence
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./mlruns:/app/mlruns
+      # Mount configs for easy updates
+      - ./configs:/app/configs:ro
+      # Mount ml_artifacts for model/feature access
+      - ./ml_artifacts:/app/ml_artifacts:ro
+    command: /app/scripts/run_nightly_pipeline.sh --data-source kaggle
+    networks:
+      - nba-network
+    restart: "no"  # Don't auto-restart (batch job)
+    # Note: This is the CPU version. For GPU, use docker-compose.gpu.yml
+
+  # Streamlit dashboard service (optional - for local testing)
+  nba-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    image: nba-dashboard:latest
+    container_name: nba-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Read-only access to data
+      - ./data/dashboard:/app/data/dashboard:ro
+      - ./data/predictions:/app/data/predictions:ro
+      - ./configs:/app/configs:ro
+    command: streamlit run streamlit_app/app.py
+    networks:
+      - nba-network
+    restart: unless-stopped
+    depends_on:
+      - nba-pipeline
+
+networks:
+  nba-network:
+    driver: bridge
+
+# Volumes for persistent data (optional - use if not mounting host dirs)
+volumes:
+  data-volume:
+  mlruns-volume:
+  logs-volume:
