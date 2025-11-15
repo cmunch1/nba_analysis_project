@@ -15,16 +15,15 @@
   "runArgs": ["--gpus", "all"],
 
   // Features to add
+  // Note: CUDA is already installed in the base image (nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04)
+  // so we don't need the nvidia-cuda feature here
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
       "installOhMyZsh": true,
       "upgradePackages": true
     },
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/nvidia-cuda:1": {
-      "installCudnn": true
-    }
+    "ghcr.io/devcontainers/features/git:1": {}
   },
 
   // VS Code settings for the container
