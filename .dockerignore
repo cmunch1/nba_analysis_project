@@ -40,6 +40,7 @@ htmlcov/
 # Documentation
 docs/
 *.md
+# Keep README.md (required by pyproject.toml)
 !README.md
 
 # CI/CD

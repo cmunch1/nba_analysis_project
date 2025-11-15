@@ -16,8 +16,8 @@ WORKDIR /app
 # Install uv
 RUN pip install --no-cache-dir uv
 
-# Copy dependency files
-COPY --chown=streamlit:streamlit pyproject.toml uv.lock ./
+# Copy dependency files (README.md required by pyproject.toml)
+COPY --chown=streamlit:streamlit pyproject.toml uv.lock README.md ./
 
 # Install dependencies
 RUN uv sync --frozen

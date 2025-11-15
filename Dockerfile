@@ -17,8 +17,8 @@ RUN pip install --no-cache-dir uv
 # Set working directory
 WORKDIR /build
 
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
+# Copy dependency files (README.md required by pyproject.toml)
+COPY pyproject.toml uv.lock README.md ./
 
 # Install Python dependencies into /build/.venv
 RUN uv sync --frozen
