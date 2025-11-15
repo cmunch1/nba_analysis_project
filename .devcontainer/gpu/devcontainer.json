@@ -1,15 +1,18 @@
 {
-  "name": "NBA Analysis Project",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "nba-pipeline",
+  "name": "NBA Analysis Project (GPU)",
+  "dockerComposeFile": "../../docker-compose.gpu.yml",
+  "service": "nba-pipeline-gpu",
   "workspaceFolder": "/app",
 
   // Only run the pipeline service, not dashboard
-  "runServices": ["nba-pipeline"],
+  "runServices": ["nba-pipeline-gpu"],
 
   // Override command to keep container running for development
   "overrideCommand": true,
   "shutdownAction": "stopCompose",
+
+  // GPU configuration
+  "runArgs": ["--gpus", "all"],
 
   // Features to add
   "features": {
@@ -18,7 +21,10 @@
       "installOhMyZsh": true,
       "upgradePackages": true
     },
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/nvidia-cuda:1": {
+      "installCudnn": true
+    }
   },
 
   // VS Code settings for the container
@@ -38,7 +44,12 @@
         "files.exclude": {
           "**/__pycache__": true,
           "**/*.pyc": true
-        }
+        },
+        // GPU-specific settings
+        "python.terminal.launchArgs": [
+          "-c",
+          "import torch; print(f'GPU Available: {torch.cuda.is_available()}')"
+        ]
       },
 
       // Extensions to install in the container
@@ -72,7 +83,7 @@
   },
 
   // Run commands after container is created
-  "postCreateCommand": "echo 'Dev container ready! Python: $(/app/.venv/bin/python --version)'",
+  "postCreateCommand": "echo 'GPU Dev container ready!' && python -c 'import torch; print(f\"CUDA Available: {torch.cuda.is_available()}\")' && nvidia-smi",
 
   // Mount points
   "mounts": [
@@ -85,7 +96,8 @@
   // Environment variables
   "remoteEnv": {
     "PYTHONPATH": "/app:${containerEnv:PYTHONPATH}",
-    "PATH": "/app/.venv/bin:${containerEnv:PATH}"
+    "PATH": "/app/.venv/bin:${containerEnv:PATH}",
+    "CUDA_VISIBLE_DEVICES": "0"
   },
 
   // User to run as (non-root for security)
