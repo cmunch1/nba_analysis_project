@@ -4,6 +4,9 @@
   "service": "nba-pipeline",
   "workspaceFolder": "/app",
 
+  // Only run the pipeline service, not dashboard
+  "runServices": ["nba-pipeline"],
+
   // Override command to keep container running for development
   "overrideCommand": true,
   "shutdownAction": "stopCompose",
