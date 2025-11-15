@@ -175,6 +175,22 @@ View daily predictions and historical performance:
 
 ## 🐳 Docker Quick Reference
 
+### Getting Started
+
+**Option 1: Quick Start with Pre-Built Images** ⚡ (2-3 min)
+```bash
+# Pull and run (fastest, recommended for most users)
+docker-compose pull
+docker-compose up nba-pipeline
+```
+
+**Option 2: Build from Source** 🔧 (5-10 min)
+```bash
+# Build locally (for customization or if pull fails)
+docker-compose build
+docker-compose up nba-pipeline
+```
+
 ### CPU Version (Default - Works Everywhere)
 
 ```bash
@@ -184,10 +200,10 @@ docker-compose up nba-pipeline
 # Run dashboard
 docker-compose up nba-dashboard
 
-# Use pre-built image from GHCR
+# Pull specific pre-built image
 docker pull ghcr.io/YOUR_GITHUB_USERNAME/nba_analysis_project:latest
 
-# Run manually
+# Run manually with pre-built image
 docker run --rm \
   -v $(pwd)/data:/app/data \
   ghcr.io/YOUR_GITHUB_USERNAME/nba_analysis_project:latest
