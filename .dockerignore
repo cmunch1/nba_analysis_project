@@ -37,17 +37,17 @@ noteboooks/
 .coverage
 htmlcov/
 
-# Documentation
-docs/
-*.md
-# Keep README.md (required by pyproject.toml)
-!README.md
+# Documentation (keep for dev container)
+# docs/ - commented out, available in container
 
-# CI/CD
-.github/
+# Markdown files (keep for dev container)
+# *.md - commented out, available in container
 
-# Streamlit (separate deployment)
-streamlit_app/
+# CI/CD (keep for dev container)
+# .github/ - commented out, available in container
+
+# Streamlit (keep for dev container - may need for testing)
+# streamlit_app/ - commented out, available in container
 
 # Artifacts
 ml_artifacts/models/
