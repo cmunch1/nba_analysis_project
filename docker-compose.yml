@@ -4,15 +4,11 @@ services:
   # Main pipeline service (CPU version)
   # For GPU support, use: docker-compose -f docker-compose.gpu.yml up
   nba-pipeline:
-    # Try to pull pre-built image first, build if unavailable
-    image: ghcr.io/YOUR_GITHUB_USERNAME/nba_analysis_project:latest
+    # Use local image (will be pushed to GHCR by CI/CD)
+    image: nba-pipeline:latest
     build:
       context: .
       dockerfile: Dockerfile
-      # Tag with both local and registry names
-      tags:
-        - nba-pipeline:latest
-        - ghcr.io/YOUR_GITHUB_USERNAME/nba_analysis_project:latest
     container_name: nba-pipeline
     environment:
       # MLflow tracking (use local or remote)
@@ -38,14 +34,11 @@ services:
 
   # Streamlit dashboard service (optional - for local testing)
   nba-dashboard:
-    # Try to pull pre-built image first, build if unavailable
-    image: ghcr.io/YOUR_GITHUB_USERNAME/nba_analysis_project-dashboard:latest
+    # Use local image (will be pushed to GHCR by CI/CD)
+    image: nba-dashboard:latest
     build:
       context: .
       dockerfile: Dockerfile.streamlit
-      tags:
-        - nba-dashboard:latest
-        - ghcr.io/YOUR_GITHUB_USERNAME/nba_analysis_project-dashboard:latest
     container_name: nba-dashboard
     ports:
       - "8501:8501"
