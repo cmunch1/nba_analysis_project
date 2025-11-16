@@ -17,8 +17,11 @@ cp "$PROJECT_ROOT/data/dataset-metadata.json" $TEMP_DIR/
 echo "Copying cumulative_scraped directory..."
 cp -r "$PROJECT_ROOT/data/cumulative_scraped" $TEMP_DIR/
 
-echo "Copying processed directory..."
-cp -r "$PROJECT_ROOT/data/processed" $TEMP_DIR/
+echo "Copying processed directory (selective files only)..."
+mkdir -p $TEMP_DIR/processed
+cp "$PROJECT_ROOT/data/processed/column_mapping.json" $TEMP_DIR/processed/ 2>/dev/null || true
+cp "$PROJECT_ROOT/data/processed/games_boxscores.csv" $TEMP_DIR/processed/ 2>/dev/null || true
+cp "$PROJECT_ROOT/data/processed/teams_boxscores.csv" $TEMP_DIR/processed/ 2>/dev/null || true
 
 # Navigate to temp directory and upload
 cd $TEMP_DIR

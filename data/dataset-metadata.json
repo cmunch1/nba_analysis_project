@@ -37,6 +37,10 @@
       "description": "Scoring breakdown for all games"
     },
     {
+      "path": "processed/column_mapping.json",
+      "description": "Column name mappings and metadata for understanding the CSV files"
+    },
+    {
       "path": "processed/games_boxscores.csv",
       "description": "Combined statistics per game including both teams that played (one row per game)."
     },
