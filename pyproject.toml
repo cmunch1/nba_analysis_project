@@ -26,6 +26,7 @@ dependencies = [
     "statsmodels>=0.14.0",
     "plotly>=5.18.0",
     "streamlit>=1.38.0",
+    "kaggle>=1.7.4.5",
 ]
 
 [build-system]
