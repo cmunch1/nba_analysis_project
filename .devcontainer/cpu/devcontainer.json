@@ -79,7 +79,9 @@
     // Mount your git config for commits
     "source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind,consistency=cached",
     // Mount SSH keys for git operations
-    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached",
+    // Mount Kaggle credentials for dataset access
+    "source=${localEnv:HOME}/.kaggle,target=/root/.kaggle,type=bind,consistency=cached"
   ],
 
   // Environment variables
