@@ -10,8 +10,9 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-# Copy metadata
+# Copy metadata and data dictionary
 cp "$PROJECT_ROOT/data/dataset-metadata.json" $TEMP_DIR/
+cp "$PROJECT_ROOT/data/data_dictionary.csv" $TEMP_DIR/ 2>/dev/null || true
 
 # Copy only cumulative_scraped and processed directories
 echo "Copying cumulative_scraped directory..."
