@@ -24,12 +24,12 @@ cd $TEMP_DIR
 DATASET_SLUG="chrismunch/nba-game-team-statistics"
 
 echo "Checking if dataset exists..."
-if uv run kaggle datasets status $DATASET_SLUG 2>/dev/null; then
+if uv run python -m kaggle datasets status $DATASET_SLUG 2>/dev/null; then
     echo "Dataset exists, creating new version..."
-    uv run kaggle datasets version -p . -m "Nightly update: $(date +%Y-%m-%d)" -r zip
+    uv run python -m kaggle datasets version -p . -m "Nightly update: $(date +%Y-%m-%d)" -r zip
 else
     echo "Dataset doesn't exist, creating initial dataset..."
-    uv run kaggle datasets create -p . -r zip
+    uv run python -m kaggle datasets create -p . -r zip
 fi
 
 echo "✓ Dataset uploaded successfully!"
