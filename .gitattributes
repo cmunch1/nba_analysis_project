@@ -1,1 +1,42 @@
+# Git LFS for CSV files
 *.csv filter=lfs diff=lfs merge=lfs -text
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Shell scripts should always use LF (Unix line endings)
+*.sh text eol=lf
+
+# Python files should use LF
+*.py text eol=lf
+
+# JSON files should use LF
+*.json text eol=lf
+
+# YAML files should use LF
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Markdown files should use LF
+*.md text eol=lf
+
+# Dockerfiles should use LF
+Dockerfile* text eol=lf
+*.dockerfile text eol=lf
+
+# Windows batch files should use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.parquet binary
+*.pkl binary
+*.joblib binary
+*.h5 binary
+*.hdf5 binary
