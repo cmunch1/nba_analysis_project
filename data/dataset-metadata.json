@@ -1,0 +1,49 @@
+{
+  "title": "NBA Game Statistics and Analysis Data",
+  "id": "chrismunch/nba-game-team-statistics",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "keywords": [
+    "basketball",
+    "nba",
+    "sports",
+    "machine learning",
+    "statistics"
+  ],
+  "subtitle": "Comprehensive NBA game-level statistics per team, 2006-present.",
+  "description": "# NBA Game-Level Statistics per Team, updated nightly.\n\nThis dataset contains comprehensive NBA game-level team statistics scraped from NBA.com, including raw scraped data and processed data from 2006 until today (certain statistical categories were not recorded before 2006). These are team level statistics and does not include player-level data. Data includes all the 'advanced statistics' categories on the NBA.com website (traditional, advanced, scoring, four-factors, and misc).\n\n## This data was compiled to support ML projects that predict game winners.\n\n##  Data Files\n\n### Raw Scraped Data (cumulative_scraped/)\n- `games_traditional.csv`: Traditional box score stats (points, rebounds, assists, etc.)\n- `games_advanced.csv`: Advanced metrics (offensive/defensive rating, pace, etc.)\n- `games_four-factors.csv`: Four Factors of basketball (shooting, turnovers, rebounding, free throws)\n- `games_misc.csv`: Miscellaneous statistics\n- `games_scoring.csv`: Detailed scoring breakdown\n\n### Processed Data\n- `processed/games_boxscores.csv`: Combined game-level statistics (one row per game with team statistics for home and visitor teams)\n- `processed/teams_boxscores.csv`: Combined statistics for each team (two rows per game, 1 for each team)\n\n## Update Frequency\nDataset is updated nightly with the latest NBA game results during the season.\n\n## Source\nData scraped from NBA.com official statistics.\n\n## Related Project\nGitHub: https://github.com/cmunch1/nba_analysis_project",
+  "resources": [
+    {
+      "path": "cumulative_scraped/games_traditional.csv",
+      "description": "Traditional box score statistics for all games"
+    },
+    {
+      "path": "cumulative_scraped/games_advanced.csv",
+      "description": "Advanced metrics for all games"
+    },
+    {
+      "path": "cumulative_scraped/games_four-factors.csv",
+      "description": "Four Factors statistics for all games"
+    },
+    {
+      "path": "cumulative_scraped/games_misc.csv",
+      "description": "Miscellaneous statistics for all games"
+    },
+    {
+      "path": "cumulative_scraped/games_scoring.csv",
+      "description": "Scoring breakdown for all games"
+    },
+    {
+      "path": "processed/games_boxscores.csv",
+      "description": "Combined statistics per game including both teams that played (one row per game)."
+    },
+    {
+      "path": "processed/teams_boxscores.csv",
+      "description": "Combined statistics per game per team (each game has two rows, one per team)."
+    }
+
+  ] 
+}
