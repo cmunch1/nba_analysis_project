@@ -33,7 +33,8 @@ DATASET_SLUG="chrismunch/nba-game-team-statistics"
 echo "Checking if dataset exists..."
 if "$PROJECT_ROOT/.venv/bin/kaggle" datasets status $DATASET_SLUG 2>/dev/null; then
     echo "Dataset exists, creating new version..."
-    "$PROJECT_ROOT/.venv/bin/kaggle" datasets version -p . -m "Nightly update: $(date +%Y-%m-%d)" -r zip
+    # -d flag deletes old versions, keeping only the latest
+    "$PROJECT_ROOT/.venv/bin/kaggle" datasets version -p . -m "Nightly update: $(date +%Y-%m-%d)" -r zip -d
 else
     echo "Dataset doesn't exist, creating initial dataset..."
     "$PROJECT_ROOT/.venv/bin/kaggle" datasets create -p . -r zip
