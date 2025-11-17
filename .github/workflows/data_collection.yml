@@ -13,7 +13,7 @@ jobs:
   collect_and_publish:
     runs-on: ubuntu-latest
     # Only run on original repo, not forks (prevents errors from missing secrets)
-    if: github.repository == 'YOUR_GITHUB_USERNAME/nba_analysis_project'
+    if: github.repository == 'cmunch1/nba_analysis_project'
 
     # Use the pre-built Docker image
     container:
@@ -28,19 +28,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Kaggle CLI
-        run: pip install kaggle
-
-      - name: Download Previous Data from Kaggle
+      - name: Set up Kaggle credentials
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Download Previous Data from Kaggle
+        run: |
           mkdir -p data/cumulative_scraped data/processed
 
-          # Download existing cumulative data (or start fresh if first run)
-          kaggle datasets download -d ${{ secrets.KAGGLE_DATASET_ID }} \
-            -p data/cumulative_scraped --unzip || echo "First run - no existing data"
+          # Download existing dataset (or start fresh if first run)
+          kaggle datasets download -d chrismunch/nba-game-team-statistics \
+            -p data --unzip || echo "First run - no existing data"
+
+          # Move downloaded files to correct locations
+          if [ -d "data/cumulative_scraped" ]; then
+            echo "Previous cumulative data downloaded"
+          fi
 
       - name: Run Webscraping
         run: python -m src.nba_app.webscraping.main
@@ -50,29 +58,8 @@ jobs:
       - name: Run Data Processing
         run: python -m src.nba_app.data_processing.main
 
-      - name: Upload Cumulative Data to Kaggle
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-        run: |
-          # Count games for version message
-          GAME_COUNT=$(tail -n +2 data/cumulative_scraped/games_traditional.csv | wc -l)
-          VERSION_MSG="Daily update $(date +%Y-%m-%d): ${GAME_COUNT} games"
-
-          # Update cumulative scraped data
-          kaggle datasets version -p data/cumulative_scraped -m "$VERSION_MSG"
-
-      - name: Upload Processed Data to Kaggle
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-        run: |
-          # Count team records
-          TEAM_COUNT=$(tail -n +2 data/processed/teams_boxscores.csv | wc -l)
-          VERSION_MSG="Processed data $(date +%Y-%m-%d): ${TEAM_COUNT} team records"
-
-          # Update processed data
-          kaggle datasets version -p data/processed -m "$VERSION_MSG"
+      - name: Upload to Kaggle
+        run: ./scripts/upload_to_kaggle.sh
 
       - name: Upload logs (on failure)
         if: failure()
