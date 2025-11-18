@@ -37,10 +37,23 @@ jobs:
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-      - name: Run Webscraping
-        run: uv run -m src.nba_app.webscraping.main
+      - name: Download Existing Cumulative Data from Kaggle
+        run: |
+          mkdir -p data/cumulative_scraped data/processed
+          # Download the existing cumulative data to merge with newly scraped data
+          # Note: This assumes the dataset already exists from a previous upload
+          kaggle datasets download -d ${{ secrets.KAGGLE_USERNAME }}/nba-game-team-statistics -p data --unzip || {
+            echo "Warning: Could not download existing data. This is expected on first run."
+            echo "Will proceed with webscraping only."
+          }
+
+      - name: Configure Proxy
         env:
           PROXY_URL: ${{ secrets.PROXY_URL }}
+        run: /app/scripts/configure_proxy.sh
+
+      - name: Run Webscraping
+        run: uv run -m src.nba_app.webscraping.main
 
       - name: Run Data Processing
         run: uv run -m src.nba_app.data_processing.main
