@@ -26,7 +26,8 @@ services:
       - ./configs:/app/configs:ro
       # Mount ml_artifacts for model/feature access
       - ./ml_artifacts:/app/ml_artifacts:ro
-    command: /app/scripts/run_nightly_pipeline.sh --data-source kaggle
+    # Use Kaggle workflow script (recommended for containerized deployment)
+    command: /app/scripts/run_with_kaggle_data.sh
     networks:
       - nba-network
     restart: "no"  # Don't auto-restart (batch job)

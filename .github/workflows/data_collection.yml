@@ -37,29 +37,16 @@ jobs:
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-      - name: Download Previous Data from Kaggle
-        run: |
-          mkdir -p data/cumulative_scraped data/processed
-
-          # Download existing dataset (or start fresh if first run)
-          kaggle datasets download -d chrismunch/nba-game-team-statistics \
-            -p data --unzip || echo "First run - no existing data"
-
-          # Move downloaded files to correct locations
-          if [ -d "data/cumulative_scraped" ]; then
-            echo "Previous cumulative data downloaded"
-          fi
-
       - name: Run Webscraping
-        run: python -m src.nba_app.webscraping.main
+        run: uv run -m src.nba_app.webscraping.main
         env:
           PROXY_URL: ${{ secrets.PROXY_URL }}
 
       - name: Run Data Processing
-        run: python -m src.nba_app.data_processing.main
+        run: uv run -m src.nba_app.data_processing.main
 
       - name: Upload to Kaggle
-        run: ./scripts/upload_to_kaggle.sh
+        run: /app/scripts/upload_to_kaggle.sh
 
       - name: Upload logs (on failure)
         if: failure()

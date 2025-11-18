@@ -26,11 +26,14 @@ RUN uv sync --frozen
 # Stage 2: Runtime - Minimal image with only what's needed
 FROM python:3.11-slim
 
-# Install runtime dependencies
+# Install runtime dependencies (bash included in slim image)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     chromium-driver \
     && rm -rf /var/lib/apt/lists/*
+
+# Install uv for runtime package management
+RUN pip install --no-cache-dir uv
 
 # Create non-root user for security
 RUN useradd -m -u 1000 nba && \
@@ -47,7 +50,10 @@ COPY --from=builder --chown=nba:nba /build/.venv /app/.venv
 COPY --chown=nba:nba src/ ./src/
 COPY --chown=nba:nba configs/ ./configs/
 COPY --chown=nba:nba scripts/ ./scripts/
-COPY --chown=nba:nba pyproject.toml ./
+COPY --chown=nba:nba pyproject.toml README.md ./
+
+# Ensure scripts are executable
+RUN chmod +x scripts/*.sh scripts/*.py
 
 # Create data directories
 RUN mkdir -p \
@@ -61,12 +67,15 @@ RUN mkdir -p \
     mlruns \
     && chown -R nba:nba data logs mlruns
 
-# Switch to non-root user
-USER nba
-
 # Add virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app:$PYTHONPATH"
+
+# Install Kaggle CLI for Kaggle workflow support (before switching to nba user)
+RUN uv pip install --system kaggle
+
+# Switch to non-root user
+USER nba
 
 # Environment variables (override at runtime)
 ENV MLFLOW_TRACKING_URI="file:///app/mlruns"

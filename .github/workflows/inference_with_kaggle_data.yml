@@ -32,37 +32,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download Data from Kaggle
+      - name: Run Kaggle Pipeline
         run: |
-          # Install Kaggle CLI (public dataset - no auth required)
-          pip install -q kaggle
+          # Determine skip flags
+          SKIP_FLAGS=""
+          if [ "${{ inputs.skip_dashboard }}" = "true" ]; then
+            SKIP_FLAGS="--skip-dashboard"
+          fi
 
-          # Create directories
-          mkdir -p data/cumulative_scraped data/processed
-
-          # Download public dataset
-          kaggle datasets download -d chrismunch/nba-game-team-statistics \
-            -p data --unzip || {
-              echo "Warning: Could not download from Kaggle"
-              echo "Dataset may be private or unavailable"
-              exit 1
-            }
-
-          # Verify files were downloaded
-          echo "Downloaded files:"
-          ls -lh data/cumulative_scraped/ data/processed/ 2>/dev/null || true
-
-      - name: Run Feature Engineering
-        run: python -m src.nba_app.feature_engineering.main
-
-      - name: Run Inference
-        run: python -m src.nba_app.inference.main
+          # Run the streamlined Kaggle workflow script
+          /app/scripts/run_with_kaggle_data.sh $SKIP_FLAGS
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-
-      - name: Run Dashboard Prep
-        if: ${{ !inputs.skip_dashboard }}
-        run: python -m src.nba_app.dashboard_prep.main
 
       - name: Upload Predictions Artifact
         uses: actions/upload-artifact@v3
