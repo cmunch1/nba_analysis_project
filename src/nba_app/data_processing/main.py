@@ -8,6 +8,7 @@ Key features:
 - Loads and validates scraped NBA data
 - Processes and transforms the data
 - Creates both team-centric and game-centric datasets
+- Appends today's game placeholders for prediction
 - Creates and saves a column mapping file
 - Saves invalid records for further review
 """
@@ -15,6 +16,8 @@ Key features:
 import logging
 import sys
 import traceback
+from datetime import datetime
+import pandas as pd
 
 from .di_container import DIContainer
 
@@ -37,6 +40,7 @@ def main() -> None:
         data_access = container.data_access()
         data_validator = container.data_validator()
         process_scraped_NBA_data = container.process_scraped_NBA_data()
+        matchup_processor = container.matchup_processor()
         error_handler = container.error_handler_factory()
 
         app_logger.structured_log(
@@ -71,6 +75,50 @@ def main() -> None:
             app_logger.structured_log(logging.INFO, "Validating processed dataframe")
             if not data_validator.validate_processed_dataframe(processed_dataframe, processed_file_name):
                 raise error_handler.create_error_handler('data_validation', "Data validation of processed data failed")
+
+            # Load today's matchups and create placeholder rows
+            app_logger.structured_log(logging.INFO, "Loading today's matchups")
+            try:
+                matchups_df, games_df = matchup_processor.load_todays_matchups()
+
+                if not matchups_df.empty:
+                    app_logger.structured_log(
+                        logging.INFO,
+                        "Creating placeholder rows for today's games",
+                        num_games=len(games_df)
+                    )
+
+                    today_date = datetime.now().strftime('%Y-%m-%d')
+                    todays_placeholder_rows = matchup_processor.create_placeholder_rows(
+                        matchups_df=matchups_df,
+                        games_df=games_df,
+                        reference_df=processed_dataframe,
+                        today_date=today_date
+                    )
+
+                    # Combine historical processed data with today's placeholder rows
+                    app_logger.structured_log(
+                        logging.INFO,
+                        "Combining historical data with today's games",
+                        historical_rows=len(processed_dataframe),
+                        todays_rows=len(todays_placeholder_rows)
+                    )
+                    processed_dataframe = pd.concat(
+                        [processed_dataframe, todays_placeholder_rows],
+                        ignore_index=True
+                    )
+                else:
+                    app_logger.structured_log(
+                        logging.INFO,
+                        "No games scheduled for today - proceeding with historical data only"
+                    )
+            except Exception as e:
+                # If today's matchups don't exist (e.g., during backfill), continue with historical data only
+                app_logger.structured_log(
+                    logging.WARNING,
+                    "Could not load today's matchups - proceeding with historical data only",
+                    error=str(e)
+                )
 
             app_logger.structured_log(logging.INFO, "Saving team-centric data", file_name=processed_file_name)
             data_access.save_dataframes([processed_dataframe], [processed_file_name], cumulative=True) # expects a list of dataframes and a list of file names

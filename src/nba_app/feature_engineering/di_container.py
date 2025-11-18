@@ -4,7 +4,6 @@ from ml_framework.core.common_di_container import CommonDIContainer
 from ..data_validator import DataValidator
 from .feature_engineer import FeatureEngineer
 from .feature_selector import FeatureSelector
-from .matchup_processor import MatchupProcessor
 
 
 class DIContainer(CommonDIContainer):
@@ -34,13 +33,4 @@ class DIContainer(CommonDIContainer):
         FeatureSelector,
         config=CommonDIContainer.config,
         app_logger=CommonDIContainer.app_logger
-    )
-
-    # Matchup processor for today's games
-    matchup_processor = providers.Factory(
-        MatchupProcessor,
-        config=CommonDIContainer.config,
-        app_logger=CommonDIContainer.app_logger,
-        data_access=CommonDIContainer.data_access,
-        error_handler=CommonDIContainer.error_handler_factory
     )

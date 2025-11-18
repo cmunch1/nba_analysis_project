@@ -3,6 +3,7 @@ from dependency_injector import containers, providers
 from ml_framework.core.common_di_container import CommonDIContainer
 from ..data_validator import DataValidator
 from .process_scraped_NBA_data import ProcessScrapedNBAData
+from .matchup_processor import MatchupProcessor
 
 
 class DIContainer(CommonDIContainer):
@@ -28,4 +29,13 @@ class DIContainer(CommonDIContainer):
         app_logger=CommonDIContainer.app_logger,
         app_file_handler=CommonDIContainer.app_file_handler
     )
-    
+
+    # Matchup processor for today's games
+    matchup_processor = providers.Factory(
+        MatchupProcessor,
+        config=CommonDIContainer.config,
+        app_logger=CommonDIContainer.app_logger,
+        data_access=CommonDIContainer.data_access,
+        error_handler=CommonDIContainer.error_handler_factory
+    )
+

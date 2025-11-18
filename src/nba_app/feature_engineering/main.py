@@ -22,7 +22,6 @@ import sys
 import traceback
 import logging
 import pandas as pd
-from datetime import datetime
 
 from .di_container import DIContainer
 
@@ -46,7 +45,6 @@ def main() -> None:
         data_access = container.data_access()
         data_validator = container.data_validator()
         feature_engineer = container.feature_engineer()
-        matchup_processor = container.matchup_processor()
         error_handler = container.error_handler_factory()
 
         app_logger.structured_log(
@@ -67,49 +65,12 @@ def main() -> None:
             if not data_validator.validate_processed_dataframe(processed_dataframe, config.team_centric_data_file):
                 raise error_handler.create_error_handler('data_validation', "Data validation of processed data failed")
 
-            # Load today's matchups and create placeholder rows
-            app_logger.structured_log(logging.INFO, "Loading today's matchups")
-            try:
-                matchups_df, games_df = matchup_processor.load_todays_matchups()
-
-                if not matchups_df.empty:
-                    app_logger.structured_log(
-                        logging.INFO,
-                        "Creating placeholder rows for today's games",
-                        num_games=len(games_df)
-                    )
-
-                    today_date = datetime.now().strftime('%Y-%m-%d')
-                    todays_placeholder_rows = matchup_processor.create_placeholder_rows(
-                        matchups_df=matchups_df,
-                        games_df=games_df,
-                        reference_df=processed_dataframe,
-                        today_date=today_date
-                    )
-
-                    # Combine historical processed data with today's placeholder rows
-                    app_logger.structured_log(
-                        logging.INFO,
-                        "Combining historical data with today's games",
-                        historical_rows=len(processed_dataframe),
-                        todays_rows=len(todays_placeholder_rows)
-                    )
-                    processed_dataframe = pd.concat(
-                        [processed_dataframe, todays_placeholder_rows],
-                        ignore_index=True
-                    )
-                else:
-                    app_logger.structured_log(
-                        logging.INFO,
-                        "No games scheduled for today - proceeding with historical data only"
-                    )
-            except Exception as e:
-                # If today's matchups don't exist (e.g., during training), continue with historical data only
-                app_logger.structured_log(
-                    logging.WARNING,
-                    "Could not load today's matchups - proceeding with historical data only",
-                    error=str(e)
-                )
+            # Note: Today's games are now included in processed data by data_processing module
+            app_logger.structured_log(
+                logging.INFO,
+                "Loaded processed data (includes today's games)",
+                total_rows=len(processed_dataframe)
+            )
 
             # engineer features and export schema
             app_logger.structured_log(logging.INFO, "Engineering features")

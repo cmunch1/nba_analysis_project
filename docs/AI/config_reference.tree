@@ -1,7 +1,7 @@
 NBA Analysis Project - Configuration Tree
 ════════════════════════════════════════
 
-Generated: 2025-11-04 07:58:06
+Generated: 2025-11-10 12:55:37
 
 Configuration Hierarchy (namespace structure):
 
@@ -26,8 +26,8 @@ Configuration Hierarchy (namespace structure):
 │   │   ├── include_columns [10 items]
 │   │   └── high_probability_threshold: 0.6 (float)
 │   ├── results/
-│   │   ├── lookback_days: 10 (int)
-│   │   └── include_columns [11 items]
+│   │   ├── lookback_days: 365 (int)
+│   │   └── include_columns [13 items]
 │   ├── performance/
 │   │   ├── time_windows [3 items]
 │   │   │   ├── {'name': 'season', 'description': 'Entire current season', 'start_date': '2025-10-22'}
@@ -35,10 +35,10 @@ Configuration Hierarchy (namespace structure):
 │   │   │   └── {'name': '30day', 'description': 'Last 30 days', 'days_back': 30}
 │   │   └── metrics [6 items]
 │   ├── team_performance/
-│   │   ├── min_games: 10 (int)
+│   │   ├── min_games: 5 (int)
 │   │   ├── metrics [5 items]
 │   │   │   ├── accuracy
-│   │   │   ├── avg_confidence
+│   │   │   ├── avg_predicted_probability
 │   │   │   ├── total_predictions
 │   │   │   ├── home_accuracy
 │   │   │   └── away_accuracy
@@ -50,7 +50,7 @@ Configuration Hierarchy (namespace structure):
 │   │   │   ├── accuracy
 │   │   │   ├── brier_score
 │   │   │   ├── calibration_error
-│   │   │   └── avg_confidence
+│   │   │   └── avg_predicted_probability
 │   │   ├── trend_window_days: 60 (int)
 │   │   └── drift_threshold/
 │   │       ├── accuracy_drop: 0.1 (float)
@@ -257,6 +257,10 @@ Configuration Hierarchy (namespace structure):
 │   │   ├── max_days_ahead: 2 (int)
 │   │   ├── skip_incomplete_features: True (bool)
 │   │   └── min_team_games: 5 (int)
+│   ├── backfill/
+│   │   ├── enabled: True (bool)
+│   │   ├── lookback_days: 14 (int)
+│   │   └── require_actual_results: True (bool)
 │   └── validation/
 │       ├── validate_features: True (bool)
 │       ├── validate_probabilities: True (bool)

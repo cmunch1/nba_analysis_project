@@ -4,7 +4,7 @@ This module runs daily AFTER feature_engineering to generate predictions.
 
 Simplified workflow (matching your proven approach):
 1. Load engineered data (already contains today's games with features)
-2. Filter to today's games only (using todays_games_ids.csv)
+2. Filter to latest date games (games with the most recent date in the data)
 3. Load production model
 4. Make predictions (preprocessing automatic via ModelPredictor)
 5. Apply postprocessing (calibration + conformal prediction)
@@ -36,16 +36,16 @@ from ml_framework.postprocessing.conformal_predictor import ConformalPredictor
 LOG_FILE = "inference.log"
 
 
-def _identify_games_to_predict(todays_game_ids: list,
+def _identify_games_to_predict(latest_date_games: pd.DataFrame,
                                engineered_df: pd.DataFrame,
                                config,
                                app_logger,
                                error_handler) -> pd.DataFrame:
     """
-    Identify all games that need predictions (today's games + backfill).
+    Identify all games that need predictions (latest date games + backfill).
 
     Args:
-        todays_game_ids: List of game IDs scheduled for today
+        latest_date_games: DataFrame of games with the latest date (today's games)
         engineered_df: Full engineered features dataframe
         config: Configuration manager
         app_logger: Logger instance
@@ -58,10 +58,10 @@ def _identify_games_to_predict(todays_game_ids: list,
 
     games_list = []
 
-    # Add today's scheduled games
-    for game_id in todays_game_ids:
+    # Add latest date games (typically today's games)
+    for _, game_row in latest_date_games.iterrows():
         games_list.append({
-            'game_id': game_id,
+            'game_id': game_row['game_id'],
             'is_backfilled': False
         })
 
@@ -138,14 +138,8 @@ def _identify_games_to_predict(todays_game_ids: list,
         num_recent_games=len(recent_games)
     )
 
-    # Normalize today's game IDs for comparison (strip leading digit if present)
-    normalized_todays_ids = set()
-    for gid in todays_game_ids:
-        gid_str = str(gid)
-        # If 8 digits, strip first digit to match processed format
-        if len(gid_str) == 8:
-            normalized_todays_ids.add(gid_str[1:])
-        normalized_todays_ids.add(gid_str)
+    # Get latest date game IDs for comparison
+    latest_date_game_ids = set(latest_date_games['game_id'].astype(str).tolist())
 
     # Check which games need predictions
     for _, game_row in recent_games.iterrows():
@@ -155,8 +149,8 @@ def _identify_games_to_predict(todays_game_ids: list,
         if game_id in existing_game_ids:
             continue
 
-        # Skip if it's in today's games (already added)
-        if game_id in normalized_todays_ids:
+        # Skip if it's in latest date games (already added)
+        if game_id in latest_date_game_ids:
             continue
 
         # If require_actual_results, check that game has been played
@@ -185,10 +179,11 @@ def _identify_games_to_predict(todays_game_ids: list,
         result_df['game_id'] = result_df['game_id'].astype(int)
 
     num_backfill = result_df['is_backfilled'].sum() if not result_df.empty else 0
+    num_latest_date_games = len(latest_date_games)
     app_logger.structured_log(
         logging.INFO,
         "Games identified for prediction",
-        num_todays_games=len(todays_game_ids),
+        num_latest_date_games=num_latest_date_games,
         num_backfill_games=int(num_backfill),
         total_games=len(result_df)
     )
@@ -232,28 +227,7 @@ def main() -> None:
 
         with app_logger.log_context(app_version=config.app_version, environment=config.environment):
 
-            # Step 1: Load today's game IDs
-            app_logger.structured_log(logging.INFO, "Loading today's game IDs")
-            # Load from newly_scraped directory (not cumulative)
-            todays_games_path = Path(config.newly_scraped_directory) / config.todays_games_ids_file
-            todays_games_df = pd.read_csv(todays_games_path)
-
-            todays_game_ids = []
-            if not todays_games_df.empty:
-                todays_game_ids = todays_games_df['game_id'].tolist()
-                app_logger.structured_log(
-                    logging.INFO,
-                    "Today's games loaded",
-                    num_games=len(todays_game_ids),
-                    game_ids=todays_game_ids
-                )
-            else:
-                app_logger.structured_log(
-                    logging.INFO,
-                    "No games scheduled for today"
-                )
-
-            # Step 2: Load engineered data (includes today's games with features)
+            # Step 1: Load engineered data (includes today's games with features)
             app_logger.structured_log(
                 logging.INFO,
                 "Loading engineered data",
@@ -263,9 +237,34 @@ def main() -> None:
             engineered_data_path = Path(config.engineered_data_directory) / config.engineered_data_file
             engineered_df = pd.read_csv(engineered_data_path)
 
-            # Step 3: Identify games to predict (today's games + backfill if enabled)
+            # Step 2: Filter to latest date games (typically today's games)
+            if 'game_date' not in engineered_df.columns:
+                raise error_handler.create_error_handler(
+                    'data_validation',
+                    "game_date column not found in engineered data"
+                )
+
+            latest_date = engineered_df['game_date'].max()
+            latest_date_games = engineered_df[engineered_df['game_date'] == latest_date].copy()
+
+            app_logger.structured_log(
+                logging.INFO,
+                "Latest date games identified",
+                latest_date=latest_date,
+                num_games=len(latest_date_games),
+                game_ids=latest_date_games['game_id'].tolist() if len(latest_date_games) <= 10 else latest_date_games['game_id'].tolist()[:10]
+            )
+
+            if latest_date_games.empty:
+                app_logger.structured_log(
+                    logging.INFO,
+                    "No games found for latest date"
+                )
+                return
+
+            # Step 3: Identify games to predict (latest date games + backfill if enabled)
             all_game_ids = _identify_games_to_predict(
-                todays_game_ids=todays_game_ids,
+                latest_date_games=latest_date_games,
                 engineered_df=engineered_df,
                 config=config,
                 app_logger=app_logger,
@@ -275,7 +274,7 @@ def main() -> None:
             if all_game_ids.empty:
                 app_logger.structured_log(
                     logging.INFO,
-                    "No games to predict (no scheduled games and no backfill needed)"
+                    "No games to predict (no latest date games and no backfill needed)"
                 )
                 return
 
@@ -289,13 +288,16 @@ def main() -> None:
                     expected_game_ids=all_game_ids['game_id'].tolist()
                 )
 
+            num_latest_date = len(latest_date_games)
+            num_backfill = len(all_game_ids) - num_latest_date
+
             app_logger.structured_log(
                 logging.INFO,
                 "Games to predict filtered from engineered data",
                 num_rows=len(games_to_predict),
                 num_features=len(games_to_predict.columns),
-                num_todays_games=len(todays_game_ids),
-                num_backfill_games=len(all_game_ids) - len(todays_game_ids)
+                num_latest_date_games=num_latest_date,
+                num_backfill_games=num_backfill
             )
 
             # Step 4: Load production model
