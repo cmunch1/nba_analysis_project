@@ -157,7 +157,7 @@ class DataValidator(BaseDataValidator):
     def _validate_dataframe(self, df: pd.DataFrame, file_name: str) -> bool:
         """
         Validate the dataframe for common issues like nulls and duplicates
-        
+
         Args:
             df: dataframe to validate.
             file_name: name of the file being validated.
@@ -165,16 +165,43 @@ class DataValidator(BaseDataValidator):
         Returns:
             bool: True if passes all the checks, False otherwise
         """
+        from datetime import datetime
+
         self.app_logger.structured_log(logging.INFO, f"Checking {file_name} for nulls and duplicates")
 
         if df.duplicated().any():
             self.app_logger.structured_log(logging.WARNING, f"Dataframe {file_name} has duplicate records")
             return False
 
+        # For processed data, allow NaN values in future-dated rows (placeholder games)
         if df.isnull().values.any():
-            self.app_logger.structured_log(logging.WARNING, f"Dataframe {file_name} has null values")
-            return False
-        
+            # If game_date column exists, check if nulls are only in future-dated rows
+            if 'game_date' in df.columns:
+                today = datetime.now().strftime('%Y-%m-%d')
+                future_rows_mask = df['game_date'] >= today
+                historical_rows_mask = df['game_date'] < today
+
+                # Check if historical rows have any nulls
+                if historical_rows_mask.any() and df[historical_rows_mask].isnull().values.any():
+                    self.app_logger.structured_log(
+                        logging.WARNING,
+                        f"Dataframe {file_name} has null values in historical rows",
+                        null_counts=df[historical_rows_mask].isnull().sum().to_dict()
+                    )
+                    return False
+
+                # If there are future rows with nulls, that's expected for placeholder games
+                if future_rows_mask.any() and df[future_rows_mask].isnull().values.any():
+                    self.app_logger.structured_log(
+                        logging.INFO,
+                        f"Dataframe {file_name} has null values in future-dated rows (expected for placeholder games)",
+                        num_future_rows=future_rows_mask.sum()
+                    )
+            else:
+                # If no game_date column, nulls are not allowed
+                self.app_logger.structured_log(logging.WARNING, f"Dataframe {file_name} has null values")
+                return False
+
         self.app_logger.structured_log(logging.INFO, f"Dataframe {file_name} passes initial checks",
                        rows=df.shape[0], columns=df.shape[1])
         return True
