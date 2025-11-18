@@ -1,0 +1,102 @@
+name: Inference with Kaggle Data (Daily)
+
+# This workflow is for users who want to run predictions without webscraping
+# It downloads maintained data from Kaggle and runs inference
+# No secrets required (uses public Kaggle dataset)
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 4am EST = 9am UTC (after data collection completes)
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      skip_dashboard:
+        description: 'Skip dashboard prep stage'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  inference:
+    runs-on: ubuntu-latest
+
+    # Use the pre-built Docker image
+    container:
+      image: ghcr.io/${{ github.repository }}:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /home/runner/work/${{ github.repository }}/data:/app/data
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download Data from Kaggle
+        run: |
+          # Install Kaggle CLI (public dataset - no auth required)
+          pip install -q kaggle
+
+          # Create directories
+          mkdir -p data/cumulative_scraped data/processed
+
+          # Download public dataset
+          kaggle datasets download -d chrismunch/nba-game-team-statistics \
+            -p data --unzip || {
+              echo "Warning: Could not download from Kaggle"
+              echo "Dataset may be private or unavailable"
+              exit 1
+            }
+
+          # Verify files were downloaded
+          echo "Downloaded files:"
+          ls -lh data/cumulative_scraped/ data/processed/ 2>/dev/null || true
+
+      - name: Run Feature Engineering
+        run: python -m src.nba_app.feature_engineering.main
+
+      - name: Run Inference
+        run: python -m src.nba_app.inference.main
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
+      - name: Run Dashboard Prep
+        if: ${{ !inputs.skip_dashboard }}
+        run: python -m src.nba_app.dashboard_prep.main
+
+      - name: Upload Predictions Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: predictions
+          path: |
+            data/predictions/predictions_*.csv
+            data/dashboard/dashboard_data.csv
+          retention-days: 30
+
+      - name: Upload Dashboard Data (if enabled)
+        if: ${{ !inputs.skip_dashboard && success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: dashboard
+          path: data/dashboard/
+          retention-days: 7
+
+      - name: Upload logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pipeline-logs
+          path: logs/
+          retention-days: 7
+
+      - name: Comment on Commit (if manual run)
+        if: github.event_name == 'workflow_dispatch' && success()
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.number }}
+          body: |
+            ✅ **Inference Pipeline Completed**
+
+            Predictions generated successfully using Kaggle data.
+
+            📊 View artifacts in the Actions tab.

@@ -7,21 +7,89 @@ An end-to-end machine learning system for predicting NBA game outcomes with ~70%
 
 ## 🚀 Quick Start
 
-### For Users (Fastest Way)
+### Option A: Use Kaggle Data (Recommended - No Webscraping)
+
+Perfect for most users - uses maintained public dataset, no secrets required:
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/YOUR_GITHUB_USERNAME/nba_analysis_project.git
 cd nba_analysis_project
 
-# 2. Download latest data from Kaggle (public, no auth required)
-./scripts/download_kaggle_data.sh
+# 2. Install dependencies
+uv sync
 
-# 3. Run predictions
-./scripts/run_nightly_pipeline.sh --data-source kaggle
+# 3. Run inference pipeline with Kaggle data
+./scripts/run_with_kaggle_data.sh
 
 # 4. View interactive dashboard
-streamlit run streamlit_app/app.py
+uv run streamlit run streamlit_app/app.py
+```
+
+**What this does:**
+- Downloads latest data from Kaggle (public, no auth)
+- Runs feature engineering (849 features)
+- Generates predictions with uncertainty quantification
+- Updates dashboard statistics
+
+### Option B: Full Pipeline with Webscraping
+
+For users who want to scrape fresh data themselves:
+
+```bash
+# 1. Clone and install dependencies
+git clone https://github.com/YOUR_GITHUB_USERNAME/nba_analysis_project.git
+cd nba_analysis_project
+uv sync
+
+# 2. Run full pipeline (webscraping → predictions)
+./scripts/run_nightly_pipeline.sh
+
+# 3. View dashboard
+uv run streamlit run streamlit_app/app.py
+```
+
+**What this does:**
+- Scrapes NBA.com for schedule and results (requires reliable connection)
+- Processes and consolidates data
+- Runs feature engineering and inference
+- Updates dashboard
+
+### Option C: Windows Users (Without WSL)
+
+For native Windows PowerShell/CMD:
+
+```powershell
+# 1. Clone the repository
+git clone https://github.com/YOUR_GITHUB_USERNAME/nba_analysis_project.git
+cd nba_analysis_project
+
+# 2. Install dependencies
+uv sync
+
+# 3. Run pipeline (cross-platform Python script)
+uv run scripts/run_pipeline.py --source kaggle
+
+# 4. View dashboard
+uv run streamlit run streamlit_app/app.py
+```
+
+**Alternative: Use Docker (recommended for Windows)**
+```powershell
+# Run pipeline in container (includes all dependencies)
+docker-compose up nba-pipeline
+
+# View dashboard
+docker-compose up nba-dashboard
+```
+
+**Alternative: Use WSL (recommended for development)**
+```powershell
+# Install WSL if not already installed
+wsl --install
+
+# Inside WSL, follow Linux instructions
+./scripts/run_with_kaggle_data.sh
 ```
 
 ### For Contributors/Forkers
@@ -92,21 +160,22 @@ View daily predictions and historical performance:
 
 ### GitHub Actions Workflows
 
-1. **Data Collection** (Nightly at 3am EST)
+1. **Data Collection** (`data_collection.yml`) - Nightly at 3am EST
    - Scrapes NBA.com for schedule and results
    - Updates Kaggle datasets automatically
-   - Maintainer only (requires proxy + secrets)
+   - **Maintainer only** (requires proxy + secrets)
 
-2. **ML Pipeline** (After data collection)
+2. **Inference with Kaggle Data** (`inference_with_kaggle_data.yml`) - Nightly at 4am EST
    - Downloads from Kaggle (public, no secrets!)
    - Generates predictions with uncertainty
-   - Anyone can fork and run
+   - Updates dashboard statistics
+   - **Anyone can fork and run**
 
-3. **Docker Build** (On code changes)
+3. **Docker Build** (`docker-build.yml`) - On code changes
    - Builds and pushes to GitHub Container Registry
    - Used by all workflows for consistency
 
-4. **Local Development** (Manual trigger)
+4. **Local Development** - Manual trigger
    - Test with Kaggle, local, or scraped data
    - Flexible for experimentation
 

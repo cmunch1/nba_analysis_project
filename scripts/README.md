@@ -4,12 +4,29 @@ This directory contains helper scripts for the NBA Analysis Project.
 
 ## Overview
 
-| Script | Purpose | Requires Secrets |
-|--------|---------|------------------|
-| `run_nightly_pipeline.sh` | Main pipeline orchestration | No (optional proxy) |
-| `download_kaggle_data.sh` | Download public Kaggle datasets | No |
-| `setup_fork.sh` | Interactive setup wizard for forkers | No |
-| `detect_gpu.sh` | Detect GPU and recommend Docker setup | No |
+| Script | Purpose | Platform | Requires Secrets |
+|--------|---------|----------|------------------|
+| `run_with_kaggle_data.sh` | Inference pipeline using Kaggle data | Linux/macOS | No |
+| `run_nightly_pipeline.sh` | Full pipeline with webscraping | Linux/macOS | No (optional proxy) |
+| `run_pipeline.py` | Cross-platform pipeline runner | All | No |
+| `download_kaggle_data.sh` | Download public Kaggle datasets | Linux/macOS | No |
+| `upload_to_kaggle.sh` | Upload data to Kaggle (maintainer) | Linux/macOS | Yes |
+| `setup_fork.sh` | Interactive setup wizard for forkers | Linux/macOS | No |
+| `detect_gpu.sh` | Detect GPU and recommend Docker setup | Linux/macOS | No |
+
+## Which Script Should I Use?
+
+**Linux/macOS Users:**
+- 🎯 **Recommended**: `./scripts/run_with_kaggle_data.sh` (fastest, no webscraping)
+- 🔄 **Full pipeline**: `./scripts/run_nightly_pipeline.sh` (includes webscraping)
+
+**Windows Users:**
+- 🎯 **Recommended**: `uv run scripts/run_pipeline.py --source kaggle`
+- 🐳 **Alternative**: Use Docker (see [docker-compose.yml](../docker-compose.yml))
+- 💻 **Alternative**: Install WSL and use bash scripts
+
+**First-Time Setup:**
+- 🚀 **All platforms**: `./scripts/setup_fork.sh` (interactive wizard)
 
 ## Quick Start
 
@@ -224,6 +241,219 @@ To modify the pipeline:
 - [DEPLOYMENT_PLAN.md](../DEPLOYMENT_PLAN.md) - Full deployment roadmap
 - [configs/nba/](../configs/nba/) - Configuration files for each module
 - [src/nba_app/](../src/nba_app/) - Source code for pipeline modules
+
+---
+
+## run_with_kaggle_data.sh
+
+Streamlined pipeline for users who want to use Kaggle data without webscraping.
+
+### Pipeline Stages
+
+1. **Download from Kaggle** - Get latest cumulative_scraped + processed data
+2. **Feature Engineering** - Generate 849 features with deterministic ordering
+3. **Inference** - Generate predictions with uncertainty quantification
+4. **Dashboard Prep** - Aggregate predictions and results (optional)
+
+### Usage
+
+```bash
+# Full pipeline with Kaggle download
+./scripts/run_with_kaggle_data.sh
+
+# Skip download (use existing data)
+./scripts/run_with_kaggle_data.sh --skip-download
+
+# Skip dashboard prep
+./scripts/run_with_kaggle_data.sh --skip-dashboard
+
+# Custom Kaggle dataset
+./scripts/run_with_kaggle_data.sh --dataset your-username/your-data
+
+# Show help
+./scripts/run_with_kaggle_data.sh --help
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--skip-download` | Skip Kaggle download (use existing local data) |
+| `--skip-dashboard` | Skip dashboard prep stage |
+| `--dataset USERNAME/DATASET` | Specify custom Kaggle dataset |
+| `-h`, `--help` | Show usage information |
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success - all stages completed |
+| 1 | Download failed (Kaggle data unavailable) |
+| 3 | Feature engineering failed |
+| 4 | Inference failed |
+| 5 | Dashboard prep failed |
+| 99 | Setup/configuration error |
+
+### When to Use This Script
+
+✅ **Use this script if you:**
+- Want to get started quickly without webscraping
+- Are forking the repo without secrets
+- Want to use maintained public dataset
+- Want faster pipeline execution (~5-10 min vs ~15-20 min)
+
+❌ **Use `run_nightly_pipeline.sh` instead if you:**
+- Want to scrape fresh data from NBA.com
+- Need full control over data collection
+- Are the project maintainer
+
+### Example Run
+
+```bash
+$ ./scripts/run_with_kaggle_data.sh
+
+[INFO] NBA Kaggle Pipeline Starting
+[INFO] Timestamp: 2025-11-18 10:30:00
+[INFO] Project Directory: /home/chris/projects/nba_analysis_project
+[INFO] Configuration:
+[INFO]   Kaggle Dataset: chrismunch/nba-game-team-statistics
+[INFO]   Skip Download: false
+[INFO]   Skip Dashboard: false
+
+================================================================================
+  STAGE 1: Download Data from Kaggle
+================================================================================
+[INFO] Downloading from Kaggle dataset: chrismunch/nba-game-team-statistics
+[SUCCESS] Stage 1 (Kaggle Download) completed
+[INFO] Downloaded files:
+  data/cumulative_scraped/games_traditional.csv (15M)
+  data/processed/teams_boxscores.csv (8.2M)
+
+================================================================================
+  STAGE 2: Feature Engineering (849 Features with Deterministic Ordering)
+================================================================================
+[SUCCESS] Stage 2 (Feature Engineering) completed in 57s
+
+================================================================================
+  STAGE 3: Inference (Predictions with Uncertainty Quantification)
+================================================================================
+[SUCCESS] Stage 3 (Inference) completed in 5s
+
+================================================================================
+  STAGE 4: Dashboard Prep (Aggregation & Performance Metrics)
+================================================================================
+[SUCCESS] Stage 4 (Dashboard Prep) completed in 3s
+
+================================================================================
+  PIPELINE COMPLETE
+================================================================================
+[SUCCESS] Pipeline completed successfully in 312s
+[INFO] Output Files:
+[SUCCESS]   ✓ data/predictions/predictions_2025-11-18.csv
+[INFO]     Generated 8 predictions
+[SUCCESS]   ✓ data/dashboard/dashboard_data.csv
+
+[INFO] Next Steps:
+[INFO]   • View predictions: cat data/predictions/predictions_2025-11-18.csv
+[INFO]   • Launch dashboard: uv run streamlit run streamlit_app/app.py
+[INFO]   • Refresh data: Run this script again (daily)
+
+[SUCCESS] All done! 🏀
+```
+
+---
+
+## run_pipeline.py
+
+**Cross-platform Python script** that works on Windows, macOS, and Linux. Provides the same functionality as the bash scripts but uses pure Python.
+
+### Usage
+
+```bash
+# Kaggle workflow (recommended)
+uv run scripts/run_pipeline.py --source kaggle
+
+# Full pipeline with webscraping
+uv run scripts/run_pipeline.py --source scraping
+
+# Skip download (use existing data)
+uv run scripts/run_pipeline.py --source kaggle --skip-download
+
+# Skip dashboard prep
+uv run scripts/run_pipeline.py --source kaggle --skip-dashboard
+
+# Show help
+uv run scripts/run_pipeline.py --help
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--source {kaggle,scraping}` | Data source (default: kaggle) |
+| `--skip-download` | Skip Kaggle download (use existing local data) |
+| `--skip-webscraping` | Skip webscraping stage (use existing scraped data) |
+| `--skip-dashboard` | Skip dashboard prep stage |
+| `--dataset USERNAME/DATASET` | Specify custom Kaggle dataset |
+
+### When to Use This Script
+
+✅ **Use this script if you:**
+- Are on Windows without WSL
+- Prefer Python over bash
+- Need programmatic control
+- Want to integrate with Python tools
+
+❌ **Use bash scripts instead if you:**
+- Are on Linux/macOS (bash scripts have better logging)
+- Want simplest user experience
+- Are running in Docker (includes bash)
+
+### Features
+
+- ✅ **Cross-platform** - Works on Windows PowerShell/CMD, macOS, Linux
+- ✅ **Colored output** - Uses colorama for Windows compatibility
+- ✅ **Same functionality** - Identical pipeline stages as bash scripts
+- ✅ **Error handling** - Comprehensive exception handling
+- ✅ **Performance tracking** - Reports execution time for each stage
+
+### Example (Windows PowerShell)
+
+```powershell
+PS C:\projects\nba_analysis_project> uv run scripts/run_pipeline.py --source kaggle
+
+[INFO] NBA Prediction Pipeline Starting
+[INFO] Timestamp: 2025-11-18 10:30:00
+[INFO] Project Directory: C:\projects\nba_analysis_project
+[INFO] Source: kaggle
+
+================================================================================
+  STAGE 1: Download Data from Kaggle
+================================================================================
+[INFO] Running: kaggle datasets download -d chrismunch/nba-game-team-statistics -p data --unzip
+[SUCCESS] Kaggle Download completed in 23.4s
+
+================================================================================
+  STAGE 3: Feature Engineering (849 Features)
+================================================================================
+[SUCCESS] Feature Engineering completed in 58.2s
+
+================================================================================
+  STAGE 4: Inference (Predictions with Uncertainty)
+================================================================================
+[SUCCESS] Inference completed in 5.1s
+
+================================================================================
+  PIPELINE COMPLETE
+================================================================================
+[SUCCESS] Pipeline completed successfully in 312.5s
+
+[INFO] Next Steps:
+[INFO]   • View predictions: cat data/predictions/predictions_*.csv
+[INFO]   • Launch dashboard: uv run streamlit run streamlit_app/app.py
+
+[SUCCESS] All done! 🏀
+```
 
 ---
 

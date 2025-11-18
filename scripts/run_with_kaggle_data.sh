@@ -1,34 +1,30 @@
 #!/bin/bash
 
 ################################################################################
-# NBA Analysis Project - Full Nightly Pipeline with Webscraping
+# NBA Analysis Project - Kaggle Data Pipeline
 #
-# This script runs the COMPLETE batch pipeline for NBA win prediction:
-# 1. Webscraping - Scrape today's schedule and yesterday's results
-# 2. Data Processing - Clean and consolidate scraped data
-# 3. Feature Engineering - Generate features for today's games
-# 4. Inference - Generate predictions with uncertainty quantification
-# 5. Dashboard Prep - Aggregate predictions and results (OPTIONAL - skipped if blocked)
+# This script runs the inference pipeline using pre-scraped data from Kaggle:
+# 1. Download data from Kaggle (cumulative_scraped + processed)
+# 2. Feature Engineering - Generate features for today's games
+# 3. Inference - Generate predictions with uncertainty quantification
+# 4. Dashboard Prep - Aggregate predictions and results
 #
 # Use this script if you want to:
-# - Scrape fresh NBA data from NBA.com (requires reliable connection)
-# - Maintain your own cumulative dataset
-# - Have full control over data collection
-#
-# Alternative: If you want to skip webscraping and use maintained Kaggle data,
-#             use run_with_kaggle_data.sh instead
+# - Avoid webscraping (use maintained Kaggle dataset)
+# - Run predictions on a forked repo without secrets
+# - Focus on ML inference without data collection overhead
 #
 # Usage:
-#   ./scripts/run_nightly_pipeline.sh [--skip-webscraping] [--skip-dashboard]
+#   ./scripts/run_with_kaggle_data.sh [--skip-download] [--skip-dashboard]
 #
 # Options:
-#   --skip-webscraping   Skip stage 1 (use existing scraped data)
-#   --skip-dashboard     Skip stage 5
+#   --skip-download      Skip Kaggle download (use existing local data)
+#   --skip-dashboard     Skip dashboard prep stage
+#   --dataset            Kaggle dataset ID (default: chrismunch/nba-game-team-statistics)
 #
 # Exit Codes:
 #   0 - Success (all stages completed)
-#   1 - Stage 1 failed (webscraping)
-#   2 - Stage 2 failed (data processing)
+#   1 - Download failed (Kaggle data unavailable)
 #   3 - Stage 3 failed (feature engineering)
 #   4 - Stage 4 failed (inference)
 #   5 - Stage 5 failed (dashboard prep)
@@ -36,12 +32,12 @@
 #
 # Environment Variables:
 #   MLFLOW_TRACKING_URI - MLflow server URI (defaults to local mlruns)
-#   PROXY_URL - Proxy for webscraping (optional)
+#   KAGGLE_USERNAME - Kaggle username (for private datasets)
+#   KAGGLE_KEY - Kaggle API key (for private datasets)
 #
 ################################################################################
 
 set -u  # Exit on undefined variable
-# Note: We don't use -e because we want to handle errors ourselves
 
 # Colors for output
 RED='\033[0;31m'
@@ -55,29 +51,43 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LOG_DIR="${PROJECT_DIR}/logs"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-PIPELINE_LOG="${LOG_DIR}/pipeline_${TIMESTAMP}.log"
+PIPELINE_LOG="${LOG_DIR}/kaggle_pipeline_${TIMESTAMP}.log"
 
 # Default options
-SKIP_WEBSCRAPING=false
-SKIP_DASHBOARD=false  # Default to including dashboard
+SKIP_DOWNLOAD=false
+SKIP_DASHBOARD=false
+KAGGLE_DATASET="chrismunch/nba-game-team-statistics"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --skip-webscraping)
-            SKIP_WEBSCRAPING=true
+        --skip-download)
+            SKIP_DOWNLOAD=true
             shift
             ;;
         --skip-dashboard)
             SKIP_DASHBOARD=true
             shift
             ;;
-        --include-dashboard)
-            SKIP_DASHBOARD=false
-            shift
+        --dataset)
+            KAGGLE_DATASET="$2"
+            shift 2
             ;;
         -h|--help)
-            echo "Usage: $0 [--skip-webscraping] [--skip-dashboard] [--include-dashboard]"
+            echo "Usage: $0 [--skip-download] [--skip-dashboard] [--dataset dataset-id]"
+            echo ""
+            echo "Run NBA prediction pipeline using Kaggle data (no webscraping)"
+            echo ""
+            echo "Options:"
+            echo "  --skip-download   Skip Kaggle download (use existing local data)"
+            echo "  --skip-dashboard  Skip dashboard prep stage"
+            echo "  --dataset         Kaggle dataset ID (default: chrismunch/nba-game-team-statistics)"
+            echo "  --help            Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                                    # Full pipeline with Kaggle download"
+            echo "  $0 --skip-download                    # Use existing local data"
+            echo "  $0 --dataset your-username/your-data  # Use custom Kaggle dataset"
             exit 0
             ;;
         *)
@@ -145,7 +155,7 @@ run_stage() {
 # Pre-flight Checks
 ################################################################################
 
-log_info "NBA Nightly Pipeline Starting"
+log_info "NBA Kaggle Pipeline Starting"
 log_info "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
 log_info "Project Directory: $PROJECT_DIR"
 log_info "Log File: $PIPELINE_LOG"
@@ -175,7 +185,8 @@ mkdir -p "$LOG_DIR"
 
 # Display configuration
 log_info "Configuration:"
-log_info "  Skip Webscraping: $SKIP_WEBSCRAPING"
+log_info "  Kaggle Dataset: $KAGGLE_DATASET"
+log_info "  Skip Download: $SKIP_DOWNLOAD"
 log_info "  Skip Dashboard: $SKIP_DASHBOARD"
 
 ################################################################################
@@ -184,56 +195,87 @@ log_info "  Skip Dashboard: $SKIP_DASHBOARD"
 
 OVERALL_START_TIME=$(date +%s)
 
-# Stage 1: Webscraping
-if [ "$SKIP_WEBSCRAPING" = true ]; then
-    log_warning "Skipping Stage 1 (Webscraping) - using existing data"
+# Stage 1: Download from Kaggle
+if [ "$SKIP_DOWNLOAD" = true ]; then
+    log_warning "Skipping Kaggle download - using existing local data"
 else
-    print_header "1" "Webscraping (Schedule & Results)"
-    run_stage 1 "Webscraping" "uv run -m src.nba_app.webscraping.main"
-    STAGE1_EXIT=$?
-    if [ $STAGE1_EXIT -ne 0 ]; then
-        log_error "Pipeline failed at Stage 1 (Webscraping)"
-        exit $STAGE1_EXIT
+    print_header "1" "Download Data from Kaggle"
+
+    # Check if kaggle CLI is available
+    if ! command -v kaggle &> /dev/null; then
+        log_warning "Kaggle CLI not found, installing..."
+        uv pip install kaggle >> "$PIPELINE_LOG" 2>&1
+    fi
+
+    # Create directories
+    mkdir -p data/cumulative_scraped data/processed
+
+    log_info "Downloading from Kaggle dataset: $KAGGLE_DATASET"
+
+    # Download cumulative scraped data
+    if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip >> "$PIPELINE_LOG" 2>&1; then
+        log_success "Stage 1 (Kaggle Download) completed"
+
+        # Show what was downloaded
+        log_info "Downloaded files:"
+        if [ -d "data/cumulative_scraped" ]; then
+            ls -lh data/cumulative_scraped/*.csv 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+        fi
+        if [ -d "data/processed" ]; then
+            ls -lh data/processed/*.csv 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+        fi
+    else
+        log_error "Failed to download data from Kaggle"
+        log_error "Make sure:"
+        log_error "  1. Dataset exists: https://kaggle.com/datasets/$KAGGLE_DATASET"
+        log_error "  2. Dataset is public OR you have Kaggle credentials configured"
+        log_error "  3. Kaggle CLI is installed: uv pip install kaggle"
+        exit 1
     fi
 fi
 
-# Stage 2: Data Processing
-print_header "2" "Data Processing (Consolidation & Cleaning)"
-run_stage 2 "Data Processing" "uv run -m src.nba_app.data_processing.main"
-STAGE2_EXIT=$?
-if [ $STAGE2_EXIT -ne 0 ]; then
-    log_error "Pipeline failed at Stage 2 (Data Processing)"
-    exit $STAGE2_EXIT
-fi
+# Verify required files exist
+log_info "Verifying required data files..."
+REQUIRED_FILES=(
+    "data/processed/teams_boxscores.csv"
+)
+for file in "${REQUIRED_FILES[@]}"; do
+    if [ ! -f "$file" ]; then
+        log_error "Required file not found: $file"
+        log_error "Please run with download enabled or check data directory"
+        exit 1
+    fi
+done
+log_success "All required data files present"
 
-# Stage 3: Feature Engineering
-print_header "3" "Feature Engineering (849 Features with Deterministic Ordering)"
+# Stage 2: Feature Engineering
+print_header "2" "Feature Engineering (849 Features with Deterministic Ordering)"
 run_stage 3 "Feature Engineering" "uv run -m src.nba_app.feature_engineering.main"
 STAGE3_EXIT=$?
 if [ $STAGE3_EXIT -ne 0 ]; then
-    log_error "Pipeline failed at Stage 3 (Feature Engineering)"
+    log_error "Pipeline failed at Stage 2 (Feature Engineering)"
     exit $STAGE3_EXIT
 fi
 
-# Stage 4: Inference
-print_header "4" "Inference (Predictions with Uncertainty Quantification)"
+# Stage 3: Inference
+print_header "3" "Inference (Predictions with Uncertainty Quantification)"
 run_stage 4 "Inference" "uv run -m src.nba_app.inference.main"
 STAGE4_EXIT=$?
 if [ $STAGE4_EXIT -ne 0 ]; then
-    log_error "Pipeline failed at Stage 4 (Inference)"
+    log_error "Pipeline failed at Stage 3 (Inference)"
     exit $STAGE4_EXIT
 fi
 
-# Stage 5: Dashboard Prep (Optional)
+# Stage 4: Dashboard Prep (Optional)
 if [ "$SKIP_DASHBOARD" = true ]; then
-    log_warning "Skipping Stage 5 (Dashboard Prep) - known data schema blocker"
+    log_warning "Skipping Stage 4 (Dashboard Prep) per user request"
 else
-    print_header "5" "Dashboard Prep (Aggregation & Performance Metrics)"
+    print_header "4" "Dashboard Prep (Aggregation & Performance Metrics)"
     run_stage 5 "Dashboard Prep" "uv run -m src.nba_app.dashboard_prep.main"
     STAGE5_EXIT=$?
     if [ $STAGE5_EXIT -ne 0 ]; then
-        log_error "Pipeline failed at Stage 5 (Dashboard Prep)"
-        log_warning "This is a known issue - continuing anyway"
+        log_error "Pipeline failed at Stage 4 (Dashboard Prep)"
+        log_warning "Continuing anyway - predictions are still available"
         # Don't exit, just warn
     fi
 fi
@@ -254,14 +296,6 @@ log_info "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
 
 # List output files
 log_info "Output Files:"
-if [ "$SKIP_WEBSCRAPING" = false ]; then
-    if [ -f "data/newly_scraped/todays_matchups.csv" ]; then
-        log_success "  ✓ data/newly_scraped/todays_matchups.csv"
-    fi
-fi
-if [ -f "data/processed/teams_boxscores.csv" ]; then
-    log_success "  ✓ data/processed/teams_boxscores.csv"
-fi
 if [ -f "data/engineered/engineered_features.csv" ]; then
     log_success "  ✓ data/engineered/engineered_features.csv"
 fi
@@ -280,6 +314,14 @@ if [ "$SKIP_DASHBOARD" = false ] && [ -f "data/dashboard/dashboard_data.csv" ]; 
 fi
 
 log_info "Full log available at: $PIPELINE_LOG"
+
+# Next steps
+echo "" | tee -a "$PIPELINE_LOG"
+log_info "Next Steps:"
+log_info "  • View predictions: cat $LATEST_PREDICTION"
+log_info "  • Launch dashboard: uv run streamlit run streamlit_app/app.py"
+log_info "  • Refresh data: Run this script again (daily)"
+
 log_success "All done! 🏀"
 
 exit 0
