@@ -130,6 +130,17 @@ class CustomWebDriver(BaseWebDriver):
                     "Chromium binary not found, using default Chrome location"
                 )
 
+            # Check if running as root and enforce critical flags
+            if os.getuid() == 0:
+                logger.info("Running as root, enforcing --no-sandbox and --disable-setuid-sandbox")
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    "Running as root user, adding required Chrome flags for root execution"
+                )
+                # These will be added first, before config options, to ensure they're set
+                chrome_options.add_argument('--no-sandbox')
+                chrome_options.add_argument('--disable-setuid-sandbox')
+
             self._add_browser_options(chrome_options, 'chrome_options')
             return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
         except Exception as e:

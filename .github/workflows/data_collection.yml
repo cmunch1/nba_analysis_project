@@ -53,6 +53,23 @@ jobs:
           PROXY_URL: ${{ secrets.PROXY_URL }}
         run: /app/scripts/configure_proxy.sh
 
+      - name: Debug Chromium Installation
+        run: |
+          echo "=== Checking Chromium Installation ==="
+          which chromium || echo "chromium not in PATH"
+          which chromium-browser || echo "chromium-browser not in PATH"
+          ls -la /usr/bin/chromium* || echo "No chromium binaries in /usr/bin"
+          echo ""
+          echo "=== Chromium Version ==="
+          chromium --version || echo "Failed to get chromium version"
+          echo ""
+          echo "=== Testing Chromium Headless ==="
+          chromium --headless --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu --dump-dom https://www.google.com 2>&1 | head -20 || echo "Chromium test failed"
+          echo ""
+          echo "=== Running as user ==="
+          whoami
+          id
+
       - name: Run Webscraping
         run: |
           export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"

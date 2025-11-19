@@ -19,7 +19,7 @@ Chrome failed to start: exited abnormally.
 
 ## Fixes Applied
 
-### 1. Set Binary Location in Code
+### 1. Set Binary Location and Enforce Root Flags in Code
 
 **File**: `src/nba_app/webscraping/web_driver.py`
 
@@ -30,10 +30,24 @@ def _create_chrome_driver(self) -> webdriver.Chrome:
 
         # Set binary location for containerized environments
         import shutil
-        chromium_path = shutil.which('chromium')
+        import os
+        chromium_path = shutil.which('chromium') or shutil.which('chromium-browser') or shutil.which('google-chrome')
+
+        if not chromium_path:
+            for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome']:
+                if os.path.exists(path):
+                    chromium_path = path
+                    break
+
         if chromium_path:
             chrome_options.binary_location = chromium_path
             logger.info(f"Using Chromium binary at: {chromium_path}")
+
+        # Check if running as root and enforce critical flags
+        if os.getuid() == 0:
+            logger.info("Running as root, enforcing --no-sandbox and --disable-setuid-sandbox")
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-setuid-sandbox')
 
         self._add_browser_options(chrome_options, 'chrome_options')
         return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
@@ -43,8 +57,10 @@ def _create_chrome_driver(self) -> webdriver.Chrome:
 
 **Why this works**:
 - `shutil.which('chromium')` finds the chromium binary path (e.g., `/usr/bin/chromium`)
+- Multiple fallback paths for different Chromium installations
 - Setting `binary_location` tells ChromeDriver exactly where to find the browser
-- Only sets it if chromium is found, so it still works with regular Chrome installations
+- `os.getuid() == 0` detects if running as root and explicitly adds required flags
+- Flags are added before config options to ensure they're always set when running as root
 
 ### 2. Update Chrome Options in Config
 
