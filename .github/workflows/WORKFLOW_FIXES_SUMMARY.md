@@ -45,59 +45,60 @@ container:
 
 ### 3. Use Container's Pre-installed Packages
 
-**Problem**: `uv run` creates a new virtual environment and downloads all packages (3.5+ GB), causing:
+**Problem**: `uv run` (without `--no-sync`) creates a new virtual environment and downloads all packages (3.5+ GB), causing:
 - Slow workflow execution
 - "No space left on device" errors
 - Defeats the purpose of pre-built Docker containers
 
-**Fix**: Use `python` directly instead of `uv run`
+**Fix**: Use `uv run --no-sync` to use the container's pre-installed packages
 
 ```yaml
-# OLD
+# OLD (re-installs everything)
 - name: Run Webscraping
   run: uv run -m src.nba_app.webscraping.main
 
-- name: Run Data Processing
-  run: uv run -m src.nba_app.data_processing.main
-
-# NEW
+# NEW (uses pre-installed packages)
 - name: Run Webscraping
-  run: python -m src.nba_app.webscraping.main
-
-- name: Run Data Processing
-  run: python -m src.nba_app.data_processing.main
+  run: uv run --no-sync -m src.nba_app.webscraping.main
 ```
 
-**Files affected**: Lines 56, 59
+**Files affected**: Lines 57, 60
+
+**Why this is better than using `python` directly:**
+- `uv run --no-sync` automatically handles PYTHONPATH based on `pyproject.toml`
+- No need to manually export environment variables
+- Consistent with local development workflow
+- More explicit about using the project's virtual environment
 
 ---
 
-### 4. Fix Python Module Path in Container
+### 4. ~~Fix Python Module Path in Container~~ (NOT NEEDED with `uv run --no-sync`)
+
+**This fix is no longer needed if you use `uv run --no-sync` from fix #3.**
+
+`uv run` automatically handles PYTHONPATH based on your `pyproject.toml` configuration, so you don't need to manually set environment variables.
+
+<details>
+<summary>Click here if you're using `python` directly instead of `uv run`</summary>
 
 **Problem**: When GitHub Actions checks out code in a container, Python doesn't know where to find project modules, causing `ModuleNotFoundError: No module named 'ml_framework'`.
 
 **Fix**: Set `PYTHONPATH` to the `src` directory and update module paths
 
 ```yaml
-# OLD
-- name: Run Webscraping
-  run: python -m src.nba_app.webscraping.main
-
-# NEW
+# If using python directly (not recommended)
 - name: Run Webscraping
   run: |
     export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"
     python -m nba_app.webscraping.main
 ```
 
-**Files affected**: Lines 56-64
-
 **Why this happens**:
 - `pyproject.toml` defines packages as `["src/ml_framework", "src/nba_app"]` (line 37)
 - This means when installed, `ml_framework` and `nba_app` are top-level packages (not under `src.`)
 - Code imports use `from ml_framework.core...` not `from src.ml_framework.core...`
 - When running from source (not installed), Python needs `src/` in PYTHONPATH to find these top-level packages
-- We also remove the `src.` prefix from module names (use `nba_app.webscraping.main` not `src.nba_app.webscraping.main`)
+</details>
 
 ---
 
@@ -109,10 +110,10 @@ When updating other `.yml` workflow files, check for:
 - [ ] Update `actions/upload-artifact@v3` → `@v4`
 - [ ] Update any other `@v3` actions to `@v4`
 - [ ] Add `options: --user root` to any `container:` blocks
-- [ ] Replace `uv run` with `python` for container-based jobs
-- [ ] Add `export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"` before Python module execution
-- [ ] Remove `src.` prefix from module names (use `nba_app.` not `src.nba_app.`)
+- [ ] Replace `uv run` with `uv run --no-sync` for container-based jobs
 - [ ] Test the workflow after changes
+
+**Note**: If using `uv run --no-sync`, you don't need to manually set PYTHONPATH or remove the `src.` prefix - `uv` handles this automatically!
 
 ---
 
