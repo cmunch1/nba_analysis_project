@@ -73,7 +73,7 @@ browsers:
 
   # Chrome-specific options
 chrome_options:
-  --headless: null
+  --headless: null  # Old Chromium doesn't support --headless=new
   --no-sandbox: null
   --disable-dev-shm-usage: null
   --disable-gpu: null
@@ -84,15 +84,7 @@ chrome_options:
   --disable-notifications: null
   --disable-3d-apis: null
   --disable-blink-features=AutomationControlled: null
-  --disable-web-security: null
-  --ignore-certificate-errors: null
-  --ignore-ssl-errors: null
   --window-size=1920,1080: null  # Better than start-maximized for headless
-  --remote-debugging-port: 9222  # Required for headless mode
-  --disable-background-networking: null  # Reduce background activity
-  --disable-default-apps: null  # Don't load default apps
-  --disable-sync: null  # Disable Chrome sync
-  --user-data-dir: "/tmp/chrome-user-data"  # Explicit user data directory
   --user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
 
 
