@@ -74,9 +74,9 @@ container:
 
 ### 4. Fix Python Module Path in Container
 
-**Problem**: When GitHub Actions checks out code in a container, the working directory is `/github/workspace`, but Python doesn't know to look there for modules, causing `ModuleNotFoundError: No module named 'ml_framework'`.
+**Problem**: When GitHub Actions checks out code in a container, Python doesn't know where to find project modules, causing `ModuleNotFoundError: No module named 'ml_framework'`.
 
-**Fix**: Set `PYTHONPATH` environment variable for Python module steps
+**Fix**: Set `PYTHONPATH` to the GitHub workspace using the `GITHUB_WORKSPACE` environment variable
 
 ```yaml
 # OLD
@@ -85,18 +85,19 @@ container:
 
 # NEW
 - name: Run Webscraping
-  env:
-    PYTHONPATH: /github/workspace
-  run: python -m src.nba_app.webscraping.main
+  run: |
+    export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH:-}"
+    python -m src.nba_app.webscraping.main
 ```
 
-**Files affected**: Lines 56-59, 61-64
+**Files affected**: Lines 56-64
 
 **Why this happens**:
-- GitHub Actions checks out code to `/github/workspace`
-- Container is configured with `WORKDIR /app`
-- When steps run, they're in `/github/workspace`, not `/app`
-- Python needs `PYTHONPATH` to find local modules like `ml_framework`
+- GitHub Actions checks out code to a workspace directory (path varies, e.g., `/__w/nba_analysis_project/nba_analysis_project/`)
+- Container's Dockerfile sets `WORKDIR /app` and `PYTHONPATH=/app`
+- When checkout happens, code is in the workspace path, not `/app`
+- Python needs `PYTHONPATH` set to the actual checkout location to find local modules like `ml_framework`
+- `GITHUB_WORKSPACE` is a built-in variable that always points to the correct checkout location
 
 ---
 
@@ -109,7 +110,7 @@ When updating other `.yml` workflow files, check for:
 - [ ] Update any other `@v3` actions to `@v4`
 - [ ] Add `options: --user root` to any `container:` blocks
 - [ ] Replace `uv run` with `python` for container-based jobs
-- [ ] Add `PYTHONPATH: /github/workspace` to Python module execution steps
+- [ ] Add `export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH:-}"` before Python module execution
 - [ ] Test the workflow after changes
 
 ---
