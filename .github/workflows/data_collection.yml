@@ -50,7 +50,9 @@ jobs:
 
       - name: Configure Proxy
         env:
+          # To disable proxy for testing, comment out the line below
           PROXY_URL: ${{ secrets.PROXY_URL }}
+          # Or set to empty: PROXY_URL: ""
         run: /app/scripts/configure_proxy.sh
 
       - name: Debug Chromium Installation
