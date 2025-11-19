@@ -161,6 +161,15 @@ class CustomWebDriver(BaseWebDriver):
                     service_args=['--verbose', '--log-path=/tmp/chromedriver.log']
                 )
 
+            # CRITICAL: Add headless mode explicitly to prevent X11/display errors
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--disable-gpu')
+            logger.info("Added critical headless flags: --headless, --disable-gpu")
+            self.app_logger.structured_log(
+                logging.INFO,
+                "Added critical headless flags to prevent X11/display errors"
+            )
+
             # Check if running as root and enforce critical flags
             if os.getuid() == 0:
                 logger.info("Running as root, enforcing --no-sandbox and --disable-setuid-sandbox")
@@ -173,6 +182,14 @@ class CustomWebDriver(BaseWebDriver):
                 chrome_options.add_argument('--disable-setuid-sandbox')
 
             self._add_browser_options(chrome_options, 'chrome_options')
+
+            # Log all final options for debugging
+            final_args = chrome_options.arguments if hasattr(chrome_options, 'arguments') else []
+            logger.info(f"Final Chrome arguments: {final_args}")
+            self.app_logger.structured_log(
+                logging.INFO,
+                f"Chrome will be launched with {len(final_args)} arguments"
+            )
             return webdriver.Chrome(service=service, options=chrome_options)
         except Exception as e:
             raise WebDriverError(f"Error creating Chrome WebDriver: {str(e)}", self.app_logger)
