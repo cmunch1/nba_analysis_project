@@ -130,6 +130,30 @@ class CustomWebDriver(BaseWebDriver):
                     "Chromium binary not found, using default Chrome location"
                 )
 
+            # Prefer a system ChromeDriver when available (better version alignment with chromium package)
+            chromedriver_path = shutil.which('chromedriver')
+
+            if not chromedriver_path:
+                for path in ['/usr/bin/chromedriver', '/usr/lib/chromium/chromedriver']:
+                    if os.path.exists(path):
+                        chromedriver_path = path
+                        break
+
+            if chromedriver_path:
+                logger.info(f"Using system ChromeDriver at: {chromedriver_path}")
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    f"Using system ChromeDriver at: {chromedriver_path}"
+                )
+                service = ChromeService(executable_path=chromedriver_path)
+            else:
+                logger.warning("System ChromeDriver not found, falling back to webdriver_manager download")
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "System ChromeDriver not found, falling back to webdriver_manager download"
+                )
+                service = ChromeService(ChromeDriverManager().install())
+
             # Check if running as root and enforce critical flags
             if os.getuid() == 0:
                 logger.info("Running as root, enforcing --no-sandbox and --disable-setuid-sandbox")
@@ -142,7 +166,7 @@ class CustomWebDriver(BaseWebDriver):
                 chrome_options.add_argument('--disable-setuid-sandbox')
 
             self._add_browser_options(chrome_options, 'chrome_options')
-            return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+            return webdriver.Chrome(service=service, options=chrome_options)
         except Exception as e:
             raise WebDriverError(f"Error creating Chrome WebDriver: {str(e)}", self.app_logger)
 
