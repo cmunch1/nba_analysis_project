@@ -78,16 +78,21 @@ chrome_options:
   --disable-dev-shm-usage: null
   --disable-gpu: null
   --disable-software-rasterizer: null  # Required for GitHub Actions
+  --disable-setuid-sandbox: null  # Required for containerized environments
   --disable-extensions: null
   --disable-popup-blocking: null
   --disable-notifications: null
   --disable-3d-apis: null
   --disable-blink-features=AutomationControlled: null
   --disable-web-security: null
-  --disable-setuid-sandbox: null  # Required for containerized environments
   --ignore-certificate-errors: null
   --ignore-ssl-errors: null
   --window-size=1920,1080: null  # Better than start-maximized for headless
+  --remote-debugging-port: 9222  # Required for headless mode
+  --disable-background-networking: null  # Reduce background activity
+  --disable-default-apps: null  # Don't load default apps
+  --disable-sync: null  # Disable Chrome sync
+  --user-data-dir: "/tmp/chrome-user-data"  # Explicit user data directory
   --user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
 
 
