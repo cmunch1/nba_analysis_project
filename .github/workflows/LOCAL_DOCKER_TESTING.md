@@ -29,6 +29,19 @@ This script will:
 
 **Chrome works perfectly locally but fails in GitHub Actions**, indicating the issue is environment-specific to GitHub Actions, not the code or configuration.
 
+**⚠️ LIKELY CAUSE: Proxy Configuration**
+
+The proxy is configured in GitHub Actions via the `PROXY_URL` secret but NOT in local testing. If the proxy is misconfigured, unreachable, or blocking Chrome, it would cause Chrome to fail in GitHub Actions but work locally.
+
+To test this theory:
+```bash
+# Test locally WITH a proxy to reproduce the issue
+./scripts/test_chrome_with_proxy.sh http://your-proxy:port
+
+# Or disable proxy in GitHub Actions by commenting out in data_collection.yml:
+# PROXY_URL: ${{ secrets.PROXY_URL }}
+```
+
 ## Debugging Tools Created
 
 ### 1. `scripts/test_chrome_locally.sh`
@@ -42,6 +55,10 @@ Verifies that duplicate Chrome flags don't cause failures
 
 ### 4. `scripts/test_chrome_verbose.py`
 Tests with verbose ChromeDriver logging enabled
+
+### 5. `scripts/test_chrome_with_proxy.sh`
+Tests Chrome with a proxy server configured (to reproduce GitHub Actions environment)
+Usage: `./scripts/test_chrome_with_proxy.sh <PROXY_URL>`
 
 ## Testing Workflow
 
