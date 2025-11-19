@@ -55,13 +55,13 @@ jobs:
 
       - name: Run Webscraping
         run: |
-          export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH:-}"
-          python -m src.nba_app.webscraping.main
+          export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"
+          python -m nba_app.webscraping.main
 
       - name: Run Data Processing
         run: |
-          export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH:-}"
-          python -m src.nba_app.data_processing.main
+          export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"
+          python -m nba_app.data_processing.main
 
       - name: Upload to Kaggle
         run: /app/scripts/upload_to_kaggle.sh

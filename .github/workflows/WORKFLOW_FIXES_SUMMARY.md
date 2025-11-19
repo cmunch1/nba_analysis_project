@@ -76,7 +76,7 @@ container:
 
 **Problem**: When GitHub Actions checks out code in a container, Python doesn't know where to find project modules, causing `ModuleNotFoundError: No module named 'ml_framework'`.
 
-**Fix**: Set `PYTHONPATH` to the GitHub workspace using the `GITHUB_WORKSPACE` environment variable
+**Fix**: Set `PYTHONPATH` to the `src` directory and update module paths
 
 ```yaml
 # OLD
@@ -86,18 +86,18 @@ container:
 # NEW
 - name: Run Webscraping
   run: |
-    export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH:-}"
-    python -m src.nba_app.webscraping.main
+    export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"
+    python -m nba_app.webscraping.main
 ```
 
 **Files affected**: Lines 56-64
 
 **Why this happens**:
-- GitHub Actions checks out code to a workspace directory (path varies, e.g., `/__w/nba_analysis_project/nba_analysis_project/`)
-- Container's Dockerfile sets `WORKDIR /app` and `PYTHONPATH=/app`
-- When checkout happens, code is in the workspace path, not `/app`
-- Python needs `PYTHONPATH` set to the actual checkout location to find local modules like `ml_framework`
-- `GITHUB_WORKSPACE` is a built-in variable that always points to the correct checkout location
+- `pyproject.toml` defines packages as `["src/ml_framework", "src/nba_app"]` (line 37)
+- This means when installed, `ml_framework` and `nba_app` are top-level packages (not under `src.`)
+- Code imports use `from ml_framework.core...` not `from src.ml_framework.core...`
+- When running from source (not installed), Python needs `src/` in PYTHONPATH to find these top-level packages
+- We also remove the `src.` prefix from module names (use `nba_app.webscraping.main` not `src.nba_app.webscraping.main`)
 
 ---
 
@@ -110,7 +110,8 @@ When updating other `.yml` workflow files, check for:
 - [ ] Update any other `@v3` actions to `@v4`
 - [ ] Add `options: --user root` to any `container:` blocks
 - [ ] Replace `uv run` with `python` for container-based jobs
-- [ ] Add `export PYTHONPATH="${GITHUB_WORKSPACE}:${PYTHONPATH:-}"` before Python module execution
+- [ ] Add `export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"` before Python module execution
+- [ ] Remove `src.` prefix from module names (use `nba_app.` not `src.nba_app.`)
 - [ ] Test the workflow after changes
 
 ---
