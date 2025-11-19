@@ -104,10 +104,31 @@ class CustomWebDriver(BaseWebDriver):
             # Set binary location for containerized environments (chromium instead of chrome)
             # This is required for Docker/GitHub Actions where chromium is installed
             import shutil
-            chromium_path = shutil.which('chromium')
+            import os
+
+            # Try multiple possible chromium locations
+            chromium_path = shutil.which('chromium') or shutil.which('chromium-browser') or shutil.which('google-chrome')
+
+            # Also try common installation paths
+            if not chromium_path:
+                for path in ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome']:
+                    if os.path.exists(path):
+                        chromium_path = path
+                        break
+
             if chromium_path:
                 chrome_options.binary_location = chromium_path
                 logger.info(f"Using Chromium binary at: {chromium_path}")
+                self.app_logger.structured_log(
+                    logging.INFO,
+                    f"Set Chrome binary location to: {chromium_path}"
+                )
+            else:
+                logger.warning("Could not find Chromium binary, Chrome will use default location")
+                self.app_logger.structured_log(
+                    logging.WARNING,
+                    "Chromium binary not found, using default Chrome location"
+                )
 
             self._add_browser_options(chrome_options, 'chrome_options')
             return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
