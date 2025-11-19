@@ -54,10 +54,14 @@ jobs:
         run: /app/scripts/configure_proxy.sh
 
       - name: Run Webscraping
-        run: uv run --no-sync -m src.nba_app.webscraping.main
+        run: |
+          export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"
+          python -m nba_app.webscraping.main
 
       - name: Run Data Processing
-        run: uv run --no-sync -m src.nba_app.data_processing.main
+        run: |
+          export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"
+          python -m nba_app.data_processing.main
 
       - name: Upload to Kaggle
         run: /app/scripts/upload_to_kaggle.sh
