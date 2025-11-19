@@ -73,7 +73,7 @@ browsers:
 
   # Chrome-specific options
 chrome_options:
-  --headless: "new"
+  --headless: null
   --no-sandbox: null
   --disable-dev-shm-usage: null
   --disable-gpu: null
