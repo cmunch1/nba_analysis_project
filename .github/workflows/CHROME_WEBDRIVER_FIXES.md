@@ -13,13 +13,14 @@ Chrome failed to start: exited abnormally.
 ## Root Causes
 
 1. **Binary Location**: GitHub Actions/Docker containers install `chromium` (not `chrome`), but ChromeDriver looks for `chrome` by default
-2. **Headless Mode Issues**: Chrome needs specific flags to run in containerized/headless environments
-3. **Sandbox Issues**: Containers have restricted permissions requiring `--no-sandbox` and `--disable-setuid-sandbox`
-4. **Shared Memory**: `/dev/shm` may be too small, requiring `--disable-dev-shm-usage`
+2. **Version Mismatch (PRIMARY CAUSE)**: Container installs Chromium via `apt install chromium chromium-driver` (Debian's pinned version), but `webdriver_manager` downloads the latest upstream ChromeDriver, causing version incompatibility
+3. **Headless Mode Issues**: Chrome needs specific flags to run in containerized/headless environments
+4. **Sandbox Issues**: Containers have restricted permissions requiring `--no-sandbox` and `--disable-setuid-sandbox`
+5. **Shared Memory**: `/dev/shm` may be too small, requiring `--disable-dev-shm-usage`
 
 ## Fixes Applied
 
-### 1. Set Binary Location and Enforce Root Flags in Code
+### 1. Use System ChromeDriver to Match Container's Chromium Version (CRITICAL FIX)
 
 **File**: `src/nba_app/webscraping/web_driver.py`
 
@@ -43,6 +44,22 @@ def _create_chrome_driver(self) -> webdriver.Chrome:
             chrome_options.binary_location = chromium_path
             logger.info(f"Using Chromium binary at: {chromium_path}")
 
+        # CRITICAL: Prefer system ChromeDriver to match container's Chromium version
+        chromedriver_path = shutil.which('chromedriver')
+
+        if not chromedriver_path:
+            for path in ['/usr/bin/chromedriver', '/usr/lib/chromium/chromedriver']:
+                if os.path.exists(path):
+                    chromedriver_path = path
+                    break
+
+        if chromedriver_path:
+            logger.info(f"Using system ChromeDriver at: {chromedriver_path}")
+            service = ChromeService(executable_path=chromedriver_path)
+        else:
+            logger.warning("System ChromeDriver not found, falling back to webdriver_manager download")
+            service = ChromeService(ChromeDriverManager().install())
+
         # Check if running as root and enforce critical flags
         if os.getuid() == 0:
             logger.info("Running as root, enforcing --no-sandbox and --disable-setuid-sandbox")
@@ -50,17 +67,19 @@ def _create_chrome_driver(self) -> webdriver.Chrome:
             chrome_options.add_argument('--disable-setuid-sandbox')
 
         self._add_browser_options(chrome_options, 'chrome_options')
-        return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+        return webdriver.Chrome(service=service, options=chrome_options)
     except Exception as e:
         raise WebDriverError(f"Error creating Chrome WebDriver: {str(e)}", self.app_logger)
 ```
 
 **Why this works**:
-- `shutil.which('chromium')` finds the chromium binary path (e.g., `/usr/bin/chromium`)
+- Container installs both Chromium and ChromeDriver from Debian packages (guaranteed version match)
+- `shutil.which('chromedriver')` finds the system ChromeDriver that matches Chromium
 - Multiple fallback paths for different Chromium installations
 - Setting `binary_location` tells ChromeDriver exactly where to find the browser
+- `webdriver_manager` is only used as fallback for local development machines
 - `os.getuid() == 0` detects if running as root and explicitly adds required flags
-- Flags are added before config options to ensure they're always set when running as root
+- **This is the primary fix that prevents the DevToolsActivePort crash**
 
 ### 2. Update Chrome Options in Config
 

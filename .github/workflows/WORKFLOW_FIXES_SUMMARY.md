@@ -95,6 +95,59 @@ container:
 
 ---
 
+### 5. Fix ChromeDriver Version Mismatch
+
+**Problem**: Selenium WebDriver crashes with `DevToolsActivePort file doesn't exist` because:
+- GitHub Actions container installs Chromium via `apt install chromium chromium-driver` (Debian's pinned version)
+- `webdriver_manager` downloads the latest upstream ChromeDriver
+- Version mismatch between container's Chromium and downloaded ChromeDriver causes crashes
+
+**Fix**: Prefer system-installed ChromeDriver from the container
+
+**File**: `src/nba_app/webscraping/web_driver.py`
+
+```python
+# After locating Chromium binary, detect system ChromeDriver
+chromedriver_path = shutil.which('chromedriver')
+
+if not chromedriver_path:
+    for path in ['/usr/bin/chromedriver', '/usr/lib/chromium/chromedriver']:
+        if os.path.exists(path):
+            chromedriver_path = path
+            break
+
+if chromedriver_path:
+    logger.info(f"Using system ChromeDriver at: {chromedriver_path}")
+    service = ChromeService(executable_path=chromedriver_path)
+else:
+    logger.warning("System ChromeDriver not found, falling back to webdriver_manager download")
+    service = ChromeService(ChromeDriverManager().install())
+
+return webdriver.Chrome(service=service, options=chrome_options)
+```
+
+**Why this works**:
+- Container's Chromium and ChromeDriver are installed together from the same Debian package
+- Versions are guaranteed to be compatible
+- `webdriver_manager` is only used as fallback for local development
+- Eliminates version mismatch crashes in GitHub Actions
+
+**Debugging Step**: Add ChromeDriver version check to workflow
+
+```yaml
+- name: Debug Chromium Installation
+  run: |
+    echo "=== Chromedriver Version ==="
+    which chromedriver || echo "chromedriver not in PATH"
+    chromedriver --version || echo "Failed to get chromedriver version"
+```
+
+**Files affected**:
+- `src/nba_app/webscraping/web_driver.py` (lines 133-155)
+- `.github/workflows/data_collection.yml` (lines 66-68)
+
+---
+
 ## Quick Checklist for Other Workflow Files
 
 When updating other `.yml` workflow files, check for:
@@ -107,6 +160,8 @@ When updating other `.yml` workflow files, check for:
 - [ ] Add `export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"` before Python commands
 - [ ] Remove `src.` prefix from module names (use `nba_app.` not `src.nba_app.`)
 - [ ] Test the workflow after changes
+- [ ] Prefer system-installed Chromium/ChromeDriver in Selenium config to avoid version mismatch
+- [ ] Log `chromedriver --version` in debugging steps to confirm driver availability
 
 ---
 
