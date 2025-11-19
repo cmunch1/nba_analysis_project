@@ -79,6 +79,16 @@ jobs:
           export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"
           python -m nba_app.webscraping.main
 
+      - name: Show ChromeDriver Log (if exists)
+        if: always()
+        run: |
+          if [ -f /tmp/chromedriver.log ]; then
+            echo "=== ChromeDriver Log ==="
+            cat /tmp/chromedriver.log
+          else
+            echo "No ChromeDriver log found at /tmp/chromedriver.log"
+          fi
+
       - name: Run Data Processing
         run: |
           export PYTHONPATH="${GITHUB_WORKSPACE}/src:${PYTHONPATH:-}"

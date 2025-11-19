@@ -145,14 +145,21 @@ class CustomWebDriver(BaseWebDriver):
                     logging.INFO,
                     f"Using system ChromeDriver at: {chromedriver_path}"
                 )
-                service = ChromeService(executable_path=chromedriver_path)
+                # Enable verbose logging for debugging
+                service = ChromeService(
+                    executable_path=chromedriver_path,
+                    service_args=['--verbose', '--log-path=/tmp/chromedriver.log']
+                )
             else:
                 logger.warning("System ChromeDriver not found, falling back to webdriver_manager download")
                 self.app_logger.structured_log(
                     logging.WARNING,
                     "System ChromeDriver not found, falling back to webdriver_manager download"
                 )
-                service = ChromeService(ChromeDriverManager().install())
+                service = ChromeService(
+                    ChromeDriverManager().install(),
+                    service_args=['--verbose', '--log-path=/tmp/chromedriver.log']
+                )
 
             # Check if running as root and enforce critical flags
             if os.getuid() == 0:
