@@ -54,9 +54,13 @@ jobs:
         run: /app/scripts/configure_proxy.sh
 
       - name: Run Webscraping
+        env:
+          PYTHONPATH: /github/workspace
         run: python -m src.nba_app.webscraping.main
 
       - name: Run Data Processing
+        env:
+          PYTHONPATH: /github/workspace
         run: python -m src.nba_app.data_processing.main
 
       - name: Upload to Kaggle

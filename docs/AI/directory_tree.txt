@@ -59,7 +59,15 @@
 │   │   │   ├── dashboard_data_2025-11-07.csv
 │   │   │   ├── dashboard_data_2025-11-08.csv
 │   │   │   ├── dashboard_data_2025-11-09.csv
-│   │   │   └── dashboard_data_2025-11-10.csv
+│   │   │   ├── dashboard_data_2025-11-10.csv
+│   │   │   ├── dashboard_data_2025-11-11.csv
+│   │   │   ├── dashboard_data_2025-11-12.csv
+│   │   │   ├── dashboard_data_2025-11-13.csv
+│   │   │   ├── dashboard_data_2025-11-14.csv
+│   │   │   ├── dashboard_data_2025-11-15.csv
+│   │   │   ├── dashboard_data_2025-11-16.csv
+│   │   │   ├── dashboard_data_2025-11-17.csv
+│   │   │   └── dashboard_data_2025-11-18.csv
 │   │   └── dashboard_data.csv
 │   ├── engineered/
 │   │   └── engineered_features.csv
@@ -101,6 +109,14 @@
 │   │   ├── predictions_2025-11-08.csv
 │   │   ├── predictions_2025-11-09.csv
 │   │   ├── predictions_2025-11-10.csv
+│   │   ├── predictions_2025-11-11.csv
+│   │   ├── predictions_2025-11-12.csv
+│   │   ├── predictions_2025-11-13.csv
+│   │   ├── predictions_2025-11-14.csv
+│   │   ├── predictions_2025-11-15.csv
+│   │   ├── predictions_2025-11-16.csv
+│   │   ├── predictions_2025-11-17.csv
+│   │   ├── predictions_2025-11-18.csv
 │   │   ├── SKLearn_HistGradientBoosting_val_predictions.csv
 │   │   ├── SKLearn_RandomForest_val_predictions.csv
 │   │   ├── XGBoost_oof_predictions.csv
@@ -120,9 +136,11 @@
 │   │   ├── games_misc.csv
 │   │   ├── games_scoring.csv
 │   │   └── games_traditional.csv
-│   └── training/
-│       ├── training_data.csv
-│       └── validation_data.csv
+│   ├── training/
+│   │   ├── training_data.csv
+│   │   └── validation_data.csv
+│   ├── data_dictionary.csv
+│   └── dataset-metadata.json
 ├── docs/
 │   ├── AI/
 │   │   ├── config_reference.tree
@@ -139,7 +157,10 @@
 │   ├── CALIBRATION_OPTIMIZATION_BUG.md
 │   ├── conformal_predictor_guide.md
 │   ├── DEPLOYMENT_PLAN.md
+│   ├── DOCKER.md
 │   ├── future_refactors.md
+│   ├── GPU_SUPPORT.md
+│   ├── GPU_SUPPORT_ADDED.md
 │   ├── readme.md
 │   └── streamlit_dashboard_reference.md
 ├── noteboooks/
@@ -147,8 +168,15 @@
 │   └── eda.ipynb
 ├── scripts/
 │   ├── analyze_calibration.py
+│   ├── configure_proxy.sh
+│   ├── detect_gpu.sh
+│   ├── download_kaggle_data.sh
 │   ├── README.md
-│   └── run_nightly_pipeline.sh
+│   ├── run_nightly_pipeline.sh
+│   ├── run_pipeline.py
+│   ├── run_with_kaggle_data.sh
+│   ├── setup_fork.sh
+│   └── upload_to_kaggle.sh
 ├── src/
 │   ├── ml_framework/
 │   │   ├── core/
@@ -450,6 +478,7 @@
 │       │   ├── base_data_processing_classes.py
 │       │   ├── di_container.py
 │       │   ├── main.py
+│       │   ├── matchup_processor.py
 │       │   ├── process_scraped_NBA_data.py
 │       │   └── reintegrate_fixed_records.py
 │       ├── feature_engineering/
@@ -458,8 +487,7 @@
 │       │   ├── feature_engineer.py
 │       │   ├── feature_schema.py
 │       │   ├── feature_selector.py
-│       │   ├── main.py
-│       │   └── matchup_processor.py
+│       │   └── main.py
 │       ├── inference/
 │       │   ├── di_container.py
 │       │   ├── game_predictor.py
@@ -518,8 +546,14 @@
 │   │   └── test_data_validator.py
 │   └── postprocessing/
 │       └── test_conformal_predictor.py
-├── CALIBRATION_OPTIMIZATION_BUG.md
-├── DEPLOYMENT_PLAN.md
+├── CONTRIBUTING.md
+├── docker-compose.gpu.yml
+├── docker-compose.yml
+├── DOCKER_SETUP_SUMMARY.md
+├── Dockerfile
+├── Dockerfile.gpu
+├── Dockerfile.streamlit
+├── KAGGLE_SETUP.md
 ├── pyproject.toml
 ├── README.md
 └── uv.lock

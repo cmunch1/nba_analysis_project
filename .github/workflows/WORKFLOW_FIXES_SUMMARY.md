@@ -72,6 +72,34 @@ container:
 
 ---
 
+### 4. Fix Python Module Path in Container
+
+**Problem**: When GitHub Actions checks out code in a container, the working directory is `/github/workspace`, but Python doesn't know to look there for modules, causing `ModuleNotFoundError: No module named 'ml_framework'`.
+
+**Fix**: Set `PYTHONPATH` environment variable for Python module steps
+
+```yaml
+# OLD
+- name: Run Webscraping
+  run: python -m src.nba_app.webscraping.main
+
+# NEW
+- name: Run Webscraping
+  env:
+    PYTHONPATH: /github/workspace
+  run: python -m src.nba_app.webscraping.main
+```
+
+**Files affected**: Lines 56-59, 61-64
+
+**Why this happens**:
+- GitHub Actions checks out code to `/github/workspace`
+- Container is configured with `WORKDIR /app`
+- When steps run, they're in `/github/workspace`, not `/app`
+- Python needs `PYTHONPATH` to find local modules like `ml_framework`
+
+---
+
 ## Quick Checklist for Other Workflow Files
 
 When updating other `.yml` workflow files, check for:
@@ -81,6 +109,7 @@ When updating other `.yml` workflow files, check for:
 - [ ] Update any other `@v3` actions to `@v4`
 - [ ] Add `options: --user root` to any `container:` blocks
 - [ ] Replace `uv run` with `python` for container-based jobs
+- [ ] Add `PYTHONPATH: /github/workspace` to Python module execution steps
 - [ ] Test the workflow after changes
 
 ---
