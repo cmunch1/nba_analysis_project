@@ -100,6 +100,15 @@ class CustomWebDriver(BaseWebDriver):
         """
         try:
             chrome_options = webdriver.ChromeOptions()
+
+            # Set binary location for containerized environments (chromium instead of chrome)
+            # This is required for Docker/GitHub Actions where chromium is installed
+            import shutil
+            chromium_path = shutil.which('chromium')
+            if chromium_path:
+                chrome_options.binary_location = chromium_path
+                logger.info(f"Using Chromium binary at: {chromium_path}")
+
             self._add_browser_options(chrome_options, 'chrome_options')
             return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
         except Exception as e:
