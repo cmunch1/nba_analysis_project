@@ -234,6 +234,13 @@ class CustomWebDriver(BaseWebDriver):
                             options.add_argument(key)
                         else:
                             options.add_argument(f"{key}={value}")
+                elif hasattr(browser_options, '__dict__'):
+                    # Handle SimpleNamespace objects (from config loading)
+                    for key, value in vars(browser_options).items():
+                        if value is None:
+                            options.add_argument(key)
+                        else:
+                            options.add_argument(f"{key}={value}")
                 logger.debug(f"Added {config_key} to WebDriver options")
             else:
                 logger.warning(f"No {config_key} found in configuration")
