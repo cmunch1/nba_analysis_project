@@ -217,10 +217,11 @@ else
         fi
 
         # Download using Kaggle CLI
-        if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip >> "$PIPELINE_LOG" 2>&1; then
+        if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
             log_success "Stage 1 (Kaggle Download via API) completed"
         else
             log_error "Failed to download data from Kaggle API"
+            log_error "See error above for details"
             exit 1
         fi
     else
