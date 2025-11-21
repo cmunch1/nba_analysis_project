@@ -207,7 +207,9 @@ if [ "$SKIP_DOWNLOAD" = true ]; then
 else
     print_header "1" "Download Data from Kaggle"
 
-    # Create directories
+    # Clear existing data directories to avoid LFS pointer conflicts
+    log_info "Clearing existing data directories..."
+    rm -rf data/cumulative_scraped data/processed
     mkdir -p data/cumulative_scraped data/processed
 
     log_info "Downloading from Kaggle dataset: $KAGGLE_DATASET"
