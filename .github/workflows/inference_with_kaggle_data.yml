@@ -22,6 +22,7 @@ jobs:
     # Use the pre-built Docker image
     container:
       image: ghcr.io/${{ github.repository }}:latest
+      options: --user root
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -30,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run Kaggle Pipeline
         run: |
@@ -46,7 +47,7 @@ jobs:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
 
       - name: Upload Predictions Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: predictions
           path: |
@@ -56,7 +57,7 @@ jobs:
 
       - name: Upload Dashboard Data (if enabled)
         if: ${{ !inputs.skip_dashboard && success() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dashboard
           path: data/dashboard/
@@ -64,7 +65,7 @@ jobs:
 
       - name: Upload logs (on failure)
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pipeline-logs
           path: logs/
@@ -72,7 +73,7 @@ jobs:
 
       - name: Comment on Commit (if manual run)
         if: github.event_name == 'workflow_dispatch' && success()
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.number }}
           body: |
