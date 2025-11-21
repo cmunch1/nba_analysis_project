@@ -201,36 +201,61 @@ if [ "$SKIP_DOWNLOAD" = true ]; then
 else
     print_header "1" "Download Data from Kaggle"
 
-    # Check if kaggle CLI is available
-    if ! command -v kaggle &> /dev/null; then
-        log_warning "Kaggle CLI not found, installing..."
-        uv pip install kaggle >> "$PIPELINE_LOG" 2>&1
-    fi
-
     # Create directories
     mkdir -p data/cumulative_scraped data/processed
 
     log_info "Downloading from Kaggle dataset: $KAGGLE_DATASET"
 
-    # Download cumulative scraped data
-    if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip >> "$PIPELINE_LOG" 2>&1; then
-        log_success "Stage 1 (Kaggle Download) completed"
+    # Check if Kaggle credentials are available
+    if [ -n "${KAGGLE_USERNAME:-}" ] && [ -n "${KAGGLE_KEY:-}" ]; then
+        log_info "Using Kaggle API with credentials"
 
-        # Show what was downloaded
-        log_info "Downloaded files:"
-        if [ -d "data/cumulative_scraped" ]; then
-            ls -lh data/cumulative_scraped/*.csv 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+        # Check if kaggle CLI is available
+        if ! command -v kaggle &> /dev/null; then
+            log_warning "Kaggle CLI not found, installing..."
+            uv pip install kaggle >> "$PIPELINE_LOG" 2>&1
         fi
-        if [ -d "data/processed" ]; then
-            ls -lh data/processed/*.csv 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+
+        # Download using Kaggle CLI
+        if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip >> "$PIPELINE_LOG" 2>&1; then
+            log_success "Stage 1 (Kaggle Download via API) completed"
+        else
+            log_error "Failed to download data from Kaggle API"
+            exit 1
         fi
     else
-        log_error "Failed to download data from Kaggle"
-        log_error "Make sure:"
-        log_error "  1. Dataset exists: https://kaggle.com/datasets/$KAGGLE_DATASET"
-        log_error "  2. Dataset is public OR you have Kaggle credentials configured"
-        log_error "  3. Kaggle CLI is installed: uv pip install kaggle"
-        exit 1
+        log_info "No Kaggle credentials found, using direct HTTP download"
+
+        # Download using curl (no authentication required for public datasets)
+        DOWNLOAD_URL="https://www.kaggle.com/api/v1/datasets/download/${KAGGLE_DATASET}"
+        TEMP_ZIP="/tmp/kaggle_data.zip"
+
+        log_info "Downloading from: $DOWNLOAD_URL"
+
+        if curl -L -o "$TEMP_ZIP" "$DOWNLOAD_URL" >> "$PIPELINE_LOG" 2>&1; then
+            # Unzip to data directory
+            if unzip -o "$TEMP_ZIP" -d data >> "$PIPELINE_LOG" 2>&1; then
+                rm -f "$TEMP_ZIP"
+                log_success "Stage 1 (Kaggle Download via HTTP) completed"
+            else
+                log_error "Failed to unzip downloaded data"
+                rm -f "$TEMP_ZIP"
+                exit 1
+            fi
+        else
+            log_error "Failed to download data from Kaggle"
+            log_error "Make sure dataset exists and is public: https://kaggle.com/datasets/$KAGGLE_DATASET"
+            exit 1
+        fi
+    fi
+
+    # Show what was downloaded
+    log_info "Downloaded files:"
+    if [ -d "data/cumulative_scraped" ]; then
+        ls -lh data/cumulative_scraped/*.csv 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
+    fi
+    if [ -d "data/processed" ]; then
+        ls -lh data/processed/*.csv 2>/dev/null | awk '{print "  " $9 " (" $5 ")"}'
     fi
 fi
 
