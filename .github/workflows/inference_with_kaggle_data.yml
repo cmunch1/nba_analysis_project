@@ -45,6 +45,8 @@ jobs:
           /app/scripts/run_with_kaggle_data.sh $SKIP_FLAGS
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
       - name: Upload Predictions Artifact
         uses: actions/upload-artifact@v4
