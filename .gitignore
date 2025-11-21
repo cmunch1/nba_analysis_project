@@ -31,3 +31,9 @@ data/training/
 data/predictions/
 data/processed/
 data/cumulative_scraped/
+data/newly_scraped/
+data/dashboard/
+data/*.csv
+
+# Feature audit CSVs
+src/ml_framework/feature_audits/*.csv
