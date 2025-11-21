@@ -283,9 +283,12 @@ log_success "All required data files present"
 # Set Python command based on mode
 if [ "$DOCKER_MODE" = true ]; then
     PYTHON_CMD="python -m"
+    # Set PYTHONPATH to include src directory for module imports
+    export PYTHONPATH="${PROJECT_DIR}/src:${PYTHONPATH:-}"
     log_info "Running in Docker mode (using python directly)"
+    log_info "PYTHONPATH: $PYTHONPATH"
 else
-    PYTHON_CMD="uv run -m"
+    PYTHON_CMD="uv run -m src."
 fi
 
 # Stage 2: Feature Engineering
