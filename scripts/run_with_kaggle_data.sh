@@ -219,17 +219,20 @@ else
         # Check if kaggle CLI is available
         if ! command -v kaggle &> /dev/null; then
             log_warning "Kaggle CLI not found, installing..."
-            uv pip install kaggle >> "$PIPELINE_LOG" 2>&1
+            pip install kaggle >> "$PIPELINE_LOG" 2>&1
         fi
 
-        # Download using Kaggle CLI
-        if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
+        # Download using Kaggle CLI (use python -m to ensure correct environment)
+        set -o pipefail
+        if python -m kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
             log_success "Stage 1 (Kaggle Download via API) completed"
         else
             log_error "Failed to download data from Kaggle API"
             log_error "See error above for details"
+            set +o pipefail
             exit 1
         fi
+        set +o pipefail
     else
         log_info "No Kaggle credentials found, using direct HTTP download"
 
