@@ -43,7 +43,7 @@ jobs:
 
           # Run the streamlined Kaggle workflow script (use checked-out version)
           chmod +x scripts/run_with_kaggle_data.sh
-          ./scripts/run_with_kaggle_data.sh $SKIP_FLAGS
+          ./scripts/run_with_kaggle_data.sh --docker $SKIP_FLAGS
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}

@@ -57,6 +57,7 @@ PIPELINE_LOG="${LOG_DIR}/kaggle_pipeline_${TIMESTAMP}.log"
 SKIP_DOWNLOAD=false
 SKIP_DASHBOARD=false
 KAGGLE_DATASET="chrismunch/nba-game-team-statistics"
+DOCKER_MODE=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -73,6 +74,10 @@ while [[ $# -gt 0 ]]; do
             KAGGLE_DATASET="$2"
             shift 2
             ;;
+        --docker)
+            DOCKER_MODE=true
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [--skip-download] [--skip-dashboard] [--dataset dataset-id]"
             echo ""
@@ -82,6 +87,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-download   Skip Kaggle download (use existing local data)"
             echo "  --skip-dashboard  Skip dashboard prep stage"
             echo "  --dataset         Kaggle dataset ID (default: chrismunch/nba-game-team-statistics)"
+            echo "  --docker          Run in Docker mode (use python directly instead of uv run)"
             echo "  --help            Show this help message"
             echo ""
             echo "Examples:"
@@ -274,9 +280,17 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 log_success "All required data files present"
 
+# Set Python command based on mode
+if [ "$DOCKER_MODE" = true ]; then
+    PYTHON_CMD="python -m"
+    log_info "Running in Docker mode (using python directly)"
+else
+    PYTHON_CMD="uv run -m"
+fi
+
 # Stage 2: Feature Engineering
 print_header "2" "Feature Engineering (849 Features with Deterministic Ordering)"
-run_stage 3 "Feature Engineering" "uv run -m src.nba_app.feature_engineering.main"
+run_stage 3 "Feature Engineering" "$PYTHON_CMD nba_app.feature_engineering.main"
 STAGE3_EXIT=$?
 if [ $STAGE3_EXIT -ne 0 ]; then
     log_error "Pipeline failed at Stage 2 (Feature Engineering)"
@@ -285,7 +299,7 @@ fi
 
 # Stage 3: Inference
 print_header "3" "Inference (Predictions with Uncertainty Quantification)"
-run_stage 4 "Inference" "uv run -m src.nba_app.inference.main"
+run_stage 4 "Inference" "$PYTHON_CMD nba_app.inference.main"
 STAGE4_EXIT=$?
 if [ $STAGE4_EXIT -ne 0 ]; then
     log_error "Pipeline failed at Stage 3 (Inference)"
@@ -297,7 +311,7 @@ if [ "$SKIP_DASHBOARD" = true ]; then
     log_warning "Skipping Stage 4 (Dashboard Prep) per user request"
 else
     print_header "4" "Dashboard Prep (Aggregation & Performance Metrics)"
-    run_stage 5 "Dashboard Prep" "uv run -m src.nba_app.dashboard_prep.main"
+    run_stage 5 "Dashboard Prep" "$PYTHON_CMD nba_app.dashboard_prep.main"
     STAGE5_EXIT=$?
     if [ $STAGE5_EXIT -ne 0 ]; then
         log_error "Pipeline failed at Stage 4 (Dashboard Prep)"
