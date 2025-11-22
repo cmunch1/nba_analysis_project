@@ -1,28 +1,62 @@
-.conda
-.venv/
+# Python
 __pycache__/
-/.ipynb_checkpoints
-.ipynb_checkpoints
-__pycache__
-ca_chain
-certfile
-keyfile
-geckodriver.log
-webscraping.log
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Logs
+/logs/
+*.log
+chromedriver.log
+geckodriver.log
+
+# ML artifacts and experiments
 mlruns/
 mlruns_backup*/
-temp/
-.pytest_cache/
-zzz/
-.vscode/
-.cspell/
-/logs/
-/logs/catboost_info/
-charts/
-*:Zone.Identifier
-
-# ML artifacts - all generated outputs from training, experiments, and feature engineering
 ml_artifacts/
 
 # Data files - large CSVs should not be in version control
@@ -33,7 +67,34 @@ data/processed/
 data/cumulative_scraped/
 data/newly_scraped/
 data/dashboard/
+data/test_data/
 data/*.csv
 
 # Feature audit CSVs
 src/ml_framework/feature_audits/*.csv
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*:Zone.Identifier
+
+# Certificates and keys
+ca_chain
+certfile
+keyfile
+
+# Misc
+zzz/
+charts/
+.cspell/
