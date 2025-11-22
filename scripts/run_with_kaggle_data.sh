@@ -207,7 +207,7 @@ if [ "$SKIP_DOWNLOAD" = true ]; then
 else
     print_header "1" "Download Data from Kaggle"
 
-    # Clear existing data directories to avoid LFS pointer conflicts
+    # Clear existing data directories to avoid conflicts with old/stale data
     log_info "Clearing existing data directories..."
     rm -rf data/cumulative_scraped data/processed
     mkdir -p data/cumulative_scraped data/processed
@@ -218,29 +218,20 @@ else
     if [ -n "${KAGGLE_USERNAME:-}" ] && [ -n "${KAGGLE_KEY:-}" ]; then
         log_info "Using Kaggle API with credentials"
 
-        # Find kaggle CLI - prefer system install over virtualenv
-        KAGGLE_CMD=""
-        if [ -x "/usr/local/bin/kaggle" ]; then
-            KAGGLE_CMD="/usr/local/bin/kaggle"
-        elif command -v kaggle &> /dev/null; then
-            KAGGLE_CMD="kaggle"
-        else
+        # Check if kaggle CLI is available
+        if ! command -v kaggle &> /dev/null; then
             log_warning "Kaggle CLI not found, installing..."
-            pip install kaggle >> "$PIPELINE_LOG" 2>&1
-            KAGGLE_CMD="kaggle"
+            uv pip install kaggle >> "$PIPELINE_LOG" 2>&1
         fi
 
         # Download using Kaggle CLI
-        set -o pipefail
-        if $KAGGLE_CMD datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
+        if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
             log_success "Stage 1 (Kaggle Download via API) completed"
         else
             log_error "Failed to download data from Kaggle API"
             log_error "See error above for details"
-            set +o pipefail
             exit 1
         fi
-        set +o pipefail
     else
         log_info "No Kaggle credentials found, using direct HTTP download"
 
@@ -294,12 +285,9 @@ log_success "All required data files present"
 # Set Python command based on mode
 if [ "$DOCKER_MODE" = true ]; then
     PYTHON_CMD="python -m"
-    # Set PYTHONPATH to include src directory for module imports
-    export PYTHONPATH="${PROJECT_DIR}/src:${PYTHONPATH:-}"
     log_info "Running in Docker mode (using python directly)"
-    log_info "PYTHONPATH: $PYTHONPATH"
 else
-    PYTHON_CMD="uv run -m src."
+    PYTHON_CMD="uv run -m"
 fi
 
 # Stage 2: Feature Engineering
