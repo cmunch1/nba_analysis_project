@@ -5,6 +5,7 @@ import contextlib
 from typing import Any, Dict, Optional, Callable
 from dataclasses import dataclass
 from contextvars import ContextVar
+from pathlib import Path
 from ml_framework.core.config_management.config_manager import BaseConfigManager
 from ml_framework.core.app_logging.base_app_logger import BaseAppLogger
 
@@ -46,10 +47,12 @@ class AppLogger(BaseAppLogger):
         # Construct full log file path from config
         if self.config and hasattr(self.config, 'core') and hasattr(self.config.core, 'app_logging_config'):
             log_path = getattr(self.config.core.app_logging_config, 'log_path', './logs')
-            from pathlib import Path
             log_file_path = Path(log_path) / log_file
         else:
             log_file_path = Path('./logs') / log_file
+
+        # Ensure log directory exists before creating handlers
+        log_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Create formatters
         file_formatter = logging.Formatter(
