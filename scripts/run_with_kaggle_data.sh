@@ -38,6 +38,7 @@
 ################################################################################
 
 set -u  # Exit on undefined variable
+set -o pipefail  # Propagate failures through pipelines
 
 # Colors for output
 RED='\033[0;31m'
@@ -157,6 +158,24 @@ run_stage() {
     fi
 }
 
+ensure_kaggle_cli() {
+    # Verify kaggle package is importable; install with uv if missing or broken
+    if python - <<'PY' >/dev/null 2>&1
+import importlib.util
+import sys
+sys.exit(0 if importlib.util.find_spec("kaggle") else 1)
+PY
+    then
+        return 0
+    fi
+
+    log_warning "Kaggle CLI not found or broken, installing with uv..."
+    if ! uv pip install --system kaggle >> "$PIPELINE_LOG" 2>&1; then
+        log_error "Failed to install Kaggle CLI via uv"
+        exit 1
+    fi
+}
+
 ################################################################################
 # Pre-flight Checks
 ################################################################################
@@ -218,14 +237,15 @@ else
     if [ -n "${KAGGLE_USERNAME:-}" ] && [ -n "${KAGGLE_KEY:-}" ]; then
         log_info "Using Kaggle API with credentials"
 
-        # Check if kaggle CLI is available
-        if ! command -v kaggle &> /dev/null; then
-            log_warning "Kaggle CLI not found, installing..."
-            uv pip install kaggle >> "$PIPELINE_LOG" 2>&1
+        # Ensure Kaggle CLI is installed and executable (python -m avoids broken entrypoints)
+        ensure_kaggle_cli
+        if ! python -m kaggle --version >> "$PIPELINE_LOG" 2>&1; then
+            log_error "Kaggle CLI is not usable after install"
+            exit 1
         fi
 
         # Download using Kaggle CLI
-        if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
+        if python -m kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
             log_success "Stage 1 (Kaggle Download via API) completed"
         else
             log_error "Failed to download data from Kaggle API"
