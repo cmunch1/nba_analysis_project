@@ -49,7 +49,8 @@ htmlcov/
 .env.*.local
 
 # Logs
-/logs/
+/logs/*
+!/logs/.gitkeep
 *.log
 chromedriver.log
 geckodriver.log
@@ -60,14 +61,27 @@ mlruns_backup*/
 ml_artifacts/
 
 # Data files - large CSVs should not be in version control
-data/engineered/
-data/training/
-data/predictions/
-data/processed/
-data/cumulative_scraped/
-data/newly_scraped/
-data/dashboard/
-data/test_data/
+data/engineered/*
+!data/engineered/.gitkeep
+data/training/*
+!data/training/.gitkeep
+data/predictions/*
+!data/predictions/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/cumulative_scraped/*
+!data/cumulative_scraped/.gitkeep
+data/newly_scraped/*
+!data/newly_scraped/.gitkeep
+data/dashboard/*
+!data/dashboard/.gitkeep
+!data/dashboard/archive/
+data/dashboard/archive/*
+!data/dashboard/archive/.gitkeep
+data/test_data/*
+!data/test_data/.gitkeep
+data/evaluation/*
+!data/evaluation/.gitkeep
 data/*.csv
 
 # Feature audit CSVs
