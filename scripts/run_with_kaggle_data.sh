@@ -218,15 +218,21 @@ else
     if [ -n "${KAGGLE_USERNAME:-}" ] && [ -n "${KAGGLE_KEY:-}" ]; then
         log_info "Using Kaggle API with credentials"
 
-        # Check if kaggle CLI is available, install if needed
-        if ! command -v kaggle &> /dev/null; then
+        # Find kaggle CLI - prefer system install over virtualenv
+        KAGGLE_CMD=""
+        if [ -x "/usr/local/bin/kaggle" ]; then
+            KAGGLE_CMD="/usr/local/bin/kaggle"
+        elif command -v kaggle &> /dev/null; then
+            KAGGLE_CMD="kaggle"
+        else
             log_warning "Kaggle CLI not found, installing..."
             pip install kaggle >> "$PIPELINE_LOG" 2>&1
+            KAGGLE_CMD="kaggle"
         fi
 
         # Download using Kaggle CLI
         set -o pipefail
-        if kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
+        if $KAGGLE_CMD datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
             log_success "Stage 1 (Kaggle Download via API) completed"
         else
             log_error "Failed to download data from Kaggle API"
