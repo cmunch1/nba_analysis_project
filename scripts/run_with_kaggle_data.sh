@@ -159,11 +159,11 @@ run_stage() {
 }
 
 ensure_kaggle_cli() {
-    # Verify kaggle package is importable; install with uv if missing or broken
+    # Verify kaggle.cli is importable; install with uv if missing or broken
     if python - <<'PY' >/dev/null 2>&1
 import importlib.util
 import sys
-sys.exit(0 if importlib.util.find_spec("kaggle") else 1)
+sys.exit(0 if importlib.util.find_spec("kaggle.cli") else 1)
 PY
     then
         return 0
@@ -239,13 +239,13 @@ else
 
         # Ensure Kaggle CLI is installed and executable (python -m avoids broken entrypoints)
         ensure_kaggle_cli
-        if ! python -m kaggle --version >> "$PIPELINE_LOG" 2>&1; then
+        if ! python -m kaggle.cli --version >> "$PIPELINE_LOG" 2>&1; then
             log_error "Kaggle CLI is not usable after install"
             exit 1
         fi
 
-        # Download using Kaggle CLI
-        if python -m kaggle datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
+        # Download using Kaggle CLI (module form to bypass broken entrypoints)
+        if python -m kaggle.cli datasets download -d "$KAGGLE_DATASET" -p data --unzip 2>&1 | tee -a "$PIPELINE_LOG"; then
             log_success "Stage 1 (Kaggle Download via API) completed"
         else
             log_error "Failed to download data from Kaggle API"
