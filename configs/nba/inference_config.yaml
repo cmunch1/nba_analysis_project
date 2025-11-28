@@ -40,7 +40,7 @@ inference:
     enable_calibration: true
 
     # Enable conformal prediction (loads conformal artifact from model)
-    enable_conformal: true
+    enable_conformal: false
 
     # Fallback if calibration artifact not found
     skip_if_missing: false  # If true, use raw probabilities
