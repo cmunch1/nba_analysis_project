@@ -26,6 +26,8 @@ services:
       - ./configs:/app/configs:ro
       # Mount ml_artifacts for model/feature access
       - ./ml_artifacts:/app/ml_artifacts:ro
+      # Mount Kaggle credentials from host (local dev only)
+      - ${HOME}/.kaggle:/home/nba/.kaggle:ro
     # Use Kaggle workflow script (recommended for containerized deployment)
     command: /app/scripts/run_with_kaggle_data.sh
     networks:
