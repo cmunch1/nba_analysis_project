@@ -108,3 +108,8 @@ class InferenceError(ErrorHandler):
     """Raised when there's an error in the inference/prediction process."""
     def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
         super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)
+
+class ModelRegistryError(ErrorHandler):
+    """Raised when there's an error in the model registry process."""
+    def __init__(self, message, app_logger, log_level=logging.ERROR, **kwargs):
+        super().__init__(message=message, app_logger=app_logger, log_level=log_level, **kwargs)

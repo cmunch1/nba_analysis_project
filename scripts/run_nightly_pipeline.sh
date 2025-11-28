@@ -165,7 +165,7 @@ fi
 # Check MLFLOW_TRACKING_URI
 if [ -z "${MLFLOW_TRACKING_URI:-}" ]; then
     log_warning "MLFLOW_TRACKING_URI not set, using local mlruns"
-    export MLFLOW_TRACKING_URI="file:///${PROJECT_DIR}/mlruns"
+    export MLFLOW_TRACKING_URI="file://${PROJECT_DIR}/mlruns"
 else
     log_info "MLflow Tracking URI: $MLFLOW_TRACKING_URI"
 fi

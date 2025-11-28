@@ -19,7 +19,8 @@ from ml_framework.core.error_handling.error_handler import (
     PostprocessingError,
     OptimizationError,
     ExperimentLoggerError,
-    InferenceError
+    InferenceError,
+    ModelRegistryError
 )
 
 class ErrorHandlerFactory:
@@ -58,6 +59,7 @@ class ErrorHandlerFactory:
             'postprocessing': PostprocessingError,
             'optimization': OptimizationError,
             'inference': InferenceError,
+            'model_registry': ModelRegistryError,
 
             # Visualization errors
             'chart_creation': ChartCreationError,

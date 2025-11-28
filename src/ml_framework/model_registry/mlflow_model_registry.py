@@ -47,10 +47,22 @@ class MLflowModelRegistry(BaseModelRegistry):
         super().__init__(config, app_logger, error_handler)
 
         # Set tracking URI
+        # Priority: 1. Config, 2. Environment variable (if absolute path), 3. Local default
         tracking_uri = getattr(config, 'tracking_uri', None)
         if tracking_uri:
             mlflow.set_tracking_uri(tracking_uri)
+        elif 'MLFLOW_TRACKING_URI' in os.environ:
+            env_uri = os.environ['MLFLOW_TRACKING_URI']
+            # If it's a file URI, ensure it's an absolute path
+            if env_uri.startswith('file://'):
+                path_part = env_uri[7:]  # Remove 'file://'
+                if not os.path.isabs(path_part):
+                    # Convert relative path to absolute
+                    abs_path = os.path.abspath(path_part)
+                    env_uri = f"file://{abs_path}"
+            mlflow.set_tracking_uri(env_uri)
         else:
+            # Use absolute path to local mlruns directory
             local_mlruns_path = f"file://{os.path.abspath('mlruns')}"
             mlflow.set_tracking_uri(local_mlruns_path)
 
