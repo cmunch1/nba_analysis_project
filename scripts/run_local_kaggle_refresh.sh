@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --- Paths ---
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # --- Config ---
 PROXY_URL="${PROXY_URL:-}"   # optional; leave empty to disable
 DATA_DIR="${DATA_DIR:-$(pwd)/data}"
@@ -38,10 +42,10 @@ fi
 DATASET_OWNER="${DATASET_OWNER:-$KAGGLE_USERNAME}"
 
 if command -v kaggle >/dev/null 2>&1 && kaggle --version >/dev/null 2>&1; then
-  KAGGLE_CMD="kaggle"
+  KAGGLE_CMD=( "$(command -v kaggle)" )
 else
-  KAGGLE_CMD=""
-  for PY_EXE in python .venv/bin/python; do
+  KAGGLE_CMD=()
+  for PY_EXE in python "$PROJECT_ROOT/.venv/bin/python"; do
     if [[ -x "$PY_EXE" ]] && "$PY_EXE" - <<'PY' >/dev/null 2>&1
 import importlib.util
 import sys
@@ -49,19 +53,19 @@ spec = importlib.util.find_spec("kaggle.cli")
 sys.exit(0 if spec else 1)
 PY
     then
-      KAGGLE_CMD="$PY_EXE -m kaggle.cli"
+      KAGGLE_CMD=( "$PY_EXE" -m kaggle.cli )
       break
     fi
   done
 
-  if [[ -z "$KAGGLE_CMD" ]]; then
+  if [[ ${#KAGGLE_CMD[@]} -eq 0 ]]; then
     echo "kaggle CLI not installed or not runnable; install with 'pip install kaggle' in the image/venv."
     exit 1
   fi
 fi
 
 echo "=== Downloading existing Kaggle dataset (if present) ==="
-$KAGGLE_CMD datasets download -d "$DATASET_OWNER"/nba-game-team-statistics -p "$DATA_DIR" --unzip || \
+"${KAGGLE_CMD[@]}" datasets download -d "$DATASET_OWNER"/nba-game-team-statistics -p "$DATA_DIR" --unzip || \
   echo "Download skipped/failed (expected on first run)"
 
 echo "=== Configuring proxy ==="
@@ -95,9 +99,6 @@ echo "=== Run data processing ==="
 python -m nba_app.data_processing.main
 
 echo "=== Preparing for Kaggle upload ==="
-# Get the project root directory (one level up from scripts/)
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-
 # Create temporary directory for Kaggle upload
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
@@ -120,6 +121,6 @@ cp "$PROJECT_ROOT/data/processed/teams_boxscores.csv" $TEMP_DIR/processed/ 2>/de
 cd $TEMP_DIR
 
 echo "=== Uploading to Kaggle ==="
-$KAGGLE_CMD datasets version -p . -m "Nightly update: $(date +%Y-%m-%d)" -r zip -d
+"${KAGGLE_CMD[@]}" datasets version -p . -m "Nightly update: $(date +%Y-%m-%d)" -r zip -d
 
 echo "✓ Dataset uploaded successfully!"
