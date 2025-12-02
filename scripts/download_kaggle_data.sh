@@ -20,8 +20,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Default datasets (REPLACE WITH YOUR KAGGLE USERNAME)
-KAGGLE_DATASET="YOUR_KAGGLE_USERNAME/nba-game-stats-daily"
-PROCESSED_DATASET="YOUR_KAGGLE_USERNAME/nba-processed-data"
+KAGGLE_DATASET="chrismunch/nba-game-team-statistics/cumulative_scraped"
+PROCESSED_DATASET="chrismunch/nba-game-team-statistics/processed"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -63,7 +63,19 @@ if ! command -v kaggle &> /dev/null; then
 fi
 
 # Create directories
-mkdir -p data/cumulative_scraped data/processed
+mkdir -p data/cumulative_scraped 
+mkdir -p data/processed
+
+# Ensure Kaggle credentials are available (CLI requires them even for public datasets)
+if [[ -z "${KAGGLE_USERNAME:-}" || -z "${KAGGLE_KEY:-}" ]]; then
+    if [[ ! -f "${HOME}/.kaggle/kaggle.json" ]]; then
+        echo -e "${YELLOW}Kaggle credentials not found.${NC}"
+        echo "The Kaggle CLI needs a username/key or ~/.kaggle/kaggle.json."
+        echo "Steps: Kaggle.com > Profile > 'Create New API Token' > save kaggle.json to ~/.kaggle (chmod 600)"
+        echo "Or set env vars: export KAGGLE_USERNAME=your_username; export KAGGLE_KEY=your_key"
+        exit 1
+    fi
+fi
 
 # Download cumulative scraped data
 echo -e "${BLUE}Downloading cumulative scraped data...${NC}"
