@@ -65,10 +65,10 @@ class ScheduleScraper(BaseScheduleScraper):
 
         Returns:
             bool: True if matchups were found and saved, False otherwise.
+                  Returns False if no games are scheduled (e.g., All-Star break).
 
         Raises:
             PageLoadError: If the page load times out.
-            ElementNotFoundError: If required elements are not found on the page.
             ScrapingError: If there's an error during the scraping process.
             DataStorageError: If there's an error saving the scraped data.
         """
@@ -82,11 +82,21 @@ class ScheduleScraper(BaseScheduleScraper):
                 days_games, game_date = self._find_games_for_day(search_day)
 
                 if days_games is None:
-                    # no games for the day
+                    # Day not found on schedule page
                     return False
 
                 matchups = self._extract_team_ids_schedule(days_games)
                 games = self._extract_game_ids_schedule(days_games)
+
+                # Check if there are no games scheduled (e.g., All-Star break)
+                if not matchups or not games:
+                    self.app_logger.structured_log(
+                        logging.WARNING,
+                        "No games scheduled for this day (e.g., All-Star break)",
+                        search_day=search_day,
+                        game_date=game_date
+                    )
+                    return False
 
                 self._save_matchups_and_games(matchups, games, game_date)
 
@@ -156,7 +166,7 @@ class ScheduleScraper(BaseScheduleScraper):
         Parse game date from NBA schedule day text.
 
         Args:
-            day_text (str): Text from day element, e.g., "FRI 11/8" or "FRI, NOV 8"
+            day_text (str): Text from day element, e.g., "FRI 11/8", "FRI, NOV 8", or "Thursday, April 4"
 
         Returns:
             Game date in YYYY-MM-DD format, or None if parsing fails
@@ -190,6 +200,21 @@ class ScheduleScraper(BaseScheduleScraper):
                     game_date = datetime(current_year, month, day).strftime('%Y-%m-%d')
                     return game_date
 
+            # Try format: "Thursday, April 4"
+            match = re.search(r',\s+(\w+)\s+(\d{1,2})', day_text)
+            if match:
+                month_name = match.group(1)
+                day = int(match.group(2))
+                full_month_map = {
+                    'JANUARY': 1, 'FEBRUARY': 2, 'MARCH': 3, 'APRIL': 4,
+                    'MAY': 5, 'JUNE': 6, 'JULY': 7, 'AUGUST': 8,
+                    'SEPTEMBER': 9, 'OCTOBER': 10, 'NOVEMBER': 11, 'DECEMBER': 12
+                }
+                month = full_month_map.get(month_name.upper())
+                if month:
+                    game_date = datetime(current_year, month, day).strftime('%Y-%m-%d')
+                    return game_date
+
             # Fallback: use today's date
             self.app_logger.structured_log(logging.WARNING, "Could not parse game date from day text",
                            day_text=day_text)
@@ -210,18 +235,20 @@ class ScheduleScraper(BaseScheduleScraper):
 
         Returns:
             List[List[str]]: A list of lists containing visitor and home team IDs.
+                            Returns empty list if no games are scheduled (e.g., All-Star break).
 
         Raises:
-            ElementNotFoundError: If the team links are not found on the page.
             DataExtractionError: If there's an error extracting team IDs.
         """
         try:
             self.app_logger.structured_log( logging.INFO, "Extracting team IDs from schedule")
-                        
+
             links = self.page_scraper.get_links_by_class(self.config.teams_links_class_name, todays_games)
 
             if not links:
-                raise self.error_handler.create_error_handler('element_not_found', "Team links not found on the page")
+                # No games scheduled for this day (e.g., All-Star break)
+                self.app_logger.structured_log(logging.WARNING, "No team links found - no games scheduled for this day")
+                return []
 
             teams_list = [i.get_attribute("href") for i in links]
 
@@ -252,26 +279,28 @@ class ScheduleScraper(BaseScheduleScraper):
 
         Returns:
             List[str]: A list of game IDs.
+                      Returns empty list if no games are scheduled (e.g., All-Star break).
 
         Raises:
-            ElementNotFoundError: If the game links are not found on the page.
             DataExtractionError: If there's an error extracting game IDs.
         """
         try:
             self.app_logger.structured_log( logging.INFO, "Extracting game IDs from schedule")
-            
+
             links = self.page_scraper.get_links_by_class(self.config.game_links_class_name, todays_games)
 
             if not links:
-                raise self.error_handler.create_error_handler('element_not_found', "Game links not found on the page")
+                # No games scheduled for this day (e.g., All-Star break)
+                self.app_logger.structured_log(logging.WARNING, "No game links found - no games scheduled for this day")
+                return []
 
             links = [i for i in links if self.config.schedule_preview_text in i.text]
             game_id_list = [i.get_attribute("href") for i in links]
-            
+
             games = []
             for game in game_id_list:
                 game_id = game.partition("-00")[2]
-                if len(game_id) > 0:               
+                if len(game_id) > 0:
                     games.append(game_id)
 
 
