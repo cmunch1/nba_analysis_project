@@ -37,18 +37,18 @@ stat_types:
   - scoring
 
 # CSS class names for scraping
-table_class_name: Crom_table__p1iZz
-pagination_class_name: Pagination_pageDropdown__KgjBU
-dropdown_class_name: DropDown_select__4pIg9
-teams_and_games_class_name: Anchor_anchor__cSc3P
-games_per_day_class_name: ScheduleDay_sdGames__NGdO5
-day_class_name: ScheduleDay_sdDay__3s2Xt
-teams_links_class_name: Anchor_anchor__cSc3P Link_styled__okbXW 
-game_links_class_name: Anchor_anchor__cSc3P TabLink_link__f_15h
-no_data_class_name: NoDataMessage_base__xUA61  # a message appears if there is no data for the parameters being searched for
+table_class_name: Crom_table__PJugT #Crom_table__p1iZz
+pagination_class_name: Pagination_pageDropdown__Ka76o
+dropdown_class_name: DropDown_select__l0YXl
+teams_and_games_class_name: Anchor_anchor__wnmj2
+games_per_day_class_name: ScheduleDay_sdGames__SxDKq
+day_class_name: ScheduleDay_sdDay__b7Rix
+teams_links_class_name: Anchor_anchor__wnmj2 Link_styled__TysPH
+game_links_class_name: Anchor_anchor__wnmj2 TabLink_link___23UW
+no_data_class_name: NoDataMessage_base__aRytW  # a message appears if there is no data for the parameters being searched for
 
 # Text to find links that contain game ids
-schedule_preview_text: PREVIEW
+schedule_preview_text: Preview
 
 # Schedule scraper column names - 
 # these are the columns created when converting lists to dataframes for todays_matchups_file and todays_games_ids_file
