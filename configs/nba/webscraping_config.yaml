@@ -37,15 +37,15 @@ stat_types:
   - scoring
 
 # CSS class names for scraping
-table_class_name: Crom_table__PJugT #Crom_table__p1iZz
-pagination_class_name: Pagination_pageDropdown__Ka76o
-dropdown_class_name: DropDown_select__l0YXl
-teams_and_games_class_name: Anchor_anchor__wnmj2
-games_per_day_class_name: ScheduleDay_sdGames__SxDKq
-day_class_name: ScheduleDay_sdDay__b7Rix
-teams_links_class_name: Anchor_anchor__wnmj2 Link_styled__TysPH
-game_links_class_name: Anchor_anchor__wnmj2 TabLink_link___23UW
-no_data_class_name: NoDataMessage_base__aRytW  # a message appears if there is no data for the parameters being searched for
+table_class_name: Crom_table__
+pagination_class_name: Pagination_pageDropdown__
+dropdown_class_name: DropDown_select__
+teams_and_games_class_name: Anchor_anchor__
+games_per_day_class_name: ScheduleDay_sdGames__
+day_class_name: ScheduleDay_sdDay__
+teams_links_class_name: Anchor_anchor__ Link_styled__
+game_links_class_name: Anchor_anchor__ TabLink_link__
+no_data_class_prefix: NoDataMessage_base__  # hash suffix intentionally omitted - scraper matches by prefix to survive NBA site redeploys
 
 # Text to find links that contain game ids
 schedule_preview_text: Preview

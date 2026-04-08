@@ -128,6 +128,16 @@ class PageScraper(BasePageScraper):
             raise self.error_handler.create_error_handler('dynamic_content_load', "Error while waiting for dynamic content",
                                           locator=locator, error_message=str(e))
 
+    def _build_css_selector(self, class_name: str, tag: str = '') -> str:
+        """Build a CSS selector using substring matching so hash suffixes are ignored.
+
+        Handles space-separated multi-class values (CSS module pattern ComponentName_el__hash).
+        E.g. 'Crom_table__' -> '[class*="Crom_table__"]'
+             'Anchor_anchor__ Link_styled__' -> '[class*="Anchor_anchor__"][class*="Link_styled__"]'
+        """
+        parts = class_name.strip().split()
+        return tag + ''.join(f'[class*="{part}"]' for part in parts)
+
     @log_performance
     def _handle_pagination(self, pagination_class: str, dropdown_class: str) -> None:
         """
@@ -143,10 +153,10 @@ class PageScraper(BasePageScraper):
         self.app_logger.structured_log( logging.INFO, "Handling pagination",
                        pagination_class=pagination_class, dropdown_class=dropdown_class)
         try:
-            pagination = self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, pagination_class)))
+            pagination = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, self._build_css_selector(pagination_class))))
             self.app_logger.structured_log( logging.INFO, "Pagination element found")
             try:
-                page_dropdown = pagination.find_element(By.CLASS_NAME, dropdown_class)
+                page_dropdown = pagination.find_element(By.CSS_SELECTOR, self._build_css_selector(dropdown_class))
                 self.app_logger.structured_log( logging.INFO, "Dropdown element found")
                 page_dropdown.send_keys("ALL")
                 time.sleep(3)
@@ -180,10 +190,11 @@ class PageScraper(BasePageScraper):
                        class_name=class_name, has_parent=parent_element is not None)
         for attempt in range(self.config.max_retries):
             try:
+                css_selector = self._build_css_selector(class_name)
                 if parent_element:
-                    elements = parent_element.find_elements(By.CLASS_NAME, class_name)
+                    elements = parent_element.find_elements(By.CSS_SELECTOR, css_selector)
                 else:
-                    elements = self.wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, class_name)))
+                    elements = self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, css_selector)))
                 if not elements:
                     self.app_logger.structured_log( logging.INFO, "No elements found",
                                    class_name=class_name, attempt=attempt+1)
@@ -237,7 +248,8 @@ class PageScraper(BasePageScraper):
                     self.app_logger.structured_log( logging.INFO, "No table found, checking for no data message", url=url)
             except:
                 try:
-                    if self.get_elements_by_class(self.config.no_data_class_name) is not None:
+                    no_data_elements = self.web_driver.find_elements(By.CSS_SELECTOR, f'[class*="{self.config.no_data_class_prefix}"]')
+                    if no_data_elements:
                         self.app_logger.structured_log( logging.INFO, "No data message found", url=url)
                         return None
                 except:
@@ -316,11 +328,11 @@ class PageScraper(BasePageScraper):
 
         for attempt in range(self.config.max_retries):
             try:
-                xpath = f".//a[@class='{class_name}']" if parent_element else f"//a[@class='{class_name}']"
+                css_selector = self._build_css_selector(class_name, tag='a')
                 if parent_element:
-                    elements = parent_element.find_elements(By.XPATH, xpath)
+                    elements = parent_element.find_elements(By.CSS_SELECTOR, css_selector)
                 else:
-                    elements = self.wait.until(EC.presence_of_all_elements_located((By.XPATH, xpath)))
+                    elements = self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, css_selector)))
 
                 if not elements:
                     self.app_logger.structured_log( logging.INFO, "No link elements found",

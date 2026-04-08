@@ -19,7 +19,7 @@ def mock_config():
     config.dynamic_content_timeout = 20
     config.max_retries = 3
     config.retry_delay = 1
-    config.no_data_class_name = "no-data"
+    config.no_data_class_prefix = "NoDataMessage_base"
     return config
 
 @pytest.fixture
@@ -87,7 +87,7 @@ def test_handle_pagination_no_dropdown(scraper):
     with patch('selenium.webdriver.support.wait.WebDriverWait.until') as mock_until:
         mock_until.return_value = mock_pagination
         scraper._handle_pagination("pagination-class", "dropdown-class")
-        mock_pagination.find_element.assert_called_once_with(By.CLASS_NAME, "dropdown-class")
+        mock_pagination.find_element.assert_called_once_with(By.CSS_SELECTOR, '[class*="dropdown-class"]')
 
 def test_get_elements_by_class_success(scraper):
     mock_elements = [Mock(spec=WebElement)]
@@ -104,7 +104,7 @@ def test_get_elements_by_class_with_parent(scraper):
     
     result = scraper.get_elements_by_class("test-class", mock_parent)
     assert result == mock_elements
-    mock_parent.find_elements.assert_called_once_with(By.CLASS_NAME, "test-class")
+    mock_parent.find_elements.assert_called_once_with(By.CSS_SELECTOR, '[class*="test-class"]')
 
 def test_get_elements_by_class_not_found(scraper):
     with patch('selenium.webdriver.support.wait.WebDriverWait.until') as mock_until:
@@ -133,10 +133,10 @@ def test_scrape_page_table_no_data(scraper):
     with patch.object(scraper, 'go_to_url') as mock_go_to_url:
         with patch.object(scraper, 'get_elements_by_class') as mock_get_elements:
             mock_go_to_url.return_value = True
+            scraper.web_driver.find_elements.return_value = [Mock()]
 
             mock_get_elements.side_effect = [
                 ElementNotFoundError("Table not found", scraper.app_logger),  # table_class check
-                [Mock()]  # no_data_class_name check
             ]
 
             result = scraper.scrape_page_table(
@@ -147,7 +147,9 @@ def test_scrape_page_table_no_data(scraper):
             )
 
             assert result is None
-            mock_get_elements.assert_any_call(scraper.config.no_data_class_name)
+            scraper.web_driver.find_elements.assert_called_with(
+                By.CSS_SELECTOR, f'[class*="{scraper.config.no_data_class_prefix}"]'
+            )
 
 def test_safe_wait_and_click_success(scraper):
     mock_element = Mock()
@@ -181,3 +183,4 @@ def test_get_links_by_class_with_parent(scraper):
     
     result = scraper.get_links_by_class("test-class", mock_parent)
     assert result == mock_links
+    mock_parent.find_elements.assert_called_once_with(By.CSS_SELECTOR, 'a[class*="test-class"]')
