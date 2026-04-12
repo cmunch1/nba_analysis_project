@@ -181,9 +181,10 @@ class BoxscoreScraper(BaseBoxscoreScraper):
         """
         with log_context(operation="scrape_sub_seasons", season=season, start_date=start_date, end_date=end_date, stat_type=stat_type):
             self.app_logger.structured_log( logging.INFO, f"Scraping {season} from {start_date} to {end_date} for {stat_type} stats")
-            
+
             all_sub_seasons = pd.DataFrame()
             sub_season_types = self._determine_sub_season_types(season,start_date, end_date)
+            failures = []
 
             for sub_season_type in sub_season_types:
                 try:
@@ -193,9 +194,15 @@ class BoxscoreScraper(BaseBoxscoreScraper):
                     self.app_logger.structured_log( logging.INFO, f"Successfully scraped {sub_season_type} for {season}",
                                    sub_season_type=sub_season_type, season=season)
                 except Exception as e:
-                    self.app_logger.structured_log( logging.ERROR, f"Error scraping {sub_season_type} for {season}",
+                    self.app_logger.structured_log( logging.WARNING, f"Error scraping {sub_season_type} for {season}, skipping",
                                    sub_season_type=sub_season_type, season=season, error_message=str(e))
-                    raise
+                    failures.append((sub_season_type, e))
+
+            if len(failures) == len(sub_season_types):
+                last_sub_season_type, last_error = failures[-1]
+                self.app_logger.structured_log( logging.ERROR, f"All sub-season types failed for {season}",
+                               season=season, error_message=str(last_error))
+                raise last_error
 
             return all_sub_seasons
     
@@ -215,15 +222,21 @@ class BoxscoreScraper(BaseBoxscoreScraper):
         """
         try:
 
-            self.app_logger.structured_log( logging.INFO, "Determining sub-season types", 
+            self.app_logger.structured_log( logging.INFO, "Determining sub-season types",
                            start_date=start_date, end_date=end_date)
             sub_season_types = []
             season_year = int(season[:4])
             start_date = datetime.strptime(start_date, "%m/%d/%Y")
             end_date = datetime.strptime(end_date, "%m/%d/%Y")
-            play_in_date = datetime(season_year + 1, self.config.play_in_month, 1)
 
-            self.app_logger.structured_log( logging.INFO, "Play-in date", 
+            play_in_start_dates = getattr(self.config, 'play_in_start_dates', None)
+            exact_date_str = getattr(play_in_start_dates, season, None) if play_in_start_dates is not None else None
+            if exact_date_str is not None:
+                play_in_date = datetime.strptime(exact_date_str, "%m/%d/%Y")
+            else:
+                play_in_date = datetime(season_year + 1, self.config.play_in_month, 1)
+
+            self.app_logger.structured_log( logging.INFO, "Play-in date",
                            play_in_date=str(play_in_date))
 
             if start_date < play_in_date and end_date < play_in_date:

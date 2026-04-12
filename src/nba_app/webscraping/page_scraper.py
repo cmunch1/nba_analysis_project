@@ -251,7 +251,9 @@ class PageScraper(BasePageScraper):
                     no_data_elements = self.web_driver.find_elements(By.CSS_SELECTOR, f'[class*="{self.config.no_data_class_prefix}"]')
                     if no_data_elements:
                         self.app_logger.structured_log( logging.INFO, "No data message found", url=url)
-                        return None
+                    else:
+                        self.app_logger.structured_log( logging.INFO, "No table and no data message found - treating as empty result", url=url)
+                    return None
                 except:
                     raise self.error_handler.create_error_handler('dynamic_content_load', "Table did not load within the specified timeout",
                                                   table_class=table_class)

@@ -12,7 +12,16 @@ full_scrape: False
 start_season: 2006
 off_season_start_month: 8
 regular_season_start_month: 10
-play_in_month: 4
+play_in_month: 4  # fallback when season not in play_in_start_dates
+
+# Exact play-in tournament start dates per season (MM/DD/YYYY).
+# Used instead of play_in_month when available. Update each year.
+play_in_start_dates:
+  "2021-22": "04/12/2022"
+  "2022-23": "04/11/2023"
+  "2023-24": "04/16/2024"
+  "2024-25": "04/15/2025"
+  "2025-26": "04/15/2026"  # approximate - verify and update
 
 # Validation settings
 enable_validation_scraping: False # Set to False to skip validation data collection
