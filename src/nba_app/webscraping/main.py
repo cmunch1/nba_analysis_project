@@ -89,7 +89,7 @@ def main() -> None:
             else:
                 cumulative_scraped, file_names = data_access.load_scraped_data(cumulative=True)
                 if validate_data(newly_scraped, cumulative_scraped, file_names, data_validator, error_handler, app_logger):
-                    concatenated_data = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_handler, app_logger)
+                    concatenated_data, file_names = concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_handler, app_logger)
 
             data_access.save_dataframes(concatenated_data, file_names, cumulative=True)
 
@@ -220,7 +220,7 @@ def validate_data(newly_scraped, cumulative_scraped, file_names, data_validator,
 
     return True
 
-def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_handler, app_logger) -> list[pd.DataFrame]:
+def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_handler, app_logger) -> tuple[list[pd.DataFrame], list[str]]:
     """
     Concatenate newly scraped data with cumulative scraped data.
 
@@ -231,6 +231,10 @@ def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_ha
         error_handler (ErrorHandlerFactory): Error handler factory instance.
         app_logger: The app logger object for structured logging.
 
+    Returns:
+        Tuple of (combined_dataframes, combined_file_names) — only files with new data are included,
+        keeping the two lists in sync so callers can zip them safely.
+
     Raises:
         DataValidationError: If there are issues with the scraped data.
         DataProcessingError: If there's an error during the concatenation process.
@@ -238,6 +242,7 @@ def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_ha
     try:
         app_logger.structured_log(logging.INFO, "Starting data concatenation process")
         combined_dataframes = []
+        combined_file_names = []
 
         for new_df, cum_df, file_name in zip(newly_scraped, cumulative_scraped, config.scraped_boxscore_files):
             if new_df.empty:
@@ -253,6 +258,7 @@ def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_ha
             combined_df = combined_df.drop_duplicates(subset=[config.game_id_column, config.team_id_column], keep='last')
 
             combined_dataframes.append(combined_df)
+            combined_file_names.append(file_name)
 
             app_logger.structured_log(
                 logging.INFO,
@@ -262,7 +268,7 @@ def concatenate_scraped_data(config, newly_scraped, cumulative_scraped, error_ha
 
         app_logger.structured_log(logging.INFO, "Completed concatenation of all scraped data files")
 
-        return combined_dataframes
+        return combined_dataframes, combined_file_names
     except Exception as e:
         # Check if it's already one of our error types (has app_logger)
         if hasattr(e, 'app_logger'):
