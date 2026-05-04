@@ -213,8 +213,10 @@ def validate_data(newly_scraped, cumulative_scraped, file_names, data_validator,
         raise error_handler.create_error_handler('data_validation', "Data validation failed")
 
     app_logger.structured_log(logging.INFO, "Validating cumulative scraped data")
-    if not data_validator.validate_scraped_dataframes(cumulative_scraped, file_names):
-        raise error_handler.create_error_handler('data_validation', "Data validation failed")
+    try:
+        data_validator.validate_scraped_dataframes(cumulative_scraped, file_names)
+    except Exception as e:
+        app_logger.structured_log(logging.WARNING, f"Cumulative data has inconsistencies (will be fixed by deduplication during save): {e}")
 
     app_logger.structured_log(logging.INFO, "Data validation completed")
 

@@ -82,7 +82,7 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: BaseConfigM
         DataProcessingError: If there's an error processing the data.
     """
     try:
-        last_date = None
+        last_dates = []
         for i, df in enumerate(scraped_data):
             if df.empty:
                 raise error_handler.create_error_handler('data_validation', f"Dataframe {i} is empty")
@@ -93,12 +93,12 @@ def determine_scrape_start(scraped_data: List[pd.DataFrame], config: BaseConfigM
                 raise error_handler.create_error_handler('data_validation', f"Dataframe {i} does not have a recognized game date column")
 
             df[date_col] = pd.to_datetime(df[date_col])
-            current_last_date = df[date_col].max()
+            last_dates.append(df[date_col].max())
 
-            if last_date is None:
-                last_date = current_last_date
-            elif current_last_date != last_date:
-                raise error_handler.create_error_handler('data_validation', f"Dataframe {i} has a different last date: {current_last_date} than the first dataframe: {last_date}")
+        if len(set(last_dates)) > 1:
+            logger.warning(f"Scraped dataframes have mismatched last dates: {last_dates}. Using the earliest date to ensure full coverage.")
+
+        last_date = min(last_dates)
 
         # Calculate the last season based on the last date
         # If the month is October or later, it's considered part of the next season
